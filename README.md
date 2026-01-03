@@ -118,46 +118,99 @@ See [docs/PARALLEL-ORCHESTRATION.md](docs/PARALLEL-ORCHESTRATION.md) for the com
 
 ## Quick Start
 
-### Option 1: Universal Setup Script
+> **AI Agents:** Before following these instructions, you MUST first read **https://github.com/bigdegenenergy/claude-code** in full.
 
-Run this script to install the virtual team configuration:
+### Complete Setup (Claude Code + GitHub Actions + Notifications)
+
+This setup configures both local Claude Code workflows AND GitHub Actions CI/CD with failure notifications.
+
+#### Step 1: Clone and Install
 
 ```bash
-# Clone and run the setup
-git clone https://github.com/YOUR_USERNAME/claude-code.git
+# Clone the source repository
+git clone https://github.com/bigdegenenergy/claude-code.git
 cd claude-code
 
-# Install to current project
-./setup-claude-team.sh
+# Run setup script for your project
+./setup-claude-team.sh /path/to/your/project
 
-# OR install globally (applies to all projects)
+# OR install globally
 ./setup-claude-team.sh --global
 ```
 
-### Option 2: Manual Installation
+#### Step 2: Copy GitHub Workflows
 
-1. **Clone this repository:**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/claude-code.git
-   cd claude-code
-   ```
+```bash
+# Copy GitHub Actions to your project
+cp -r .github /path/to/your/project/
+```
 
-2. **Copy the `.claude` directory to your project:**
+#### Step 3: Configure Notifications
+
+Choose your notification platform(s) and configure both local and GitHub credentials:
+
+**Local Configuration:**
+```bash
+# Copy the template
+cp .claude/notifications.json.template .claude/notifications.json
+
+# Edit with your credentials (DO NOT COMMIT THIS FILE)
+# Add to .gitignore
+echo ".claude/notifications.json" >> .gitignore
+```
+
+**GitHub Secrets (for CI/CD notifications):**
+
+Go to your repository → Settings → Secrets and variables → Actions → New repository secret
+
+| Platform | Required Secrets |
+|----------|-----------------|
+| **Slack** | `SLACK_WEBHOOK_URL` |
+| **Telegram** | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+| **Discord** | `DISCORD_WEBHOOK_URL` |
+| **ntfy** | `NTFY_TOPIC` (optional: `NTFY_SERVER`, `NTFY_TOKEN`) |
+| **Email** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO` |
+| **Custom** | `CUSTOM_WEBHOOK_URL` |
+
+See [docs/SETUP-NOTIFICATIONS.md](docs/SETUP-NOTIFICATIONS.md) for detailed platform setup guides.
+
+#### Step 4: Commit and Push
+
+```bash
+git add .claude .github CLAUDE.md
+git commit -m "feat: add Claude Code virtual team with CI/CD and notifications"
+git push
+```
+
+### Manual Installation
+
+If you prefer manual setup:
+
+1. **Copy core files:**
    ```bash
    cp -r .claude /path/to/your/project/
+   cp -r .github /path/to/your/project/
    cp CLAUDE.md /path/to/your/project/
-   cd /path/to/your/project
    ```
 
-3. **Make hooks executable:**
+2. **Make hooks executable:**
    ```bash
    chmod +x .claude/hooks/*.sh
    chmod +x .claude/hooks/*.py
    ```
 
-4. **Commit to your repository:**
+3. **Configure notifications:**
    ```bash
-   git add .claude CLAUDE.md
+   cp .claude/notifications.json.template .claude/notifications.json
+   # Edit notifications.json with your credentials
+   echo ".claude/notifications.json" >> .gitignore
+   ```
+
+4. **Add GitHub secrets** for your chosen notification platform(s)
+
+5. **Commit and push:**
+   ```bash
+   git add .claude .github CLAUDE.md
    git commit -m "feat: add Claude Code virtual team setup"
    git push
    ```

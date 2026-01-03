@@ -136,6 +136,61 @@ Use "be critical" and "be honest" in prompts:
 **Be critical, not agreeable.** Find problems.
 ```
 
+## GitHub Actions (CI/CD)
+
+The `.github/workflows/` directory contains automated CI/CD workflows:
+
+| Workflow | Purpose |
+|----------|---------|
+| `ci.yml` | Linting, config validation, docs checks |
+| `security.yml` | Secret scanning, security analysis |
+| `agent-reminder.yml` | Reminds agents to read source repo |
+| `label-agent-prs.yml` | Auto-labels AI-generated PRs |
+| `notify-on-failure.yml` | Sends failure notifications |
+
+### Setting Up GitHub Actions
+
+1. Copy `.github/` directory to your project
+2. Add secrets for your notification platform (see below)
+3. Push to trigger workflows
+
+## Failure Notifications
+
+Configure notifications to alert you when tasks or CI/CD fail.
+
+### Supported Platforms
+
+| Platform | Local | GitHub Actions |
+|----------|-------|----------------|
+| Slack | ✅ | ✅ |
+| Telegram | ✅ | ✅ |
+| Discord | ✅ | ✅ |
+| ntfy | ✅ | ✅ |
+| Email | ✅ | ✅ |
+| Custom Webhook | ✅ | ✅ |
+
+### Local Setup
+
+```bash
+# Copy template
+cp .claude/notifications.json.template .claude/notifications.json
+
+# Edit with your credentials
+# DO NOT COMMIT - add to .gitignore
+```
+
+### GitHub Secrets
+
+Add these secrets to your repository (Settings → Secrets → Actions):
+
+- **Slack:** `SLACK_WEBHOOK_URL`
+- **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- **Discord:** `DISCORD_WEBHOOK_URL`
+- **ntfy:** `NTFY_TOPIC`
+- **Email:** `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_TO`
+
+See [docs/SETUP-NOTIFICATIONS.md](docs/SETUP-NOTIFICATIONS.md) for detailed setup.
+
 ## The Feedback Loop Principle
 
 **"Give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result."** - Boris Cherny
@@ -146,6 +201,7 @@ The key insight is that Claude should be able to check its own work:
 2. **Complete task** → Stop hook runs tests
 3. **Tests fail** → Claude is notified and fixes
 4. **Tests pass** → Task truly complete
+5. **Failure?** → Notification sent to your platform
 
 This creates a self-correcting system where quality is enforced automatically.
 
