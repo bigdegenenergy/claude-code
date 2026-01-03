@@ -1,15 +1,27 @@
 #!/bin/bash
 # Stop Hook - Runs at the end of Claude's turn
 # Primary use: Automated verification and quality gates
-
-# This hook is called with the following environment variables:
+#
+# This implements the "feedback loop" pattern - Claude verifies its own work.
+# As Boris Cherny notes: "Giving Claude a way to verify its work can 2-3x
+# the quality of the final result."
+#
+# Environment variables:
 # - CLAUDE_SESSION_ID: The current session ID
 # - CLAUDE_TURN_COUNT: The number of turns in this session
+# - CLAUDE_STRICT_MODE: Set to "1" to block completion on test failures
+#
+# Exit codes:
+# - 0: All checks passed
+# - 1: Some checks failed (Claude is notified but can continue)
+# - 2: Critical failure (blocks Claude from declaring task complete)
 
 echo "🔍 Running end-of-turn quality checks..."
+echo "   (Feedback loop: verifying Claude's work)"
 
 # Initialize exit code
 EXIT_CODE=0
+CRITICAL_FAILURE=0
 
 # Check 1: Run tests if they exist
 if [ -f "package.json" ] && grep -q "\"test\"" package.json; then
@@ -94,12 +106,25 @@ fi
 mkdir -p .claude/metrics
 echo "$(date -Iseconds),${CLAUDE_SESSION_ID},${CLAUDE_TURN_COUNT},${EXIT_CODE}" >> .claude/metrics/quality_checks.csv 2>/dev/null || true
 
+# Determine final exit code
 if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
     echo "✅ All quality checks passed"
+    echo "   Claude's work has been verified."
+    exit 0
 else
+    echo ""
     echo "❌ Some quality checks failed - review the output above"
-fi
+    echo ""
 
-# Exit with the accumulated exit code
-# Note: Non-zero exit will notify Claude but won't stop execution
-exit $EXIT_CODE
+    # In strict mode, block Claude from completing if tests failed
+    if [ "${CLAUDE_STRICT_MODE:-0}" = "1" ]; then
+        echo "⛔ STRICT MODE: Task cannot be marked complete until tests pass."
+        echo "   Fix the failing tests and try again."
+        exit 2  # Exit code 2 blocks the agent
+    else
+        echo "ℹ️  Claude has been notified of the failures."
+        echo "   Set CLAUDE_STRICT_MODE=1 to block completion on failures."
+        exit 1  # Exit code 1 notifies but allows continuation
+    fi
+fi

@@ -11,9 +11,11 @@ This file contains team-specific knowledge, patterns, and conventions that Claud
 | Architect | `/plan` | Before complex features |
 | QA Engineer | `/qa` | When tests need fixing |
 | TDD | `/test-driven` | Red-green-refactor loop |
+| Gatekeeper | `/test-and-commit` | Run tests, only commit if pass |
 | Reviewer | `/review` | Code review (read-only) |
 | Refactorer | `/simplify` | After implementation |
 | DevOps | `/ship` | Ready to commit |
+| Deploy | `/deploy-staging` | Build and deploy to staging |
 
 ### Quick Reference - Agents
 
