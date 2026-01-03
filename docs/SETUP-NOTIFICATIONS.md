@@ -96,6 +96,24 @@ Go to your GitHub repository:
 
 ### Required Secrets by Platform
 
+#### GitHub Token (Required for Private Repos)
+
+For private repositories, you MUST configure a `GH_TOKEN` with `repo` access for full workflow functionality:
+
+| Secret Name | Description |
+|-------------|-------------|
+| `GH_TOKEN` | Personal Access Token with `repo` scope |
+
+**Why this is needed:**
+- The default `GITHUB_TOKEN` has limited permissions in private repos
+- Enables PR/issue comment automation (agent-reminder workflow)
+- Required for cross-repository access
+
+**How to get:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Generate new token with `repo` scope
+3. Add as repository secret named `GH_TOKEN`
+
 #### Slack
 | Secret Name | Description |
 |-------------|-------------|
