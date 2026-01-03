@@ -10,14 +10,37 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 
 ## The Virtual Team
 
-| Role | Implementation | When to Use |
-|------|----------------|-------------|
+### Commands (Slash)
+
+| Role | Command | When to Use |
+|------|---------|-------------|
 | **Architect** | `/plan` | Before implementing complex features |
 | **QA Engineer** | `/qa` | When tests fail or need verification |
+| **TDD** | `/test-driven` | Red-green-refactor development |
+| **Gatekeeper** | `/test-and-commit` | Only commit if tests pass |
+| **Reviewer** | `/review` | Critical code review (read-only) |
 | **Refactorer** | `/simplify` | After implementing features |
 | **DevOps** | `/ship` | When ready to commit and PR |
-| **Code Reviewer** | `@code-reviewer` | Before submitting PRs |
-| **Code Janitor** | PostToolUse Hook | Automatic after every edit |
+| **Deploy** | `/deploy-staging` | Build and deploy to staging |
+
+### Agents (Subagents)
+
+| Role | Agent | Specialty |
+|------|-------|-----------|
+| **Code Reviewer** | `@code-reviewer` | Critical code review |
+| **QA** | `@verify-app` | End-to-end testing |
+| **Security** | `@security-auditor` | Vulnerability scanning (read-only) |
+| **Frontend** | `@frontend-specialist` | React, TS, accessibility |
+| **Infrastructure** | `@infrastructure-engineer` | Docker, K8s, CI/CD |
+| **Cleanup** | `@code-simplifier` | Code hygiene |
+
+### Hooks (Automatic)
+
+| Hook | Type | Function |
+|------|------|----------|
+| **Safety Net** | PreToolUse | Blocks dangerous commands |
+| **Formatter** | PostToolUse | Auto-formats code after edits |
+| **Quality Gate** | Stop | Runs tests at end of turn |
 
 ## Workflow
 
@@ -96,6 +119,30 @@ Use "be critical" and "be honest" in prompts:
 **Be critical, not agreeable.** Find problems.
 ```
 
+## The Feedback Loop Principle
+
+**"Give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result."** - Boris Cherny
+
+The key insight is that Claude should be able to check its own work:
+
+1. **Write code** → PostToolUse hook formats it
+2. **Complete task** → Stop hook runs tests
+3. **Tests fail** → Claude is notified and fixes
+4. **Tests pass** → Task truly complete
+
+This creates a self-correcting system where quality is enforced automatically.
+
+### Enabling Strict Mode
+
+For critical work, enable strict mode to block completion until tests pass:
+
+```bash
+export CLAUDE_STRICT_MODE=1
+claude
+```
+
+In strict mode, Claude cannot declare a task complete until the Stop hook reports all tests passing.
+
 ## Update Log
 
 Track improvements to this configuration:
@@ -103,6 +150,12 @@ Track improvements to this configuration:
 - **2025-01-03**: Initial virtual team setup with `/plan`, `/qa`, `/simplify`, `/ship`
 - **2025-01-03**: Added format.py hook for robust auto-formatting
 - **2025-01-03**: Created universal setup script (setup-claude-team.sh)
+- **2025-01-03**: Added parallel orchestration with git worktrees
+- **2025-01-03**: Added specialized agents (security, frontend, infrastructure)
+- **2025-01-03**: Added safety-net.sh PreToolUse hook
+- **2025-01-03**: Added /test-and-commit, /review, /test-driven commands
+- **2025-01-03**: Enhanced stop.sh with strict mode support
+- **2025-01-03**: Added feedback loop principle documentation
 
 ---
 

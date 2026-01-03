@@ -413,6 +413,44 @@ The `.claude/docs.md` file is a living document that serves as the team's shared
 - Use type hints for all functions
 ```
 
+## The Feedback Loop Principle
+
+**"Give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result."** - Boris Cherny
+
+This is the core insight behind the entire setup. Claude should be able to check its own work through automated feedback loops:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    THE FEEDBACK LOOP                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  1. Claude writes code                                       │
+│         ↓                                                    │
+│  2. PostToolUse hook auto-formats (format.py)               │
+│         ↓                                                    │
+│  3. Claude completes task                                    │
+│         ↓                                                    │
+│  4. Stop hook runs tests (stop.sh)                          │
+│         ↓                                                    │
+│  ┌─────────────────────────────────────────────────┐        │
+│  │  Tests PASS → Task truly complete               │        │
+│  │  Tests FAIL → Claude notified → Fix → Repeat    │        │
+│  └─────────────────────────────────────────────────┘        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Strict Mode
+
+For critical work, enable strict mode to block completion until tests pass:
+
+```bash
+export CLAUDE_STRICT_MODE=1
+claude
+```
+
+In strict mode, the Stop hook returns exit code 2 on test failure, blocking Claude from declaring the task complete.
+
 ## Boris Cherny's Workflow Principles
 
 Based on the creator of Claude Code's actual setup:
@@ -427,7 +465,7 @@ Press shift+tab twice to enter Plan mode. Get the plan right before switching to
 Boris runs 5 Claudes in terminal tabs and 5-10 on claude.ai/code simultaneously. Use `&` for session handoff and `--teleport` to move between terminal and web.
 
 ### 4. Verification is Mandatory
-"Give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result." Every workflow should include verification.
+Every workflow should include verification. The Stop hook implements this automatically.
 
 ### 5. Pre-compute Context
 Use inline bash in slash commands to inject real-time context (git status, environment variables) before Claude processes the prompt.
