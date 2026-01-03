@@ -17,21 +17,35 @@ plan_mode_default = true
 
 [agent.philosophy]
 primary_principle = "Give Claude a way to verify its work. If Claude has that feedback loop, it will 2-3x the quality of the final result."
-approach = "Start in Plan mode, get the plan right, then switch to auto-accept edits mode"
+approach = "Read the full repo first, then start in Plan mode, get the plan right, then switch to auto-accept edits mode"
 quality_over_speed = true
 verification_mandatory = true
+read_before_plan = "CRITICAL: Always read the entire public repository before creating any plan. You cannot design good solutions without full context."
+
+[workflow.prerequisites]
+description = "MANDATORY: Must complete before any planning or implementation"
+read_repo_first = true
+rationale = "Agents must understand the full codebase context before proposing changes"
+steps = [
+    "1. Read CLAUDE.md and all documentation files",
+    "2. Read the complete directory structure (use tree or glob)",
+    "3. Read all source files in the repository",
+    "4. Understand existing patterns, conventions, and architecture",
+    "5. Only THEN proceed to planning"
+]
 
 [workflow.standard]
 description = "Standard development workflow for all changes"
 steps = [
-    "1. Start in Plan mode (shift+tab twice)",
-    "2. Create detailed plan and get approval",
-    "3. Switch to auto-accept edits mode",
-    "4. Implement the plan",
-    "5. Use @code-simplifier for code hygiene",
-    "6. Use @verify-app for testing",
-    "7. Use @code-reviewer for quality check",
-    "8. Use /commit-push-pr to finalize"
+    "1. READ THE ENTIRE REPOSITORY FIRST (see workflow.prerequisites)",
+    "2. Start in Plan mode (shift+tab twice)",
+    "3. Create detailed plan and get approval",
+    "4. Switch to auto-accept edits mode",
+    "5. Implement the plan",
+    "6. Use @code-simplifier for code hygiene",
+    "7. Use @verify-app for testing",
+    "8. Use @code-reviewer for quality check",
+    "9. Use /commit-push-pr to finalize"
 ]
 
 [workflow.git]
@@ -200,7 +214,9 @@ rationale = "Despite being slower, requires less steering and has better tool us
 always_start_in_plan_mode = true
 keyboard_shortcut = "shift+tab twice"
 principle = "A good plan is really important"
-workflow = "Plan first, then switch to auto-accept edits"
+workflow = "Read repo first, plan second, then switch to auto-accept edits"
+read_repo_before_planning = true
+read_repo_rationale = "You cannot create a good plan without understanding the full codebase context"
 
 [best_practices.context]
 pre_compute = true
@@ -223,6 +239,10 @@ avoid_dangerous_commands = true
 
 [anti_patterns]
 description = "Things Claude should NEVER do"
+
+[anti_patterns.planning]
+plan_without_reading_repo = false
+reason = "NEVER create a plan without first reading the entire repository. Plans without full context lead to poor architectural decisions."
 
 [anti_patterns.typescript]
 use_any_type = false
@@ -295,6 +315,7 @@ step_6 = "Start Claude Code and begin in Plan mode"
 [onboarding.first_workflow]
 prompt = "I need to add user authentication"
 steps = [
+    "FIRST: Read the entire repository (all files, structure, patterns)",
     "Start in Plan mode (shift+tab twice)",
     "Review and approve the plan",
     "Switch to auto-accept edits mode",
