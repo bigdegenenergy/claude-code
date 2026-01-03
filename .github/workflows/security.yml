@@ -1,0 +1,99 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly on Sundays at midnight
+    - cron: '0 0 * * 0'
+
+jobs:
+  secrets-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  gitleaks:
+    name: Gitleaks Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  shell-security:
+    name: Shell Script Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck Security Analysis
+        run: |
+          sudo apt-get install -y shellcheck
+          find .claude/hooks -name "*.sh" -exec shellcheck -S warning {} \; || true
+
+      - name: Check for dangerous patterns
+        run: |
+          echo "Checking for potentially dangerous patterns in shell scripts..."
+
+          # Check for eval usage
+          if grep -r "eval " .claude/hooks/*.sh 2>/dev/null; then
+            echo "Warning: eval found in shell scripts"
+          fi
+
+          # Check for curl | bash patterns
+          if grep -rE "curl.*\|.*bash" .claude/hooks/*.sh 2>/dev/null; then
+            echo "Warning: curl pipe to bash found"
+          fi
+
+          # Check for rm -rf with variables
+          if grep -rE "rm -rf.*\\\$" .claude/hooks/*.sh 2>/dev/null; then
+            echo "Warning: rm -rf with variable found"
+          fi
+
+          echo "Security pattern check complete"
+
+  python-security:
+    name: Python Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit Security Scan
+        run: |
+          find .claude/hooks -name "*.py" -exec bandit -ll {} \; || true
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v3
+        continue-on-error: true
