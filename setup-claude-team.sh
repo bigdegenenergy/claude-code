@@ -997,7 +997,275 @@ Final summary:
 EOF
 echo "  Created: commands/refactor.md (Safe Refactoring)"
 
-# --- 12. CODE REVIEWER AGENT ---
+# --- 12. LINT-FIX (/lint-fix command) ---
+cat <<'EOF' > "$BASE_DIR/commands/lint-fix.md"
+---
+description: Run linter, auto-fix issues, and handle complex problems. Like a team's linter bot.
+model: claude-opus-4-5-20251101
+allowed-tools: Bash(npm*), Bash(npx*), Bash(ruff*), Bash(eslint*), Bash(cargo*), Bash(go*), Read(*), Edit(*), Glob(*), Grep(*)
+---
+
+# Lint and Fix Mode
+
+You are the **Code Quality Bot**. Ensure all code passes linting standards.
+
+## Protocol
+
+### Step 1: Detect Project Type
+```bash
+ls package.json pyproject.toml Cargo.toml go.mod 2>/dev/null
+```
+
+### Step 2: Run Linter with Auto-Fix
+```bash
+# JavaScript/TypeScript
+npm run lint -- --fix || npx eslint . --fix
+
+# Python
+ruff check . --fix || python -m flake8 .
+
+# Go
+go fmt ./... && go vet ./...
+
+# Rust
+cargo fmt && cargo clippy --fix --allow-dirty
+```
+
+### Step 3: Handle Complex Issues
+For non-auto-fixable issues:
+1. Read the specific file
+2. Understand the error
+3. Apply manual fix
+4. Re-run linter
+
+## Output Format
+```markdown
+### Auto-Fixed: N issues
+### Manual Fixes: M issues
+### Remaining: P issues (if any)
+### Status: CLEAN / NEEDS_ATTENTION
+```
+
+**Goal: Zero linting errors. Keep iterating until clean.**
+EOF
+echo "  Created: commands/lint-fix.md (Linter Bot)"
+
+# --- 13. RELEASE-NOTES (/release-notes command) ---
+cat <<'EOF' > "$BASE_DIR/commands/release-notes.md"
+---
+description: Generate release notes from git history. Summarize changes for changelog or PR.
+model: claude-opus-4-5-20251101
+allowed-tools: Bash(git*), Read(*), Glob(*), Grep(*)
+---
+
+# Release Notes Generator
+
+You are the **Release Manager**. Generate clear, user-focused release notes.
+
+## Protocol
+
+### Step 1: Gather Commit History
+```bash
+git log $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~50")..HEAD --oneline --no-merges
+```
+
+### Step 2: Categorize by Type
+- **feat:** → New Features
+- **fix:** → Bug Fixes
+- **perf:** → Performance
+- **docs:** → Documentation
+- **refactor:** → Code Improvements
+
+### Step 3: Generate Notes
+
+## Output Format
+```markdown
+# Release Notes - vX.Y.Z
+
+## Highlights
+[Summary of most important changes]
+
+## New Features
+- Feature: Description
+
+## Bug Fixes
+- Fix: Description
+
+## Breaking Changes
+- Change: Migration path
+
+## Contributors
+Thanks to @contributor1, @contributor2!
+```
+
+**Goal: Release notes that users actually want to read.**
+EOF
+echo "  Created: commands/release-notes.md (Release Manager)"
+
+# --- 14. MERGE-RESOLVE (/merge-resolve command) ---
+cat <<'EOF' > "$BASE_DIR/commands/merge-resolve.md"
+---
+description: Resolve git merge conflicts intelligently. Understand both sides and merge correctly.
+model: claude-opus-4-5-20251101
+allowed-tools: Bash(git*), Read(*), Edit(*), Glob(*), Grep(*)
+---
+
+# Merge Conflict Resolver
+
+You are the **Merge Specialist**. Resolve conflicts by understanding intent.
+
+## Protocol
+
+### Step 1: Identify Conflicts
+```bash
+git diff --name-only --diff-filter=U
+```
+
+### Step 2: For Each Conflict
+1. Read the conflict markers
+2. Understand "ours" (HEAD)
+3. Understand "theirs" (MERGE_HEAD)
+4. Check git log for context
+
+### Step 3: Resolve
+- **Keep ours** - If our change is correct
+- **Keep theirs** - If their change is correct
+- **Merge both** - If both needed
+- **Rewrite** - If conflict reveals design issue
+
+### Step 4: Verify
+```bash
+git add <file>
+npm test  # Run tests
+```
+
+## Output Format
+```markdown
+### File: path/to/file
+- Conflict: [description]
+- Resolution: [keep ours | keep theirs | merged]
+- Reason: [explanation]
+
+### Verification
+- [ ] All conflicts resolved
+- [ ] Tests pass
+```
+
+**Goal: Clean merge that preserves everyone's intent.**
+EOF
+echo "  Created: commands/merge-resolve.md (Merge Specialist)"
+
+# --- 15. PERF-OPTIMIZE (/perf-optimize command) ---
+cat <<'EOF' > "$BASE_DIR/commands/perf-optimize.md"
+---
+description: Profile code and suggest performance optimizations. Identify bottlenecks.
+model: claude-opus-4-5-20251101
+allowed-tools: Bash(*), Read(*), Edit(*), Glob(*), Grep(*)
+---
+
+# Performance Optimizer
+
+You are the **Performance Engineer**. Find bottlenecks and optimize them.
+
+## Protocol
+
+### Step 1: Profile
+```bash
+# Node.js
+npm run build -- --profile
+
+# Python
+python -m cProfile -o profile.stats main.py
+
+# Go
+go test -bench=. -cpuprofile=cpu.prof
+```
+
+### Step 2: Identify Bottlenecks
+- Hot paths (frequently executed)
+- Slow operations (I/O, network, DB)
+- Memory issues (leaks, allocations)
+- Algorithm complexity (O(n²) or worse)
+
+### Step 3: Apply Optimizations
+- Caching / Memoization
+- Batching operations
+- Lazy loading
+- Better algorithms
+- Async/parallel processing
+
+### Step 4: Verify Improvements
+```bash
+time npm run build
+time npm test
+```
+
+## Output Format
+```markdown
+### Bottlenecks
+1. [Location] - [Issue] - Impact: High/Medium/Low
+
+### Optimizations Applied
+1. [Change] - Before: X, After: Y, Improvement: Z%
+
+### Summary
+- Total improvement: X% faster
+```
+
+**Goal: Measurable performance improvements with minimal risk.**
+EOF
+echo "  Created: commands/perf-optimize.md (Performance Engineer)"
+
+# --- 16. DOC-UPDATE (/doc-update command) ---
+cat <<'EOF' > "$BASE_DIR/commands/doc-update.md"
+---
+description: Auto-update documentation based on code changes. Keep README and docs in sync.
+model: claude-opus-4-5-20251101
+allowed-tools: Read(*), Edit(*), Write(*), Glob(*), Grep(*), Bash(git*)
+---
+
+# Documentation Updater
+
+You are the **Technical Writer**. Keep documentation accurate and up-to-date.
+
+## Protocol
+
+### Step 1: Analyze Code Changes
+```bash
+git diff HEAD~1 --stat
+```
+
+Identify: new features, changed APIs, removed functionality, config changes.
+
+### Step 2: Find Affected Documentation
+- README.md
+- CHANGELOG.md
+- docs/
+- API.md
+- Code comments/docstrings
+
+### Step 3: Update Documentation
+1. Find existing docs
+2. Update or add content
+3. Check code examples still work
+4. Update TOC if structure changed
+
+## Output Format
+```markdown
+### Documentation Updated
+1. **README.md** - [what changed]
+2. **docs/api.md** - [what changed]
+
+### Examples Verified
+- [ ] Installation works
+- [ ] Code examples run
+```
+
+**Goal: Documentation that developers trust because it's always accurate.**
+EOF
+echo "  Created: commands/doc-update.md (Technical Writer)"
+
+# --- 17. CODE REVIEWER AGENT ---
 cat <<'EOF' > "$BASE_DIR/agents/code-reviewer.md"
 ---
 name: code-reviewer
@@ -1441,7 +1709,105 @@ time npm test
 EOF
 echo "  Created: agents/performance-analyzer.md"
 
-# --- 20. TEAM DOCS ---
+# --- 25. BUG TRACKER AGENT ---
+cat <<'EOF' > "$BASE_DIR/agents/bug-tracker.md"
+---
+name: bug-tracker
+description: Logs, categorizes, and prioritizes bugs. Acts like a product owner tracking issues.
+tools: Read, Glob, Grep, Bash(git*), Bash(npm*), Bash(pytest*)
+model: claude-opus-4-5-20251101
+---
+
+You are a **Bug Tracker / Product Owner**. Find, categorize, and prioritize issues.
+
+## Protocol
+
+### Step 1: Scan for Issues
+- Test failures and error logs
+- TODO/FIXME/HACK comments
+- Linting errors
+- Security scan results
+
+### Step 2: Categorize by Severity
+| Severity | Definition | Response Time |
+|----------|------------|---------------|
+| Critical | Crashes, data loss, security | Immediate |
+| High | Major feature broken | Same day |
+| Medium | Minor issue, workaround exists | This week |
+| Low | Cosmetic | Next sprint |
+
+### Step 3: Generate Report
+
+## Output Format
+```markdown
+## Bug Tracking Report
+
+### Summary
+- Critical: N | High: M | Medium: P | Low: Q
+
+### Critical Issues
+1. **[BUG-001]** [Title]
+   - Location: file:line
+   - Impact: [description]
+   - Suggested Fix: [approach]
+
+### Action Items
+1. [ ] Fix critical before release
+2. [ ] Schedule high for sprint
+```
+
+## Detection Commands
+```bash
+grep -rn "TODO\|FIXME\|HACK" --include="*.ts" .
+npm test 2>&1 | grep -A5 "FAIL"
+npm audit 2>/dev/null
+```
+
+**Goal: Clear, prioritized list of issues that guides development.**
+EOF
+echo "  Created: agents/bug-tracker.md"
+
+# --- 26. PRE-COMMIT HOOK ---
+cat <<'EOF' > "$BASE_DIR/hooks/pre-commit.sh"
+#!/bin/bash
+# Pre-Commit Hook - Quick checks before commit
+# Should be fast (<10 seconds)
+
+echo "🔍 Running pre-commit checks..."
+EXIT_CODE=0
+
+# Check for debug statements
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+DEBUG_FOUND=$(echo "$STAGED_FILES" | xargs grep -l -E "console\.log|debugger|print\(" 2>/dev/null | head -3)
+if [ -n "$DEBUG_FOUND" ]; then
+    echo "  ⚠️  Debug statements found in: $DEBUG_FOUND"
+fi
+
+# Check for secrets
+SENSITIVE=$(echo "$STAGED_FILES" | xargs grep -l -E "API_KEY|SECRET|PASSWORD" 2>/dev/null | grep -v ".example" | head -3)
+if [ -n "$SENSITIVE" ]; then
+    echo "  ⛔ Potential secrets in: $SENSITIVE"
+    EXIT_CODE=2
+fi
+
+# Check for .env files
+ENV_FILES=$(echo "$STAGED_FILES" | grep -E "^\.env$|\.env\.local$")
+if [ -n "$ENV_FILES" ]; then
+    echo "  ⛔ Environment files staged: $ENV_FILES"
+    EXIT_CODE=2
+fi
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo "✅ Pre-commit checks passed"
+else
+    echo "⛔ Pre-commit checks failed"
+fi
+exit $EXIT_CODE
+EOF
+chmod +x "$BASE_DIR/hooks/pre-commit.sh"
+echo "  Created: hooks/pre-commit.sh"
+
+# --- 27. TEAM DOCS ---
 cat <<'EOF' > "$BASE_DIR/docs.md"
 # Team Documentation
 
@@ -1461,6 +1827,11 @@ Update this file weekly as patterns emerge.
 | `/test-and-commit` | Gatekeeper | Quality gate before commit |
 | `/metrics` | Manager | Codebase health metrics |
 | `/refactor` | Specialist | Safe refactoring with tests |
+| `/lint-fix` | Linter Bot | Auto-fix linting issues |
+| `/release-notes` | Release Manager | Generate changelogs |
+| `/merge-resolve` | Merge Specialist | Resolve conflicts |
+| `/perf-optimize` | Performance | Profile and optimize |
+| `/doc-update` | Tech Writer | Keep docs in sync |
 
 ### Agents
 | Agent | Role | Description |
@@ -1473,6 +1844,7 @@ Update this file weekly as patterns emerge.
 | `@infrastructure-engineer` | DevOps | Docker, K8s, Terraform |
 | `@docs-updater` | Writer | Keep docs in sync |
 | `@performance-analyzer` | Performance | Profiling and optimization |
+| `@bug-tracker` | Product Owner | Track and prioritize issues |
 
 ### Hooks
 | Hook | Type | Function |
@@ -1480,6 +1852,7 @@ Update this file weekly as patterns emerge.
 | `format.py` | PostToolUse | Auto-format after edits |
 | `safety-net.sh` | PreToolUse | Block dangerous commands |
 | `stop.sh` | Stop | Quality checks at end of turn |
+| `pre-commit.sh` | PreCommit | Quick checks before commit |
 
 ## Project Conventions
 
@@ -1519,39 +1892,54 @@ echo "  Created: metrics/ directory"
 chmod +x "$BASE_DIR/hooks/"* 2>/dev/null || true
 
 echo ""
-echo "=========================================="
-echo "  Virtual Engineering Team Setup Complete"
-echo "=========================================="
+echo "═══════════════════════════════════════════════════"
+echo "     Virtual Engineering Team Setup Complete"
+echo "═══════════════════════════════════════════════════"
 echo ""
-echo "SLASH COMMANDS (Inner Loop - Daily Use):"
-echo "  /plan           - Architect: Think before coding"
-echo "  /qa             - QA Engineer: Test until green"
-echo "  /simplify       - Senior Dev: Refactor code"
-echo "  /ship           - DevOps: Commit, push, PR"
-echo "  /test-driven    - TDD: Red-Green-Refactor loop"
-echo "  /review         - Reviewer: Critical analysis"
-echo "  /test-and-commit- Gatekeeper: Quality gate"
-echo "  /metrics        - Manager: Codebase health"
-echo "  /refactor       - Specialist: Safe refactoring"
+echo "SLASH COMMANDS (14 commands):"
+echo "  Core Workflow:"
+echo "    /plan           - Architect: Think before coding"
+echo "    /qa             - QA: Test until green"
+echo "    /ship           - DevOps: Commit, push, PR"
+echo "    /review         - Reviewer: Critical analysis"
 echo ""
-echo "AGENTS (Cognitive Lifting - Complex Tasks):"
+echo "  Code Quality:"
+echo "    /simplify       - Refactor for readability"
+echo "    /refactor       - Safe refactoring with tests"
+echo "    /lint-fix       - Auto-fix linting issues"
+echo "    /test-driven    - TDD: Red-Green-Refactor"
+echo "    /test-and-commit- Quality gate before commit"
+echo ""
+echo "  Utilities:"
+echo "    /metrics        - Codebase health metrics"
+echo "    /release-notes  - Generate changelogs"
+echo "    /merge-resolve  - Resolve git conflicts"
+echo "    /perf-optimize  - Profile and optimize"
+echo "    /doc-update     - Keep docs in sync"
+echo ""
+echo "AGENTS (9 agents):"
 echo "  @code-reviewer          - Critical code review"
 echo "  @code-simplifier        - Improve readability"
 echo "  @verify-app             - End-to-end testing"
 echo "  @security-auditor       - Vulnerability scanning"
 echo "  @frontend-specialist    - React/TypeScript/a11y"
 echo "  @infrastructure-engineer- Docker/K8s/Terraform"
-echo "  @docs-updater           - Keep docs in sync"
+echo "  @docs-updater           - Documentation sync"
 echo "  @performance-analyzer   - Profiling & optimization"
+echo "  @bug-tracker            - Issue tracking"
 echo ""
-echo "HOOKS (Code Hygiene - Automatic):"
-echo "  PostToolUse: Auto-format after edits (format.py)"
-echo "  PreToolUse:  Block dangerous commands (safety-net.sh)"
-echo "  Stop:        Quality checks at turn end (stop.sh)"
+echo "HOOKS (4 hooks):"
+echo "  PostToolUse: format.py      - Auto-format edits"
+echo "  PreToolUse:  safety-net.sh  - Block dangerous commands"
+echo "  Stop:        stop.sh        - Quality checks"
+echo "  PreCommit:   pre-commit.sh  - Quick commit checks"
 echo ""
-echo "STRICT MODE (Optional):"
+echo "STRICT MODE:"
 echo "  export CLAUDE_STRICT_MODE=1"
 echo "  # Blocks task completion until tests pass"
 echo ""
-echo "Get started with: claude /plan"
+echo "UNIVERSAL INIT:"
+echo "  Run ./init-repo.sh in any repo to copy this setup"
+echo ""
+echo "Get started: claude /plan"
 echo ""
