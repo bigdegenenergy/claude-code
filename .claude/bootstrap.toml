@@ -103,13 +103,13 @@ description = "Automated quality gates that run at specific points"
 enabled = true
 script = ".claude/hooks/post-tool-use.sh"
 purpose = "Automatic code formatting after edits"
-formatters = {
-    python = ["black", "ruff"],
-    javascript = ["prettier", "eslint"],
-    typescript = ["prettier", "eslint"],
-    go = ["gofmt"],
-    rust = ["rustfmt"]
-}
+
+[hooks.post_tool_use.formatters]
+python = ["black", "ruff"]
+javascript = ["prettier", "eslint"]
+typescript = ["prettier", "eslint"]
+go = ["gofmt"]
+rust = ["rustfmt"]
 
 [hooks.stop]
 enabled = true
@@ -182,20 +182,20 @@ examples = [
 [verification]
 mandatory = true
 principle = "Every workflow must include verification"
-strategies = {
-    web_apps = ["run_dev_server", "test_endpoints", "verify_ui", "check_responsive"],
-    cli_tools = ["test_various_inputs", "verify_output", "test_error_messages"],
-    libraries = ["run_test_suite", "check_coverage", "test_api_contracts"],
-    apis = ["test_endpoints", "verify_formats", "check_auth", "test_errors"]
-}
+
+[verification.strategies]
+web_apps = ["run_dev_server", "test_endpoints", "verify_ui", "check_responsive"]
+cli_tools = ["test_various_inputs", "verify_output", "test_error_messages"]
+libraries = ["run_test_suite", "check_coverage", "test_api_contracts"]
+apis = ["test_endpoints", "verify_formats", "check_auth", "test_errors"]
 
 [metrics]
 track = true
 directory = ".claude/metrics/"
-files = {
-    tool_usage = "tool_usage.csv",
-    quality_checks = "quality_checks.csv"
-}
+
+[metrics.files]
+tool_usage = "tool_usage.csv"
+quality_checks = "quality_checks.csv"
 
 [metrics.key_indicators]
 slash_command_usage = "Which workflows are most used?"
