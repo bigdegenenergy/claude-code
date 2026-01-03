@@ -122,6 +122,12 @@ See [docs/PARALLEL-ORCHESTRATION.md](docs/PARALLEL-ORCHESTRATION.md) for the com
 
 ### Complete Setup (Claude Code + GitHub Actions + Notifications)
 
+> **⚠️ IMPORTANT:** For full functionality, you MUST install BOTH:
+> 1. **Claude Code configuration** (`.claude/` directory) - Enables slash commands, hooks, and agents
+> 2. **GitHub Actions workflows** (`.github/` directory) - Enables CI/CD, PR automation, and notifications
+>
+> Skipping either component will result in missing functionality.
+
 This setup configures both local Claude Code workflows AND GitHub Actions CI/CD with failure notifications.
 
 #### Step 1: Clone and Install
@@ -171,6 +177,25 @@ Go to your repository → Settings → Secrets and variables → Actions → New
 | **ntfy** | `NTFY_TOPIC` (optional: `NTFY_SERVER`, `NTFY_TOKEN`) |
 | **Email** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO` |
 | **Custom** | `CUSTOM_WEBHOOK_URL` |
+
+**GitHub Token (required for private repos):**
+
+For private repositories, you MUST configure a `GH_TOKEN` secret with `repo` access:
+
+| Secret | Description |
+|--------|-------------|
+| `GH_TOKEN` | Personal Access Token with `repo` scope |
+
+**Why this is needed:** The default `GITHUB_TOKEN` has limited permissions and cannot access private repository contents or write comments on PRs/issues in some contexts. The `GH_TOKEN` with `repo` scope enables:
+- PR and issue comment automation (agent-reminder workflow)
+- Cross-repository access for private repos
+- Full workflow functionality
+
+**How to create:**
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
+2. Click "Generate new token (classic)"
+3. Select the `repo` scope (full control of private repositories)
+4. Copy the token and add it as a repository secret named `GH_TOKEN`
 
 See [docs/SETUP-NOTIFICATIONS.md](docs/SETUP-NOTIFICATIONS.md) for detailed platform setup guides.
 
