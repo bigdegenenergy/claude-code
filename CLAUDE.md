@@ -150,9 +150,12 @@ The `.github/workflows/` directory contains automated CI/CD workflows:
 
 ### Setting Up GitHub Actions
 
+> **⚠️ IMPORTANT:** Both `.claude/` and `.github/` directories are required for full functionality.
+
 1. Copy `.github/` directory to your project
-2. Add secrets for your notification platform (see below)
-3. Push to trigger workflows
+2. **For private repos:** Add `GH_TOKEN` secret with `repo` scope (required for PR/issue automation)
+3. Add secrets for your notification platform (see below)
+4. Push to trigger workflows
 
 ## Failure Notifications
 
@@ -183,6 +186,7 @@ cp .claude/notifications.json.template .claude/notifications.json
 
 Add these secrets to your repository (Settings → Secrets → Actions):
 
+- **GitHub Token (private repos):** `GH_TOKEN` - Personal Access Token with `repo` scope
 - **Slack:** `SLACK_WEBHOOK_URL`
 - **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 - **Discord:** `DISCORD_WEBHOOK_URL`
