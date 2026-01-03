@@ -1,18 +1,40 @@
 # Team Documentation for Claude Code
 
-This file contains team-specific knowledge, patterns, and conventions that Claude should follow when working on this codebase. Update this file weekly as you discover new patterns or encounter issues.
+This file contains team-specific knowledge, patterns, and conventions that Claude should follow when working on this codebase. Update this file weekly as patterns emerge.
+
+## The Virtual Team
+
+### Quick Reference
+
+| Role | Command | When to Use |
+|------|---------|-------------|
+| Architect | `/plan` | Before complex features |
+| QA Engineer | `/qa` | When tests need fixing |
+| Refactorer | `/simplify` | After implementation |
+| DevOps | `/ship` | Ready to commit |
+| Reviewer | `@code-reviewer` | Before PR submission |
+
+### Standard Workflow
+
+```
+1. /plan           → Think before coding
+2. [implement]     → Write the code
+3. /simplify       → Clean up
+4. /qa             → Verify tests pass
+5. @code-reviewer  → Self-review
+6. /ship           → Commit, push, PR
+```
 
 ## Project Overview
 
-**Description:** [Brief description of what this project does]
+**Description:** Claude Code meta-repository for virtual team configuration
 
-**Architecture:** [High-level architecture overview]
+**Architecture:** Configuration-as-code using Claude Code's native features
 
 **Tech Stack:**
-- Language: [e.g., Python 3.11, TypeScript 5.0]
-- Framework: [e.g., FastAPI, React, Next.js]
-- Database: [e.g., PostgreSQL, MongoDB]
-- Infrastructure: [e.g., AWS, Docker, Kubernetes]
+- Language: Markdown, Bash, Python (hooks)
+- Framework: Claude Code slash commands, hooks, subagents
+- Target: Solo developers and small teams
 
 ## Code Conventions
 
@@ -22,134 +44,94 @@ This file contains team-specific knowledge, patterns, and conventions that Claud
 - **Functions:** Use camelCase (e.g., `getUserById`)
 - **Constants:** Use UPPER_SNAKE_CASE (e.g., `MAX_RETRY_COUNT`)
 
-### File Organization
-```
-src/
-├── components/     # Reusable UI components
-├── services/       # Business logic and API calls
-├── utils/          # Helper functions
-├── types/          # Type definitions
-└── tests/          # Test files (co-located with source)
-```
+### Slash Command Conventions
+- Use frontmatter for metadata (description, model, allowed-tools)
+- Include pre-computed context with inline bash (`!`command``)
+- Assign a clear persona ("You are the **Staff Architect**")
+- Be explicit about when to stop and wait for approval
 
-### Import Order
-1. External libraries (e.g., `react`, `lodash`)
-2. Internal modules (e.g., `@/components`)
-3. Relative imports (e.g., `./utils`)
-4. Type imports (e.g., `import type { User }`)
+### Hook Conventions
+- PostToolUse hooks must fail silently (never block the agent)
+- Stop hooks can exit non-zero to alert Claude of issues
+- Use Python for complex logic, shell for simple commands
+- Log metrics for continuous improvement
 
 ## Common Patterns
 
-### Error Handling
-Always use try-catch blocks with specific error types:
-```typescript
-try {
-  await riskyOperation();
-} catch (error) {
-  if (error instanceof ValidationError) {
-    // Handle validation error
-  } else if (error instanceof NetworkError) {
-    // Handle network error
-  } else {
-    // Handle unexpected error
-    logger.error('Unexpected error', { error });
-    throw error;
-  }
-}
+### Pre-compute Context
+Always inject real-time data into slash commands:
+```markdown
+## Context
+- **Git Status:** !`git status -sb`
+- **Recent Changes:** !`git diff --stat HEAD~1`
 ```
 
-### API Response Format
-All API responses should follow this structure:
-```json
-{
-  "success": true,
-  "data": { ... },
-  "error": null,
-  "metadata": {
-    "timestamp": "2025-01-03T10:00:00Z",
-    "version": "1.0"
-  }
-}
+### Iterative Loops (QA Pattern)
+For testing, use a "keep going until green" pattern:
+```markdown
+1. Run tests
+2. If fail: analyze, fix, goto 1
+3. If pass: report and exit
 ```
 
-### Testing Patterns
-- Use descriptive test names: `test_user_creation_with_valid_email`
-- Follow AAA pattern: Arrange, Act, Assert
-- Mock external dependencies
-- Test edge cases and error conditions
+### Critical Review Pattern
+Use explicit instructions to override agreeable behavior:
+```markdown
+**Be critical, not agreeable.** Find problems. The team depends on you.
+```
 
 ## Things Claude Should NOT Do
 
-### ❌ Avoid These Patterns
+### Patterns to Avoid
 1. **Don't use `any` type in TypeScript** - Always provide specific types
 2. **Don't commit commented-out code** - Delete it or use feature flags
 3. **Don't hardcode configuration** - Use environment variables
 4. **Don't skip error handling** - Every external call needs try-catch
-5. **Don't write tests that depend on external services** - Use mocks
+5. **Don't skip the planning phase** - Use `/plan` for complex features
 
-### ❌ Common Mistakes to Avoid
-- **Database queries without pagination** - Always paginate large datasets
-- **Missing input validation** - Validate all user inputs
-- **Synchronous operations in async functions** - Use await properly
-- **Circular dependencies** - Refactor to remove circular imports
-- **Missing null checks** - Always check for null/undefined
+### Common Mistakes
+- Skipping tests before committing
+- Not running `/simplify` after complex changes
+- Force pushing without permission
+- Implementing without a plan for complex features
 
 ## Things Claude SHOULD Do
 
-### ✅ Always Do These
-1. **Run tests before committing** - Use `/commit-push-pr` which includes verification
-2. **Update documentation** - If you change behavior, update docs
-3. **Add logging** - Log important operations and errors
-4. **Use type hints** - Provide type annotations for all functions
+### Always Do These
+1. **Use `/plan` first** for complex features
+2. **Run `/qa` before committing** - Ensure tests pass
+3. **Use `/simplify`** after complex changes
+4. **Use `@code-reviewer`** for self-review
 5. **Write meaningful commit messages** - Follow conventional commits
 
-### ✅ Best Practices
-- **Use the code-simplifier subagent** after complex changes
-- **Use the verify-app subagent** before final commits
-- **Use the code-reviewer subagent** for self-review
-- **Pre-compute context** in slash commands with inline bash
-- **Document complex logic** with inline comments
+### Best Practices
+- Pre-compute context in slash commands with inline bash
+- Include "be critical" in review prompts
+- Log important operations and errors
+- Update this docs.md when new patterns emerge
 
 ## Team-Specific Knowledge
 
 ### Known Issues
-- [Issue 1]: [Description and workaround]
-- [Issue 2]: [Description and workaround]
+- PostToolUse hooks require the formatter to be installed (fail silently if not)
+- Stop hooks may timeout on large test suites
 
 ### Performance Considerations
-- [Optimization 1]: [When and how to apply]
-- [Optimization 2]: [When and how to apply]
+- Formatters run on every file edit (keep them fast)
+- QA loops have a max iteration limit to prevent infinite loops
 
 ### Security Notes
-- [Security concern 1]: [How to handle]
-- [Security concern 2]: [How to handle]
-
-## Workflow
-
-### Standard Development Flow
-1. Start in Plan mode (shift+tab twice)
-2. Create a detailed plan
-3. Switch to auto-accept edits mode
-4. Implement the plan
-5. Use code-simplifier subagent
-6. Use verify-app subagent
-7. Use code-reviewer subagent
-8. Use `/commit-push-pr` to finalize
-
-### Code Review Checklist
-- [ ] Tests pass
-- [ ] Code is formatted
-- [ ] No linting errors
-- [ ] Documentation updated
-- [ ] No security vulnerabilities
-- [ ] Performance is acceptable
+- Never commit .env files or secrets
+- Always validate inputs at system boundaries
+- Use allowed-tools in frontmatter to restrict dangerous operations
 
 ## Update Log
 
 Track when this document is updated and why:
 
 - **2025-01-03**: Initial documentation created
-- [Add updates here as the team learns new patterns]
+- **2025-01-03**: Added virtual team quick reference
+- **2025-01-03**: Added slash command and hook conventions
 
 ---
 

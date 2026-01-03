@@ -1,50 +1,62 @@
 {
   "permissions": {
-    "allowed_commands": [
-      "git status",
-      "git diff",
-      "git log",
-      "git branch",
-      "git add",
-      "git commit",
-      "git push",
-      "git pull",
-      "gh pr create",
-      "gh pr list",
-      "gh pr view",
-      "npm test",
-      "npm run",
-      "pytest",
-      "cargo test",
-      "cargo build",
-      "docker ps",
-      "docker logs",
-      "kubectl get",
-      "kubectl describe",
-      "ls",
-      "cat",
-      "grep",
-      "find",
-      "tree"
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git pull*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(gh pr*)",
+      "Bash(gh issue*)",
+      "Bash(ls*)",
+      "Bash(find*)",
+      "Bash(grep*)",
+      "Bash(npm test*)",
+      "Bash(npm run*)",
+      "Bash(pytest*)",
+      "Bash(python -m pytest*)",
+      "Bash(cargo test*)",
+      "Bash(cargo build*)",
+      "Bash(go test*)",
+      "Bash(make test*)",
+      "Bash(docker ps*)",
+      "Bash(docker logs*)",
+      "Bash(kubectl get*)",
+      "Bash(kubectl describe*)",
+      "Read(*)"
     ],
-    "description": "Pre-approved safe commands that don't require permission prompts"
+    "deny": []
   },
   "hooks": {
-    "post_tool_use": {
-      "enabled": true,
-      "script": ".claude/hooks/post-tool-use.sh",
-      "description": "Automatically format code after edits"
-    },
-    "stop": {
-      "enabled": true,
-      "script": ".claude/hooks/stop.sh",
-      "description": "Run quality checks at the end of each turn"
-    }
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/format.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop.sh"
+          }
+        ]
+      }
+    ]
   },
   "defaults": {
-    "model": "claude-opus-4.5",
-    "thinking_enabled": true,
-    "plan_mode_default": true
+    "model": "claude-opus-4-5-20251101",
+    "thinking_enabled": true
   },
   "team": {
     "shared_docs": ".claude/docs.md",
