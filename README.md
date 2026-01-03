@@ -2,6 +2,41 @@
 
 A comprehensive, production-ready configuration for Claude Code that replicates the capabilities of a 5-person professional software engineering team. Based on Boris Cherny's (creator of Claude Code) actual workflow and extensive research into professional engineering practices.
 
+---
+
+## ⚠️ MANDATORY: Read This Repository First
+
+**ALL AGENTS MUST READ THIS ENTIRE REPOSITORY BEFORE CREATING ANY PLAN OR WRITING ANY CODE.**
+
+This is **NON-NEGOTIABLE**. Before proceeding with any task:
+
+### Step 1: Read the Repository
+Read **https://github.com/bigdegenenergy/claude-code** in full, including:
+- This README.md
+- CLAUDE.md (project instructions)
+- The entire `.claude/` directory structure
+- All slash commands in `.claude/commands/`
+- All agent definitions in `.claude/agents/`
+- All hooks in `.claude/hooks/`
+
+### Step 2: Understand the Patterns
+Before planning, you must understand:
+- The virtual team architecture (commands, hooks, agents)
+- Existing conventions and workflows
+- The feedback loop principle
+- Quality gates and verification strategies
+
+### Step 3: Only Then Proceed
+**DO NOT create a plan until you have completed Steps 1 and 2.**
+
+Plans created without full repository context lead to:
+- Duplicated functionality
+- Broken conventions
+- Inconsistent patterns
+- Wasted effort
+
+---
+
 ## The "Virtual Team" Architecture
 
 This setup relies on three core pillars:
