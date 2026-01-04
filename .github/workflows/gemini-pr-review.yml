@@ -1,0 +1,285 @@
+name: Gemini PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]  # New PRs, new commits, and draft->ready transitions
+  workflow_dispatch:  # Allow manual re-runs without pushing commits
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Gemini Code Review
+    runs-on: ubuntu-latest
+    # Only run on non-draft PRs and skip bot-created PRs
+    if: |
+      github.event.pull_request.draft == false &&
+      !contains(github.actor, '[bot]')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better diff analysis
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Get PR diff
+        id: diff
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          echo "Comparing $BASE...$HEAD"
+          DIFF=$(git diff "$BASE...$HEAD" --stat)
+          DIFF_FULL=$(git diff "$BASE...$HEAD")
+
+          # Save to files for the review step
+          echo "$DIFF" > /tmp/diff_stat.txt
+          echo "$DIFF_FULL" > /tmp/diff_full.txt
+
+          # Get changed files list
+          git diff --name-only "$BASE...$HEAD" > /tmp/changed_files.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Google Gen AI SDK
+        run: pip install google-genai>=1.51.0
+
+      - name: Run Gemini Review
+        id: review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python << 'EOF'
+          import os
+          from google import genai
+
+          # Create client with API key
+          client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+          # Read diff files
+          with open('/tmp/diff_stat.txt') as f:
+              diff_stat = f.read()
+
+          with open('/tmp/diff_full.txt') as f:
+              diff_full = f.read()
+
+          with open('/tmp/changed_files.txt') as f:
+              changed_files = f.read()
+
+          # Truncate if too long
+          max_diff_chars = 50000
+          if len(diff_full) > max_diff_chars:
+              diff_full = diff_full[:max_diff_chars] + "\n\n[... diff truncated due to size ...]"
+
+          prompt = f"""You are a senior code reviewer. Review this pull request diff and provide constructive feedback.
+
+          ## Changed Files
+          {changed_files}
+
+          ## Diff Statistics
+          {diff_stat}
+
+          ## Full Diff
+          ```diff
+          {diff_full}
+          ```
+
+          ## Review Guidelines
+
+          Focus on:
+          1. **Critical Issues** - Bugs, security vulnerabilities, data loss risks
+          2. **Important Issues** - Performance problems, maintainability concerns
+          3. **Suggestions** - Style improvements, best practices
+
+          Be specific - reference file names and line numbers when possible.
+          Be constructive - suggest solutions, not just problems.
+          Be concise - focus on the most important issues.
+
+          ## OUTPUT FORMAT (REQUIRED)
+
+          You MUST respond with a valid TOML document. Do not include any text outside the TOML block.
+          Use this exact structure:
+
+          ```toml
+          [review]
+          summary = "Brief 1-2 sentence summary of the changes"
+          decision = "APPROVE" # or "REQUEST_CHANGES" or "COMMENT"
+
+          [[issues]]
+          severity = "critical" # or "important" or "suggestion"
+          file = "path/to/file.py"
+          line = 42 # optional, omit if not applicable
+          title = "Short issue title"
+          description = "Detailed explanation of the issue"
+          suggestion = "How to fix it" # optional
+
+          [[issues]]
+          severity = "suggestion"
+          file = "another/file.js"
+          title = "Another issue"
+          description = "Description here"
+          ```
+
+          If there are no issues, use an empty issues array:
+          ```toml
+          [review]
+          summary = "Clean PR with no issues found"
+          decision = "APPROVE"
+          ```
+          """
+
+          response = client.models.generate_content(
+              model="gemini-2.5-pro-preview-06-05",
+              contents=prompt,
+          )
+
+          review_text = response.text
+
+          # Save raw TOML for debugging
+          with open('/tmp/review_raw.toml', 'w') as f:
+              f.write(review_text)
+
+          # Parse TOML and format for GitHub
+          import tomllib
+          import re
+
+          # Extract TOML from markdown code block if present
+          toml_match = re.search(r'```toml\s*(.*?)\s*```', review_text, re.DOTALL)
+          toml_content = toml_match.group(1) if toml_match else review_text
+
+          try:
+              review_data = tomllib.loads(toml_content)
+
+              # Format as GitHub-friendly markdown
+              summary = review_data.get('review', {}).get('summary', 'No summary provided')
+              decision = review_data.get('review', {}).get('decision', 'COMMENT')
+              issues = review_data.get('issues', [])
+
+              # Decision emoji
+              decision_emoji = {'APPROVE': '✅', 'REQUEST_CHANGES': '🔴', 'COMMENT': '💬'}.get(decision, '💬')
+
+              output = f"**Summary:** {summary}\n\n"
+              output += f"**Decision:** {decision_emoji} {decision}\n\n"
+
+              if issues:
+                  # Group by severity
+                  critical = [i for i in issues if i.get('severity') == 'critical']
+                  important = [i for i in issues if i.get('severity') == 'important']
+                  suggestions = [i for i in issues if i.get('severity') == 'suggestion']
+
+                  if critical:
+                      output += "### 🔴 Critical Issues\n\n"
+                      for issue in critical:
+                          loc = f"`{issue.get('file', 'unknown')}"
+                          if issue.get('line'):
+                              loc += f":{issue['line']}"
+                          loc += "`"
+                          output += f"- **{issue.get('title', 'Issue')}** ({loc})\n"
+                          output += f"  {issue.get('description', '')}\n"
+                          if issue.get('suggestion'):
+                              output += f"  > 💡 {issue['suggestion']}\n"
+                          output += "\n"
+
+                  if important:
+                      output += "### 🟡 Important Issues\n\n"
+                      for issue in important:
+                          loc = f"`{issue.get('file', 'unknown')}"
+                          if issue.get('line'):
+                              loc += f":{issue['line']}"
+                          loc += "`"
+                          output += f"- **{issue.get('title', 'Issue')}** ({loc})\n"
+                          output += f"  {issue.get('description', '')}\n"
+                          if issue.get('suggestion'):
+                              output += f"  > 💡 {issue['suggestion']}\n"
+                          output += "\n"
+
+                  if suggestions:
+                      output += "### 🟢 Suggestions\n\n"
+                      for issue in suggestions:
+                          loc = f"`{issue.get('file', 'unknown')}"
+                          if issue.get('line'):
+                              loc += f":{issue['line']}"
+                          loc += "`"
+                          output += f"- **{issue.get('title', 'Issue')}** ({loc})\n"
+                          output += f"  {issue.get('description', '')}\n"
+                          if issue.get('suggestion'):
+                              output += f"  > 💡 {issue['suggestion']}\n"
+                          output += "\n"
+              else:
+                  output += "No issues found. ✨\n"
+
+              # Add raw TOML in collapsible section
+              output += "\n<details>\n<summary>📄 Raw TOML Response</summary>\n\n```toml\n"
+              output += toml_content
+              output += "\n```\n</details>"
+
+              formatted_review = output
+
+          except Exception as e:
+              # Fallback: show raw response if TOML parsing fails
+              formatted_review = f"⚠️ Failed to parse TOML response: {e}\n\n**Raw Response:**\n```\n{review_text}\n```"
+
+          # Save formatted review for posting
+          with open('/tmp/review.txt', 'w') as f:
+              f.write(formatted_review)
+
+          print(formatted_review)
+          EOF
+
+      - name: Post Review Comment
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          REVIEW=$(cat /tmp/review.txt)
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Post as PR comment
+          gh pr comment "$PR_NUMBER" --body "## 🤖 Gemini Code Review
+
+          $REVIEW
+
+          ---
+          *Automated review by Gemini. Please verify suggestions before applying.*"
+
+      - name: Send Telegram notification
+        if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Skip if Telegram secrets not configured
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets not configured, skipping notification"
+            exit 0
+          fi
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          MESSAGE="🤖 *PR Review Complete*
+
+          *PR #${PR_NUMBER}:* ${PR_TITLE}
+          *Author:* ${{ github.actor }}
+
+          [View PR](https://github.com/${{ github.repository }}/pull/${PR_NUMBER})"
+
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "parse_mode=Markdown" \
+            -d "text=${MESSAGE}" \
+            -d "disable_web_page_preview=true"
+
+      - name: Handle missing API key
+        if: failure() && env.GEMINI_API_KEY == ''
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          echo "::warning::GEMINI_API_KEY secret is not set. Skipping Gemini review."
+          echo "To enable Gemini PR reviews, add GEMINI_API_KEY to repository secrets."

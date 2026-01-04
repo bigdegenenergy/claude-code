@@ -147,7 +147,8 @@ The `.github/workflows/` directory contains automated CI/CD workflows:
 |----------|---------|
 | `ci.yml` | Linting, config validation, docs checks |
 | `security.yml` | Secret scanning, security analysis, PII detection |
-| `pii-scan-content.yml` | Scans issues/PRs/comments for personal information |
+| `pii-scan-content.yml` | Scans issues/PRs for personal information |
+| `gemini-pr-review.yml` | AI-powered code review with structured TOML output |
 | `agent-reminder.yml` | Reminds agents to read source repo |
 | `label-agent-prs.yml` | Auto-labels AI-generated PRs |
 | `notify-on-failure.yml` | Sends failure notifications |
@@ -191,6 +192,7 @@ cp .claude/notifications.json.template .claude/notifications.json
 Add these secrets to your repository (Settings → Secrets → Actions):
 
 - **GitHub Token (private repos):** `GH_TOKEN` - Personal Access Token with `repo` scope
+- **Gemini AI Review:** `GEMINI_API_KEY` - Google AI API key for PR reviews
 - **Slack:** `SLACK_WEBHOOK_URL`
 - **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 - **Discord:** `DISCORD_WEBHOOK_URL`
@@ -349,6 +351,8 @@ Track improvements to this configuration:
 - **2025-01-03**: Added feedback loop principle documentation
 - **2025-01-04**: Added pre-commit hook for linting and formatting compliance
 - **2025-01-04**: Added PII (Personal Information) scanning to pre-commit hook and CI/CD
+- **2025-01-04**: Added Gemini PR review workflow with structured TOML output
+- **2025-01-04**: Fixed recursive triggers in GitHub Actions workflows (pii-scan, label-agent, reminder)
 
 ---
 
