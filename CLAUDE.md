@@ -53,6 +53,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 | Hook | Type | Function |
 |------|------|----------|
 | **Safety Net** | PreToolUse | Blocks dangerous commands |
+| **Pre-Commit** | PreToolUse | Runs linters & checks formatting before `git commit` |
 | **Formatter** | PostToolUse | Auto-formats code after edits |
 | **Quality Gate** | Stop | Runs tests at end of turn |
 
@@ -93,6 +94,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 - **Create a plan without first reading https://github.com/bigdegenenergy/claude-code**
 - Skip the planning phase for complex features
 - Commit without running tests
+- Commit code with linting errors or formatting issues
 - Use `any` type in TypeScript
 - Hardcode configuration values
 - Leave commented-out code
@@ -103,6 +105,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 - **Read https://github.com/bigdegenenergy/claude-code BEFORE creating any plan**
 - Use `/plan` before complex implementations
 - Run `/qa` before committing
+- Ensure code passes linting and formatting checks before committing
 - Use `/simplify` to pay down tech debt
 - Follow conventional commit messages
 - Update documentation when changing behavior
@@ -220,6 +223,58 @@ claude
 
 In strict mode, Claude cannot declare a task complete until the Stop hook reports all tests passing.
 
+## Pre-Commit Hook (Linting & Formatting)
+
+The pre-commit hook automatically runs before any `git commit` command to ensure code quality:
+
+### What It Checks
+
+**Linting:**
+- JavaScript/TypeScript: ESLint
+- Python: Ruff or Flake8
+- Go: staticcheck or golint
+- Rust: Clippy
+- Shell scripts: ShellCheck
+
+**Formatting:**
+- JavaScript/TypeScript/Web: Prettier
+- Python: Black
+- Go: gofmt
+- Rust: rustfmt
+- Shell scripts: shfmt
+
+**Security:**
+- Detects potential secrets (API keys, passwords)
+- Blocks `.env` files from being committed
+- Warns about debug statements
+
+### How It Works
+
+1. Before `git commit`, the hook checks all staged files
+2. Runs appropriate linters based on file type
+3. Verifies formatting compliance (check mode, not auto-fix)
+4. Blocks commit if issues are found (exit code 2)
+5. Reports exactly what needs to be fixed
+
+### Fixing Issues
+
+If the pre-commit hook blocks your commit:
+
+```bash
+# For linting errors - fix manually or use auto-fix tools
+npx eslint --fix <file>     # JavaScript/TypeScript
+ruff --fix <file>            # Python
+
+# For formatting issues - run the formatter
+npx prettier --write <file>  # JavaScript/TypeScript/Web
+black <file>                 # Python
+gofmt -w <file>              # Go
+rustfmt <file>               # Rust
+shfmt -w <file>              # Shell
+```
+
+**Note:** The PostToolUse formatter hook auto-formats files after Write/Edit operations, so most formatting issues are caught during development.
+
 ## Update Log
 
 Track improvements to this configuration:
@@ -233,6 +288,7 @@ Track improvements to this configuration:
 - **2025-01-03**: Added /test-and-commit, /review, /test-driven commands
 - **2025-01-03**: Enhanced stop.sh with strict mode support
 - **2025-01-03**: Added feedback loop principle documentation
+- **2025-01-04**: Added pre-commit hook for linting and formatting compliance
 
 ---
 
