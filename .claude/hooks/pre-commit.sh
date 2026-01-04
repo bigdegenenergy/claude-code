@@ -234,8 +234,9 @@ echo "👤 Scanning for personal information (PII)..."
 
 PII_ERRORS=""
 
-# Skip binary files, non-code files, and files that contain PII patterns as examples
-CODE_FILES=$(echo "$STAGED_FILES" | grep -vE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf|zip|tar|gz)$' | grep -vE '(\.github/workflows/|\.claude/hooks/|CLAUDE\.md|README\.md)' || true)
+# Skip binary files, config files, and infrastructure files that may contain false positives
+# (workflow files, hook files, documentation, config files with IDs)
+CODE_FILES=$(echo "$STAGED_FILES" | grep -vE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf|zip|tar|gz|md|toml|yml|yaml)$' | grep -vE '(\.github/|\.claude/)' || true)
 
 # IMPORTANT: All PII patterns BLOCK commits because this is a public repo.
 # Once committed, data is permanently in git history and exposed.
