@@ -43,7 +43,16 @@ Read necessary files to understand:
 - Existing conventions and style
 - Potential impact areas
 
-### 2. Think
+### 2. Think (Select Appropriate Depth)
+
+**Choose thinking level based on complexity:**
+
+| Complexity | Trigger | Use When |
+|------------|---------|----------|
+| Simple | `think` | Small features, bug fixes, refactoring |
+| Medium | `think hard` | Multi-file changes, API design, caching |
+| Complex | `ultrathink` | Major architecture, security audits |
+
 Analyze and identify:
 - Breaking changes and migration needs
 - Edge cases and error scenarios
