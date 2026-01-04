@@ -10,6 +10,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +36,8 @@ jobs:
   validate-config:
     name: Validate Configuration
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -81,6 +85,8 @@ jobs:
   hooks-executable:
     name: Verify Hooks Executable
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -99,6 +105,8 @@ jobs:
   docs-check:
     name: Documentation Check
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 

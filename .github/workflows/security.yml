@@ -13,6 +13,8 @@ jobs:
   secrets-scan:
     name: Scan for Secrets
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +28,8 @@ jobs:
   gitleaks:
     name: Gitleaks Scan
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +44,8 @@ jobs:
   shell-security:
     name: Shell Script Security
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -72,6 +78,8 @@ jobs:
   python-security:
     name: Python Security
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -90,7 +98,8 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # Only on PRs and skip commits from github-actions[bot]
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
 
@@ -101,6 +110,8 @@ jobs:
   pii-scan:
     name: PII (Personal Information) Scan
     runs-on: ubuntu-latest
+    # Skip commits from github-actions[bot] to prevent infinite loops
+    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v4
         with:
