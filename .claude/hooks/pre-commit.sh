@@ -237,26 +237,31 @@ PII_ERRORS=""
 # Skip binary files and common non-code files
 CODE_FILES=$(echo "$STAGED_FILES" | grep -vE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf|zip|tar|gz)$' || true)
 
+# IMPORTANT: All PII patterns BLOCK commits because this is a public repo.
+# Once committed, data is permanently in git history and exposed.
+
 if [ -n "$CODE_FILES" ]; then
     # Email addresses (but exclude example.com, test.com, localhost patterns)
     EMAIL_PATTERN='[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    EMAIL_EXCLUDES='example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@'
+    EMAIL_EXCLUDES='example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@|users\.noreply\.github\.com'
     EMAIL_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$EMAIL_PATTERN" 2>/dev/null | while read -r file; do
         if grep -E "$EMAIL_PATTERN" "$file" 2>/dev/null | grep -vE "$EMAIL_EXCLUDES" | grep -qE "$EMAIL_PATTERN"; then
             echo "$file"
         fi
     done | head -5)
     if [ -n "$EMAIL_FOUND" ]; then
-        PII_ERRORS="${PII_ERRORS}  ⚠️  Email addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}  ⛔ Email addresses found in:\n"
         PII_ERRORS="${PII_ERRORS}$(echo "$EMAIL_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
     fi
 
     # Phone numbers (various formats: +1-xxx-xxx-xxxx, (xxx) xxx-xxxx, xxx.xxx.xxxx)
     PHONE_PATTERN='\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
     PHONE_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$PHONE_PATTERN" 2>/dev/null | head -3)
     if [ -n "$PHONE_FOUND" ]; then
-        PII_ERRORS="${PII_ERRORS}  ⚠️  Phone numbers found in:\n"
+        PII_ERRORS="${PII_ERRORS}  ⛔ Phone numbers found in:\n"
         PII_ERRORS="${PII_ERRORS}$(echo "$PHONE_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
     fi
 
     # Social Security Numbers (xxx-xx-xxxx format)
@@ -287,8 +292,9 @@ if [ -n "$CODE_FILES" ]; then
         fi
     done | head -3)
     if [ -n "$IP_FOUND" ]; then
-        PII_ERRORS="${PII_ERRORS}  ⚠️  Public IP addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}  ⛔ Public IP addresses found in:\n"
         PII_ERRORS="${PII_ERRORS}$(echo "$IP_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
     fi
 
     # AWS Account IDs (12 digits)
@@ -296,23 +302,43 @@ if [ -n "$CODE_FILES" ]; then
     # Only check in specific contexts to reduce false positives
     AWS_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "(aws|arn:|account).{0,20}$AWS_PATTERN" 2>/dev/null | head -3)
     if [ -n "$AWS_FOUND" ]; then
-        PII_ERRORS="${PII_ERRORS}  ⚠️  AWS Account ID patterns found in:\n"
+        PII_ERRORS="${PII_ERRORS}  ⛔ AWS Account ID patterns found in:\n"
         PII_ERRORS="${PII_ERRORS}$(echo "$AWS_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
     fi
 
     # Physical addresses (basic pattern: number + street name)
     ADDR_PATTERN='[0-9]+\s+(N\.?|S\.?|E\.?|W\.?|North|South|East|West)?\s*[A-Z][a-z]+\s+(St\.?|Street|Ave\.?|Avenue|Rd\.?|Road|Blvd\.?|Boulevard|Dr\.?|Drive|Ln\.?|Lane|Way|Ct\.?|Court)'
     ADDR_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$ADDR_PATTERN" 2>/dev/null | grep -v "test" | grep -v "mock" | grep -v "example" | head -3)
     if [ -n "$ADDR_FOUND" ]; then
-        PII_ERRORS="${PII_ERRORS}  ⚠️  Physical addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}  ⛔ Physical addresses found in:\n"
         PII_ERRORS="${PII_ERRORS}$(echo "$ADDR_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
+    fi
+
+    # Full names (First Last pattern - capitalized words that look like names)
+    # Look for patterns like "name: John Smith" or "author: Jane Doe" or "by John Smith"
+    NAME_CONTEXT='(name|author|user|contact|owner|created[_ ]?by|assigned[_ ]?to|submitted[_ ]?by)\s*[:=]?\s*'
+    NAME_PATTERN="[A-Z][a-z]+\s+[A-Z][a-z]+"
+    NAME_EXCLUDES='Hello World|Lorem Ipsum|Foo Bar|John Doe|Jane Doe|Test User|Example User|First Last|Your Name'
+    NAME_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "${NAME_CONTEXT}${NAME_PATTERN}" 2>/dev/null | while read -r file; do
+        if grep -E "${NAME_CONTEXT}${NAME_PATTERN}" "$file" 2>/dev/null | grep -vE "$NAME_EXCLUDES" | grep -qE "${NAME_CONTEXT}${NAME_PATTERN}"; then
+            echo "$file"
+        fi
+    done | head -3)
+    if [ -n "$NAME_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⛔ Full names found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$NAME_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
     fi
 fi
 
 if [ -n "$PII_ERRORS" ]; then
     echo -e "$PII_ERRORS"
-    echo "     Review these files for personal information before committing."
-    echo "     Use placeholders or environment variables for sensitive data."
+    echo ""
+    echo "     ⛔ COMMIT BLOCKED: Personal information detected!"
+    echo "     This is a PUBLIC repository - data in git history is permanent."
+    echo "     Remove PII and use placeholders (e.g., user@example.com)."
 fi
 
 # ============================================

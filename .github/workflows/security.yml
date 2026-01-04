@@ -125,17 +125,21 @@ jobs:
             -not -name "*.pdf" -not -name "*.zip" -not -name "*.tar.gz" \
             2>/dev/null)
 
+          # IMPORTANT: All PII patterns FAIL because this is a public repo.
+          # Once committed, data is permanently in git history and exposed.
+
           echo "📧 Checking for email addresses..."
           EMAIL_PATTERN='[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-          EMAIL_EXCLUDES='example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@|github\.com'
+          EMAIL_EXCLUDES='example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@|github\.com|users\.noreply\.github\.com'
           EMAIL_FOUND=$(echo "$FILES" | xargs grep -lE "$EMAIL_PATTERN" 2>/dev/null | while read -r file; do
             if grep -E "$EMAIL_PATTERN" "$file" 2>/dev/null | grep -vE "$EMAIL_EXCLUDES" | grep -qE "$EMAIL_PATTERN"; then
               echo "$file"
             fi
           done | head -10)
           if [ -n "$EMAIL_FOUND" ]; then
-            echo "⚠️  Email addresses found in:"
+            echo "⛔ Email addresses found in:"
             echo "$EMAIL_FOUND" | sed 's/^/   /'
+            EXIT_CODE=1
             echo ""
           fi
 
@@ -143,8 +147,9 @@ jobs:
           PHONE_PATTERN='\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
           PHONE_FOUND=$(echo "$FILES" | xargs grep -lE "$PHONE_PATTERN" 2>/dev/null | head -5)
           if [ -n "$PHONE_FOUND" ]; then
-            echo "⚠️  Phone number patterns found in:"
+            echo "⛔ Phone number patterns found in:"
             echo "$PHONE_FOUND" | sed 's/^/   /'
+            EXIT_CODE=1
             echo ""
           fi
 
@@ -177,16 +182,34 @@ jobs:
             fi
           done | head -5)
           if [ -n "$IP_FOUND" ]; then
-            echo "⚠️  Public IP addresses found in:"
+            echo "⛔ Public IP addresses found in:"
             echo "$IP_FOUND" | sed 's/^/   /'
+            EXIT_CODE=1
+            echo ""
+          fi
+
+          echo "👤 Checking for full names..."
+          NAME_CONTEXT='(name|author|user|contact|owner|created[_ ]?by|assigned[_ ]?to|submitted[_ ]?by)\s*[:=]?\s*'
+          NAME_PATTERN="[A-Z][a-z]+\s+[A-Z][a-z]+"
+          NAME_EXCLUDES='Hello World|Lorem Ipsum|Foo Bar|John Doe|Jane Doe|Test User|Example User|First Last|Your Name'
+          NAME_FOUND=$(echo "$FILES" | xargs grep -lE "${NAME_CONTEXT}${NAME_PATTERN}" 2>/dev/null | while read -r file; do
+            if grep -E "${NAME_CONTEXT}${NAME_PATTERN}" "$file" 2>/dev/null | grep -vE "$NAME_EXCLUDES" | grep -qE "${NAME_CONTEXT}${NAME_PATTERN}"; then
+              echo "$file"
+            fi
+          done | head -5)
+          if [ -n "$NAME_FOUND" ]; then
+            echo "⛔ Full names found in:"
+            echo "$NAME_FOUND" | sed 's/^/   /'
+            EXIT_CODE=1
             echo ""
           fi
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ PII scan complete - no critical issues found"
+            echo "✅ PII scan complete - no issues found"
           else
-            echo "⛔ PII scan found potential issues - please review"
+            echo "⛔ PII scan FAILED - personal information detected!"
+            echo "   This is a PUBLIC repository - remove all PII before merging."
           fi
 
           exit $EXIT_CODE

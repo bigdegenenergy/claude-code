@@ -293,15 +293,18 @@ Multiple layers of protection against accidentally committing or exposing person
 
 The pre-commit hook scans staged files for:
 
-| Pattern | Severity | Action |
-|---------|----------|--------|
-| SSN (xxx-xx-xxxx) | Critical | Blocks commit |
-| Credit card numbers | Critical | Blocks commit |
-| Email addresses | Warning | Reports, doesn't block |
-| Phone numbers | Warning | Reports, doesn't block |
-| Public IP addresses | Warning | Reports, doesn't block |
-| AWS Account IDs | Warning | Reports, doesn't block |
-| Physical addresses | Warning | Reports, doesn't block |
+| Pattern | Action |
+|---------|--------|
+| Email addresses | **Blocks commit** |
+| Phone numbers | **Blocks commit** |
+| SSN (xxx-xx-xxxx) | **Blocks commit** |
+| Credit card numbers | **Blocks commit** |
+| Public IP addresses | **Blocks commit** |
+| AWS Account IDs | **Blocks commit** |
+| Physical addresses | **Blocks commit** |
+| Full names (First Last) | **Blocks commit** |
+
+**All PII patterns block commits** because this is a public repository. Once data is in git history, it's permanently exposed and cannot be fully removed.
 
 ### CI/CD Scan (GitHub Actions)
 
