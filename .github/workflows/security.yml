@@ -113,16 +113,19 @@ jobs:
 
           EXIT_CODE=0
 
-          # Get files to scan (exclude binaries and common non-code files)
+          # Get files to scan (exclude binaries, non-code files, and PII scanner files themselves)
           FILES=$(find . -type f \
             -not -path "./.git/*" \
             -not -path "./node_modules/*" \
             -not -path "./vendor/*" \
             -not -path "./.venv/*" \
+            -not -path "./.github/workflows/*" \
+            -not -path "./.claude/hooks/*" \
             -not -name "*.png" -not -name "*.jpg" -not -name "*.jpeg" \
             -not -name "*.gif" -not -name "*.ico" -not -name "*.svg" \
             -not -name "*.woff" -not -name "*.woff2" -not -name "*.ttf" \
             -not -name "*.pdf" -not -name "*.zip" -not -name "*.tar.gz" \
+            -not -name "CLAUDE.md" -not -name "README.md" -not -name "RESEARCH.md" \
             2>/dev/null)
 
           # IMPORTANT: All PII patterns FAIL because this is a public repo.
