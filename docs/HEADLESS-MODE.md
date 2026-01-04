@@ -190,7 +190,7 @@ claude -p "Compare mockup.png with result.png, fix differences"
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@anthropic-ai/playwright-mcp"]
+      "args": ["@playwright/mcp@latest"]
     }
   }
 }

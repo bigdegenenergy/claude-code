@@ -6,10 +6,11 @@ description: "Context management and session hygiene"
 
 ## Understanding Context Limits
 
-- Claude Code has a ~200k token context window
-- Auto-compact triggers at **~95% capacity** (not 60%)
-- By 95%, you've lost control over what gets summarized
-- Run `/compact` manually at **~70%** for better control
+- Model limit: ~200k tokens (theoretical maximum)
+- **Effective CLI limit**: Often lower due to internal buffers and truncation
+- Auto-compact triggers at **~95% model capacity** (not 60%)
+- **Recommendation**: Run `/compact` manually at **~60-70%** for safety margin
+- At 95%, you've lost control over what gets summarized
 
 ## Session Commands Quick Reference
 

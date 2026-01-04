@@ -83,7 +83,7 @@ For detailed guidance, see @.claude/rules/thinking.md
 
 ### Context Hygiene
 
-- Run `/compact` at ~70% capacity (auto-compact triggers at ~95%)
+- Run `/compact` at ~60-70% capacity (auto-compact triggers at ~95% model limit)
 - Run `/context` periodically during long sessions
 - Use `/clear` between workflow phases
 - Disable unused MCP servers: `/mcp`
