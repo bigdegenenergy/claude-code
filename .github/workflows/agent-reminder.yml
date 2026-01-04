@@ -5,10 +5,12 @@ on:
     types: [opened]
   issues:
     types: [opened]
+  workflow_dispatch:  # Allow manual re-runs
 
 jobs:
   remind-pr:
-    if: github.event_name == 'pull_request'
+    # Skip bot actors to prevent potential recursive issues
+    if: github.event_name == 'pull_request' && !contains(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -44,7 +46,8 @@ jobs:
             });
 
   remind-issue:
-    if: github.event_name == 'issues'
+    # Skip bot actors to prevent potential recursive issues
+    if: github.event_name == 'issues' && !contains(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:
       issues: write

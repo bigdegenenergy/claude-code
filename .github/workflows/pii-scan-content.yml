@@ -1,18 +1,21 @@
 name: PII Content Scanner
 
+# SECURITY: Trigger only on content-creation events, NOT on comments
+# to prevent recursive loops (workflow posts comment → triggers itself → infinite loop)
 on:
   issues:
     types: [opened, edited]
   pull_request:
     types: [opened, edited]
-  issue_comment:
-    types: [created, edited]
-  pull_request_review_comment:
-    types: [created, edited]
+  # REMOVED: issue_comment and pull_request_review_comment triggers
+  # These caused infinite loops when the workflow posted warning comments
+  workflow_dispatch:  # Allow manual re-runs
 
 jobs:
   scan-content:
     name: Scan for PII in Content
+    # Skip bot actors to prevent any potential recursive triggers
+    if: "!contains(github.actor, '[bot]')"
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -84,6 +87,7 @@ jobs:
             };
 
             // Get content based on event type
+            // NOTE: Only scanning issues and PRs, not comments (to prevent recursive triggers)
             let content = '';
             let contentType = '';
             let contentUrl = '';
@@ -96,15 +100,9 @@ jobs:
               content = context.payload.pull_request.body || '';
               contentType = 'pull request';
               contentUrl = context.payload.pull_request.html_url;
-            } else if (context.eventName === 'issue_comment') {
-              content = context.payload.comment.body || '';
-              contentType = 'issue comment';
-              contentUrl = context.payload.comment.html_url;
-            } else if (context.eventName === 'pull_request_review_comment') {
-              content = context.payload.comment.body || '';
-              contentType = 'PR review comment';
-              contentUrl = context.payload.comment.html_url;
             }
+            // REMOVED: issue_comment and pull_request_review_comment handlers
+            // These triggers were removed to prevent infinite loops when posting warnings
 
             if (!content) {
               console.log('No content to scan');
