@@ -15,9 +15,9 @@
     },
 
     "playwright": {
-      "comment": "Browser automation for visual testing and screenshots (RECOMMENDED over Puppeteer)",
+      "comment": "Browser automation for visual testing and screenshots (Microsoft official, RECOMMENDED over Puppeteer)",
       "command": "npx",
-      "args": ["-y", "@anthropic-ai/playwright-mcp"],
+      "args": ["@playwright/mcp@latest"],
       "disabled": true
     },
 
