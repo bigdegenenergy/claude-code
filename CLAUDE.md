@@ -146,7 +146,8 @@ The `.github/workflows/` directory contains automated CI/CD workflows:
 | Workflow | Purpose |
 |----------|---------|
 | `ci.yml` | Linting, config validation, docs checks |
-| `security.yml` | Secret scanning, security analysis |
+| `security.yml` | Secret scanning, security analysis, PII detection |
+| `pii-scan-content.yml` | Scans issues/PRs/comments for personal information |
 | `agent-reminder.yml` | Reminds agents to read source repo |
 | `label-agent-prs.yml` | Auto-labels AI-generated PRs |
 | `notify-on-failure.yml` | Sends failure notifications |
@@ -248,6 +249,15 @@ The pre-commit hook automatically runs before any `git commit` command to ensure
 - Blocks `.env` files from being committed
 - Warns about debug statements
 
+**PII (Personal Information) Scan:**
+- Email addresses (excluding test/example domains)
+- Phone numbers (various formats)
+- Social Security Numbers (blocks commit)
+- Credit card numbers (blocks commit)
+- Public IP addresses
+- AWS Account IDs
+- Physical addresses
+
 ### How It Works
 
 1. Before `git commit`, the hook checks all staged files
@@ -275,6 +285,52 @@ shfmt -w <file>              # Shell
 
 **Note:** The PostToolUse formatter hook auto-formats files after Write/Edit operations, so most formatting issues are caught during development.
 
+## PII (Personal Information) Protection
+
+Multiple layers of protection against accidentally committing or exposing personal information:
+
+### Pre-Commit Scan (Local)
+
+The pre-commit hook scans staged files for:
+
+| Pattern | Severity | Action |
+|---------|----------|--------|
+| SSN (xxx-xx-xxxx) | Critical | Blocks commit |
+| Credit card numbers | Critical | Blocks commit |
+| Email addresses | Warning | Reports, doesn't block |
+| Phone numbers | Warning | Reports, doesn't block |
+| Public IP addresses | Warning | Reports, doesn't block |
+| AWS Account IDs | Warning | Reports, doesn't block |
+| Physical addresses | Warning | Reports, doesn't block |
+
+### CI/CD Scan (GitHub Actions)
+
+The `security.yml` workflow scans all code on push/PR for PII patterns.
+
+### Issue/PR Content Scan
+
+The `pii-scan-content.yml` workflow automatically scans:
+- Issue descriptions and comments
+- PR descriptions and review comments
+
+If PII is detected, it posts a warning comment and fails on critical findings.
+
+### What To Do If PII Is Detected
+
+1. **Don't panic** - the commit was blocked, data wasn't exposed
+2. **Review the flagged files** - check if it's real PII or a false positive
+3. **Remove or redact** the personal information
+4. **Use environment variables** for any legitimate sensitive data
+5. **Re-stage and commit** once the PII is removed
+
+### Common False Positives
+
+Some patterns may trigger false positives:
+- Test data with placeholder values (use `example.com` for emails)
+- Documentation examples (mark with `<!-- pii-ignore -->`)
+- UUID/hash strings that match patterns
+- Version numbers that look like phone numbers
+
 ## Update Log
 
 Track improvements to this configuration:
@@ -289,6 +345,7 @@ Track improvements to this configuration:
 - **2025-01-03**: Enhanced stop.sh with strict mode support
 - **2025-01-03**: Added feedback loop principle documentation
 - **2025-01-04**: Added pre-commit hook for linting and formatting compliance
+- **2025-01-04**: Added PII (Personal Information) scanning to pre-commit hook and CI/CD
 
 ---
 

@@ -197,7 +197,7 @@ fi
 echo ""
 echo "🔒 Running security checks..."
 
-# Look for sensitive data patterns
+# Look for sensitive data patterns (secrets/credentials)
 SENSITIVE_PATTERNS="API_KEY=|SECRET=|PASSWORD=|PRIVATE_KEY|-----BEGIN"
 SENSITIVE_FOUND=$(echo "$STAGED_FILES" | xargs grep -l -E "$SENSITIVE_PATTERNS" 2>/dev/null | grep -v ".example" | grep -v ".template" | head -5)
 if [ -n "$SENSITIVE_FOUND" ]; then
@@ -223,6 +223,96 @@ if [ -n "$DEBUG_FOUND" ]; then
     echo "  ⚠️  Debug statements found in:"
     echo "$DEBUG_FOUND" | sed 's/^/     /'
     echo "     Consider removing before commit."
+fi
+
+# ============================================
+# PII (PERSONAL INFORMATION) SCAN
+# ============================================
+
+echo ""
+echo "👤 Scanning for personal information (PII)..."
+
+PII_ERRORS=""
+
+# Skip binary files and common non-code files
+CODE_FILES=$(echo "$STAGED_FILES" | grep -vE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|pdf|zip|tar|gz)$' || true)
+
+if [ -n "$CODE_FILES" ]; then
+    # Email addresses (but exclude example.com, test.com, localhost patterns)
+    EMAIL_PATTERN='[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    EMAIL_EXCLUDES='example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@'
+    EMAIL_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$EMAIL_PATTERN" 2>/dev/null | while read -r file; do
+        if grep -E "$EMAIL_PATTERN" "$file" 2>/dev/null | grep -vE "$EMAIL_EXCLUDES" | grep -qE "$EMAIL_PATTERN"; then
+            echo "$file"
+        fi
+    done | head -5)
+    if [ -n "$EMAIL_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⚠️  Email addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$EMAIL_FOUND" | sed 's/^/     /')\n"
+    fi
+
+    # Phone numbers (various formats: +1-xxx-xxx-xxxx, (xxx) xxx-xxxx, xxx.xxx.xxxx)
+    PHONE_PATTERN='\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
+    PHONE_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$PHONE_PATTERN" 2>/dev/null | head -3)
+    if [ -n "$PHONE_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⚠️  Phone numbers found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$PHONE_FOUND" | sed 's/^/     /')\n"
+    fi
+
+    # Social Security Numbers (xxx-xx-xxxx format)
+    SSN_PATTERN='[0-9]{3}-[0-9]{2}-[0-9]{4}'
+    SSN_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$SSN_PATTERN" 2>/dev/null | head -3)
+    if [ -n "$SSN_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⛔ SSN patterns found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$SSN_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
+    fi
+
+    # Credit card numbers (basic patterns for major card types)
+    # Visa: 4xxx, Mastercard: 5xxx, Amex: 3xxx, etc.
+    CC_PATTERN='[3-6][0-9]{3}[-\s]?[0-9]{4}[-\s]?[0-9]{4}[-\s]?[0-9]{4}'
+    CC_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$CC_PATTERN" 2>/dev/null | head -3)
+    if [ -n "$CC_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⛔ Credit card patterns found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$CC_FOUND" | sed 's/^/     /')\n"
+        EXIT_CODE=2
+    fi
+
+    # IP addresses (but exclude common private/localhost ranges in certain contexts)
+    IP_PATTERN='[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'
+    IP_EXCLUDES='127\.0\.0\.1|0\.0\.0\.0|192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost'
+    IP_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$IP_PATTERN" 2>/dev/null | while read -r file; do
+        if grep -E "$IP_PATTERN" "$file" 2>/dev/null | grep -vE "$IP_EXCLUDES" | grep -qE "$IP_PATTERN"; then
+            echo "$file"
+        fi
+    done | head -3)
+    if [ -n "$IP_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⚠️  Public IP addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$IP_FOUND" | sed 's/^/     /')\n"
+    fi
+
+    # AWS Account IDs (12 digits)
+    AWS_PATTERN='[0-9]{12}'
+    # Only check in specific contexts to reduce false positives
+    AWS_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "(aws|arn:|account).{0,20}$AWS_PATTERN" 2>/dev/null | head -3)
+    if [ -n "$AWS_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⚠️  AWS Account ID patterns found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$AWS_FOUND" | sed 's/^/     /')\n"
+    fi
+
+    # Physical addresses (basic pattern: number + street name)
+    ADDR_PATTERN='[0-9]+\s+(N\.?|S\.?|E\.?|W\.?|North|South|East|West)?\s*[A-Z][a-z]+\s+(St\.?|Street|Ave\.?|Avenue|Rd\.?|Road|Blvd\.?|Boulevard|Dr\.?|Drive|Ln\.?|Lane|Way|Ct\.?|Court)'
+    ADDR_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$ADDR_PATTERN" 2>/dev/null | grep -v "test" | grep -v "mock" | grep -v "example" | head -3)
+    if [ -n "$ADDR_FOUND" ]; then
+        PII_ERRORS="${PII_ERRORS}  ⚠️  Physical addresses found in:\n"
+        PII_ERRORS="${PII_ERRORS}$(echo "$ADDR_FOUND" | sed 's/^/     /')\n"
+    fi
+fi
+
+if [ -n "$PII_ERRORS" ]; then
+    echo -e "$PII_ERRORS"
+    echo "     Review these files for personal information before committing."
+    echo "     Use placeholders or environment variables for sensitive data."
 fi
 
 # ============================================

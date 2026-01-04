@@ -1,0 +1,178 @@
+name: PII Content Scanner
+
+on:
+  issues:
+    types: [opened, edited]
+  pull_request:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+
+jobs:
+  scan-content:
+    name: Scan for PII in Content
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Scan Issue/PR Content for PII
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const piiPatterns = {
+              // Email (excluding common test/example domains)
+              email: {
+                pattern: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi,
+                excludes: /example\.com|test\.com|localhost|your-?email|user@|email@|foo@|bar@|noreply@|no-reply@|github\.com|users\.noreply\.github\.com/i,
+                severity: 'warning',
+                name: 'Email Address'
+              },
+              // Phone numbers
+              phone: {
+                pattern: /\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g,
+                excludes: /555-|123-456|000-000/i,
+                severity: 'warning',
+                name: 'Phone Number'
+              },
+              // SSN
+              ssn: {
+                pattern: /\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b/g,
+                excludes: /000-00-0000|123-45-6789|xxx-xx-xxxx/i,
+                severity: 'critical',
+                name: 'Social Security Number'
+              },
+              // Credit card
+              creditCard: {
+                pattern: /\b[3-6][0-9]{3}[-\s]?[0-9]{4}[-\s]?[0-9]{4}[-\s]?[0-9]{4}\b/g,
+                excludes: /0000[-\s]?0000[-\s]?0000[-\s]?0000|1234[-\s]?5678|xxxx/i,
+                severity: 'critical',
+                name: 'Credit Card Number'
+              },
+              // AWS Access Key
+              awsKey: {
+                pattern: /\b(AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}\b/g,
+                excludes: null,
+                severity: 'critical',
+                name: 'AWS Access Key'
+              },
+              // Private keys
+              privateKey: {
+                pattern: /-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g,
+                excludes: null,
+                severity: 'critical',
+                name: 'Private Key'
+              },
+              // API keys/tokens (generic patterns)
+              apiKey: {
+                pattern: /\b(api[_-]?key|apikey|access[_-]?token|auth[_-]?token|bearer)\s*[:=]\s*['"]?[a-zA-Z0-9_-]{20,}['"]?/gi,
+                excludes: /your[_-]?api[_-]?key|example|placeholder|xxx/i,
+                severity: 'warning',
+                name: 'API Key/Token'
+              }
+            };
+
+            // Get content based on event type
+            let content = '';
+            let contentType = '';
+            let contentUrl = '';
+
+            if (context.eventName === 'issues') {
+              content = context.payload.issue.body || '';
+              contentType = 'issue';
+              contentUrl = context.payload.issue.html_url;
+            } else if (context.eventName === 'pull_request') {
+              content = context.payload.pull_request.body || '';
+              contentType = 'pull request';
+              contentUrl = context.payload.pull_request.html_url;
+            } else if (context.eventName === 'issue_comment') {
+              content = context.payload.comment.body || '';
+              contentType = 'issue comment';
+              contentUrl = context.payload.comment.html_url;
+            } else if (context.eventName === 'pull_request_review_comment') {
+              content = context.payload.comment.body || '';
+              contentType = 'PR review comment';
+              contentUrl = context.payload.comment.html_url;
+            }
+
+            if (!content) {
+              console.log('No content to scan');
+              return;
+            }
+
+            console.log(`Scanning ${contentType} for PII...`);
+
+            const findings = [];
+
+            for (const [key, config] of Object.entries(piiPatterns)) {
+              const matches = content.match(config.pattern);
+              if (matches) {
+                // Filter out excluded patterns
+                const realMatches = matches.filter(match => {
+                  if (!config.excludes) return true;
+                  return !config.excludes.test(match);
+                });
+
+                if (realMatches.length > 0) {
+                  findings.push({
+                    type: config.name,
+                    severity: config.severity,
+                    count: realMatches.length,
+                    // Redact actual values for security
+                    samples: realMatches.slice(0, 2).map(m => m.substring(0, 4) + '***')
+                  });
+                }
+              }
+            }
+
+            if (findings.length === 0) {
+              console.log('✅ No PII detected');
+              return;
+            }
+
+            // Build warning message
+            const criticalFindings = findings.filter(f => f.severity === 'critical');
+            const warningFindings = findings.filter(f => f.severity === 'warning');
+
+            let message = `## ⚠️ Potential Personal Information Detected\n\n`;
+            message += `This ${contentType} may contain sensitive personal information:\n\n`;
+
+            if (criticalFindings.length > 0) {
+              message += `### 🔴 Critical (should be removed immediately)\n`;
+              for (const finding of criticalFindings) {
+                message += `- **${finding.type}**: ${finding.count} instance(s) found\n`;
+              }
+              message += `\n`;
+            }
+
+            if (warningFindings.length > 0) {
+              message += `### 🟡 Warning (review recommended)\n`;
+              for (const finding of warningFindings) {
+                message += `- **${finding.type}**: ${finding.count} instance(s) found\n`;
+              }
+              message += `\n`;
+            }
+
+            message += `---\n`;
+            message += `Please review and remove any sensitive information. `;
+            message += `Consider editing the ${contentType} to redact personal data.\n\n`;
+            message += `*This is an automated scan. Some detections may be false positives.*`;
+
+            // Post comment
+            const issueNumber = context.issue?.number || context.payload.pull_request?.number;
+            if (issueNumber) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: message
+              });
+              console.log(`Posted PII warning comment on ${contentType} #${issueNumber}`);
+            }
+
+            // Fail if critical findings
+            if (criticalFindings.length > 0) {
+              core.setFailed(`Critical PII detected in ${contentType}`);
+            }
