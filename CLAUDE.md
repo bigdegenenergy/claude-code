@@ -353,6 +353,7 @@ Track improvements to this configuration:
 - **2025-01-04**: Added PII (Personal Information) scanning to pre-commit hook and CI/CD
 - **2025-01-04**: Added Gemini PR review workflow with structured TOML output
 - **2025-01-04**: Fixed recursive triggers in GitHub Actions workflows (pii-scan, label-agent, reminder)
+- **2025-01-04**: Added github-actions[bot] exclusion to CI and Security workflows to prevent infinite loops
 
 ---
 
