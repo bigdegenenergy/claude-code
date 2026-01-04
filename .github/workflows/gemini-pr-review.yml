@@ -13,18 +13,32 @@ jobs:
   review:
     name: Gemini Code Review
     runs-on: ubuntu-latest
-    # Only run on non-draft PRs and skip bot-created PRs
+    # Only run on non-draft PRs, skip bot-created PRs, and require API key
     if: |
       github.event.pull_request.draft == false &&
       !contains(github.actor, '[bot]')
 
     steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::notice::GEMINI_API_KEY not configured. Skipping AI review. Add this secret to enable Gemini PR reviews."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.check-key.outputs.skip != 'true'
         with:
           fetch-depth: 0  # Full history for better diff analysis
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Get PR diff
+        if: steps.check-key.outputs.skip != 'true'
         id: diff
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
@@ -42,14 +56,17 @@ jobs:
           git diff --name-only "$BASE...$HEAD" > /tmp/changed_files.txt
 
       - name: Set up Python
+        if: steps.check-key.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Google Gen AI SDK
+        if: steps.check-key.outputs.skip != 'true'
         run: pip install google-genai>=1.51.0
 
       - name: Run Gemini Review
+        if: steps.check-key.outputs.skip != 'true'
         id: review
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -232,7 +249,7 @@ jobs:
           EOF
 
       - name: Post Review Comment
-        if: success()
+        if: success() && steps.check-key.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
@@ -248,7 +265,7 @@ jobs:
           *Automated review by Gemini. Please verify suggestions before applying.*"
 
       - name: Send Telegram notification
-        if: success()
+        if: success() && steps.check-key.outputs.skip != 'true'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -274,12 +291,3 @@ jobs:
             -d "parse_mode=Markdown" \
             -d "text=${MESSAGE}" \
             -d "disable_web_page_preview=true"
-
-      - name: Handle missing API key
-        if: failure() && env.GEMINI_API_KEY == ''
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          echo "::warning::GEMINI_API_KEY secret is not set. Skipping Gemini review."
-          echo "To enable Gemini PR reviews, add GEMINI_API_KEY to repository secrets."
