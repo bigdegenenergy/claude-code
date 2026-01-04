@@ -1,6 +1,6 @@
 {
   "$schema": "https://modelcontextprotocol.io/schemas/mcp.json",
-  "comment": "MCP Server Configuration Template - Rename to .mcp.json and configure",
+  "comment": "MCP Server Configuration Template - Copy to .mcp.json and configure",
 
   "mcpServers": {
 
@@ -11,6 +11,20 @@
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       },
+      "disabled": true
+    },
+
+    "playwright": {
+      "comment": "Browser automation for visual testing and screenshots (RECOMMENDED over Puppeteer)",
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/playwright-mcp"],
+      "disabled": true
+    },
+
+    "fetch": {
+      "comment": "Web content retrieval and parsing",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
       "disabled": true
     },
 
@@ -53,7 +67,7 @@
     },
 
     "memory": {
-      "comment": "Persistent memory for cross-session context",
+      "comment": "Persistent knowledge graph for cross-session context",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "disabled": true
@@ -70,7 +84,7 @@
     },
 
     "puppeteer": {
-      "comment": "Browser automation for web scraping and testing",
+      "comment": "DEPRECATED - Use playwright instead. Browser automation for web scraping.",
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
       "disabled": true
