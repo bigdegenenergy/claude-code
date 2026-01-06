@@ -14,18 +14,25 @@
 >
 > **DO NOT PROCEED TO PLANNING UNTIL YOU HAVE READ https://github.com/bigdegenenergy/claude-code IN FULL.**
 
-This is a **Claude Code meta repository** - a template that configures Claude Code to replicate a 5-person professional software engineering team for a single developer.
+This is a **Claude Code meta repository** - a template that configures Claude Code to replicate a professional software engineering team for a single developer.
 
 ## Project Overview
 
-**Purpose:** Provide a universal, production-ready Claude Code configuration that amplifies a solo developer's capabilities through automated workflows, specialized subagents, and quality gates.
+**Purpose:** Provide a universal, production-ready Claude Code configuration that amplifies a solo developer's capabilities through automated workflows, specialized subagents, skills, and quality gates.
 
-**Architecture:** Configuration-as-code approach using Claude Code's native features (slash commands, hooks, subagents).
+**Architecture:** Configuration-as-code approach using Claude Code's native features (slash commands, hooks, subagents, skills).
+
+**Capabilities:**
+- **18 Specialized Agents** for different development domains
+- **10 Auto-Discovered Skills** for domain expertise
+- **21 Slash Commands** for workflows and orchestration
+- **4 Automated Hooks** for quality gates
 
 ## The Virtual Team
 
 ### Commands (Slash)
 
+#### Core Workflows
 | Role | Command | When to Use |
 |------|---------|-------------|
 | **Architect** | `/plan` | Before implementing complex features |
@@ -37,16 +44,52 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 | **DevOps** | `/ship` | When ready to commit and PR |
 | **Deploy** | `/deploy-staging` | Build and deploy to staging |
 
+#### Orchestration Workflows
+| Workflow | Command | Description |
+|----------|---------|-------------|
+| **Feature Dev** | `/feature-workflow` | Full-stack feature with multi-agent coordination |
+| **Security** | `/security-hardening` | Security audit, remediation, verification |
+| **Incidents** | `/incident-response` | Production incident response guide |
+| **Audit** | `/codebase-audit` | Comprehensive code quality audit |
+
 ### Agents (Subagents)
 
+#### Quality & Review
 | Role | Agent | Specialty |
 |------|-------|-----------|
-| **Code Reviewer** | `@code-reviewer` | Critical code review |
-| **QA** | `@verify-app` | End-to-end testing |
-| **Security** | `@security-auditor` | Vulnerability scanning (read-only) |
-| **Frontend** | `@frontend-specialist` | React, TS, accessibility |
-| **Infrastructure** | `@infrastructure-engineer` | Docker, K8s, CI/CD |
-| **Cleanup** | `@code-simplifier` | Code hygiene |
+| **Code Reviewer** | `@code-reviewer` | Critical code review (read-only) |
+| **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning |
+| **Test Automator** | `@test-automator` | Unit, integration, E2E test creation |
+| **Code Simplifier** | `@code-simplifier` | Refactoring, code hygiene |
+| **QA Verifier** | `@verify-app` | End-to-end testing |
+
+#### Architecture & Design
+| Role | Agent | Specialty |
+|------|-------|-----------|
+| **Backend Architect** | `@backend-architect` | API design, microservices, system design |
+| **Database Architect** | `@database-architect` | Schema design, query optimization |
+| **Kubernetes Architect** | `@kubernetes-architect` | K8s, GitOps, service mesh |
+
+#### Language Specialists
+| Role | Agent | Specialty |
+|------|-------|-----------|
+| **Python Pro** | `@python-pro` | Python 3.12+, FastAPI, Django, async |
+| **TypeScript Pro** | `@typescript-pro` | Advanced types, Node.js backend |
+| **Frontend Specialist** | `@frontend-specialist` | React, accessibility, UI/UX |
+
+#### Operations
+| Role | Agent | Specialty |
+|------|-------|-----------|
+| **Infrastructure Engineer** | `@infrastructure-engineer` | Docker, Terraform, CI/CD |
+| **DevOps Troubleshooter** | `@devops-troubleshooter` | Production debugging, incidents |
+| **Performance Analyzer** | `@performance-analyzer` | Profiling, optimization |
+
+#### Specialized
+| Role | Agent | Specialty |
+|------|-------|-----------|
+| **AI Engineer** | `@ai-engineer` | LLM apps, RAG, embeddings |
+| **Bug Tracker** | `@bug-tracker` | Issue triage, prioritization |
+| **Docs Updater** | `@docs-updater` | Documentation generation |
 
 ### Hooks (Automatic)
 
@@ -56,6 +99,25 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 | **Pre-Commit** | PreToolUse | Runs linters & checks formatting before `git commit` |
 | **Formatter** | PostToolUse | Auto-formats code after edits |
 | **Quality Gate** | Stop | Runs tests at end of turn |
+
+### Skills (Auto-Discovered)
+
+Skills are context-aware expertise modules that auto-trigger based on the task at hand.
+
+| Skill | Auto-Triggers When |
+|-------|-------------------|
+| **tdd** | Writing tests first, TDD workflow |
+| **security-review** | Reviewing for vulnerabilities, auth code |
+| **api-design** | Designing REST/GraphQL endpoints |
+| **async-patterns** | Implementing concurrent code |
+| **debugging** | Investigating bugs, analyzing errors |
+| **refactoring** | Cleaning up code, reducing complexity |
+| **testing-patterns** | Writing test suites, improving coverage |
+| **k8s-operations** | Working with Kubernetes, containers |
+| **cicd-automation** | Setting up pipelines, GitHub Actions |
+| **observability** | Implementing logging, metrics, tracing |
+
+Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
 
 ## Workflow
 
@@ -72,21 +134,44 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 ### Quick Reference
 
 ```bash
-# Planning
+# Planning & Architecture
 /plan                    # Think before coding
+/feature-workflow        # Full-stack feature orchestration
 
-# Quality
+# Quality & Security
 /qa                      # Run tests, fix until green
 /simplify                # Clean up code
+/security-hardening      # Security audit workflow
+/codebase-audit          # Comprehensive audit
 
 # Git Operations
 /ship                    # Commit, push, create PR
 /git:commit-push-pr      # Alternative git workflow
 
-# Agents (invoke with @)
+# Operations
+/incident-response       # Production incident guide
+
+# Agents - Quality (invoke with @)
 @code-reviewer           # Critical code review
+@security-auditor        # Security audit
+@test-automator          # Create test suites
 @code-simplifier         # Improve readability
 @verify-app              # End-to-end testing
+
+# Agents - Architecture
+@backend-architect       # API & system design
+@database-architect      # Schema & query design
+@kubernetes-architect    # K8s & cloud-native
+
+# Agents - Language Specialists
+@python-pro              # Python expert
+@typescript-pro          # TypeScript expert
+@frontend-specialist     # React & UI/UX
+
+# Agents - Operations
+@infrastructure-engineer # DevOps & CI/CD
+@devops-troubleshooter   # Production debugging
+@ai-engineer             # LLM & RAG apps
 ```
 
 ## Things Claude Should NOT Do
@@ -354,6 +439,11 @@ Track improvements to this configuration:
 - **2025-01-04**: Added Gemini PR review workflow with structured TOML output
 - **2025-01-04**: Fixed recursive triggers in GitHub Actions workflows (pii-scan, label-agent, reminder)
 - **2025-01-04**: Added github-actions[bot] exclusion to CI and Security workflows to prevent infinite loops
+- **2026-01-06**: **Major Enhancement** - Integrated agents and orchestration from wshobson/agents:
+  - Added 10 new specialized agents (python-pro, typescript-pro, backend-architect, database-architect, kubernetes-architect, test-automator, devops-troubleshooter, ai-engineer)
+  - Added Skills architecture with 10 auto-discovered skills (tdd, security-review, api-design, async-patterns, debugging, refactoring, testing-patterns, k8s-operations, cicd-automation, observability)
+  - Added 4 orchestration commands (/feature-workflow, /security-hardening, /incident-response, /codebase-audit)
+  - Total: 18 agents, 10 skills, 21 commands
 
 ---
 
