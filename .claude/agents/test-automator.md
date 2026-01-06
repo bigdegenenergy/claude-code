@@ -94,13 +94,14 @@ from sqlalchemy.orm import sessionmaker
 
 @pytest.fixture(scope="session")
 def engine():
-    """Create test database engine."""
-    return create_engine("sqlite:///:memory:")
+    """Create test database engine and schema once per session."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)  # Create schema once
+    return engine
 
 @pytest.fixture(scope="function")
 def db_session(engine):
     """Create fresh database session for each test."""
-    Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
 

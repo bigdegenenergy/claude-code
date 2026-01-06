@@ -28,14 +28,13 @@ You are an AI/ML engineer specializing in building production LLM applications, 
 
 ### Basic RAG Pipeline
 ```python
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
+# Modern LangChain imports (v0.1+)
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_chroma import Chroma
 from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-
-# 1. Document Loading & Chunking
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+# 1. Document Loading & Chunking
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=200,
@@ -64,8 +63,8 @@ chain = RetrievalQA.from_chain_type(
     return_source_documents=True,
 )
 
-# 4. Query
-result = chain({"query": "What is the return policy?"})
+# 4. Query (use .invoke() in modern LangChain)
+result = chain.invoke({"query": "What is the return policy?"})
 ```
 
 ### Advanced RAG Patterns
@@ -73,7 +72,7 @@ result = chain({"query": "What is the return policy?"})
 ```python
 # Hybrid search (keyword + semantic)
 from langchain.retrievers import EnsembleRetriever
-from langchain.retrievers import BM25Retriever
+from langchain_community.retrievers import BM25Retriever
 
 bm25_retriever = BM25Retriever.from_documents(documents)
 semantic_retriever = vectorstore.as_retriever()
@@ -85,9 +84,9 @@ ensemble_retriever = EnsembleRetriever(
 
 # Re-ranking
 from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import CohereRerank
+from langchain_cohere import CohereRerank
 
-reranker = CohereRerank(model="rerank-english-v2.0", top_n=3)
+reranker = CohereRerank(model="rerank-english-v3-0", top_n=3)
 compression_retriever = ContextualCompressionRetriever(
     base_compressor=reranker,
     base_retriever=retriever
