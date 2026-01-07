@@ -37,6 +37,12 @@ jobs:
           fetch-depth: 0  # Full history for better diff analysis
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
+      - name: Set up Python
+        if: steps.check-key.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Get PR diff and context
         if: steps.check-key.outputs.skip != 'true'
         id: diff
@@ -70,12 +76,6 @@ jobs:
 
           # Get PR body for additional context
           echo "${{ github.event.pull_request.body }}" > /tmp/pr_body.txt
-
-      - name: Set up Python
-        if: steps.check-key.outputs.skip != 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
 
       - name: Install Google Gen AI SDK
         if: steps.check-key.outputs.skip != 'true'
@@ -119,11 +119,15 @@ jobs:
           if len(diff_full) > max_diff_chars:
               diff_full = diff_full[:max_diff_chars] + "\n\n[... diff truncated due to size ...]"
 
-          # Sanitize inputs to prevent triple-quote injection breaking the f-string
-          # This is critical for reviewing Python code with docstrings
+          # Sanitize inputs to prevent f-string breakage
+          # Must escape: triple quotes (Python docstrings) and curly braces (code)
           def sanitize_for_fstring(text: str) -> str:
-              """Escape triple quotes to prevent f-string breakage."""
-              return text.replace('"""', '\\"\\"\\"').replace("'''", "\\'\\'\\'")
+              """Escape characters that would break f-string interpolation."""
+              # Escape curly braces first (critical for any code with {})
+              text = text.replace('{', '{{').replace('}', '}}')
+              # Then escape triple quotes
+              text = text.replace('"""', '\\"\\"\\"').replace("'''", "\\'\\'\\'")
+              return text
 
           diff_full = sanitize_for_fstring(diff_full)
           diff_stat = sanitize_for_fstring(diff_stat)
