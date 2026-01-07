@@ -26,7 +26,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 - **18 Specialized Agents** for different development domains
 - **10 Auto-Discovered Skills** for domain expertise
 - **21 Slash Commands** for workflows and orchestration
-- **4 Automated Hooks** for quality gates
+- **5 Automated Hooks** for quality gates
 
 ## The Virtual Team
 
@@ -96,6 +96,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 | Hook | Type | Function |
 |------|------|----------|
 | **Safety Net** | PreToolUse | Blocks dangerous commands |
+| **Commit Context** | PreToolUse | Documents changes for PR review context |
 | **Pre-Commit** | PreToolUse | Runs linters & checks formatting before `git commit` |
 | **Formatter** | PostToolUse | Auto-formats code after edits |
 | **Quality Gate** | Stop | Runs tests at end of turn |
@@ -311,6 +312,32 @@ claude
 
 In strict mode, Claude cannot declare a task complete until the Stop hook reports all tests passing.
 
+## Commit Context Generator
+
+The commit context generator hook automatically documents changes before each commit, providing context for the Gemini PR review.
+
+### What It Generates
+
+- **Change Summary**: Files changed, additions/deletions count
+- **Category Analysis**: Groups changes by type (python, typescript, tests, ci-cd, etc.)
+- **Pattern Detection**: Identifies new functions, classes, imports, error handling
+- **Change Type Inference**: Suggests commit type (feat, fix, refactor, docs, etc.)
+
+### Output Files
+
+Context is saved to `.claude/artifacts/` (gitignored):
+- `commit-context.md` - Human-readable markdown
+- `commit-context.json` - Machine-readable JSON
+
+### Integration with Gemini PR Review
+
+The Gemini PR review workflow automatically reads:
+1. **Commit messages** - Developer intent and explanations
+2. **PR description** - Summary and test plan
+3. **Commit context** - Auto-generated change analysis
+
+This gives Gemini rich context about *what* changed and *why*, resulting in more relevant and actionable code review feedback.
+
 ## Pre-Commit Hook (Linting & Formatting)
 
 The pre-commit hook automatically runs before any `git commit` command to ensure code quality:
@@ -444,6 +471,11 @@ Track improvements to this configuration:
   - Added Skills architecture with 10 auto-discovered skills (tdd, security-review, api-design, async-patterns, debugging, refactoring, testing-patterns, k8s-operations, cicd-automation, observability)
   - Added 4 orchestration commands (/feature-workflow, /security-hardening, /incident-response, /codebase-audit)
   - Total: 18 agents, 10 skills, 21 commands
+- **2026-01-07**: Added commit context generator hook and enhanced Gemini PR review:
+  - New `commit-context-generator.py` hook documents changes before commits
+  - Gemini PR review now reads commit messages, PR body, and auto-generated context
+  - TOML review output now displayed in visible, copyable markdown block
+  - Total: 18 agents, 10 skills, 21 commands, 5 hooks
 
 ---
 
