@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 """
-Commit Context Generator - Pre-commit hook that documents changes.
+Commit Context Generator - Documents changes for PR review context.
 
-Analyzes staged changes and generates a context document that helps
-the Gemini PR review understand what changed and why.
+Can be used in two modes:
+1. Pre-commit hook (default): Analyzes staged changes
+2. CI mode: Analyzes diff between two refs (e.g., base...head of a PR)
+
+Usage:
+    # Pre-commit hook (analyzes staged changes)
+    python3 commit-context-generator.py
+
+    # CI mode (analyzes PR diff)
+    python3 commit-context-generator.py --base origin/main --head HEAD
+
+    # Output to stdout only (for CI piping)
+    python3 commit-context-generator.py --base $BASE --head $HEAD --stdout
 
 Output:
 - Prints context summary to stdout
-- Saves full context to .claude/artifacts/commit-context.md
+- Saves full context to .claude/artifacts/commit-context.md (unless --stdout)
 """
 
+import argparse
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime
@@ -28,20 +39,25 @@ def run_git(args: list[str]) -> str:
     return result.stdout.strip()
 
 
-def get_staged_files() -> list[str]:
-    """Get list of staged files."""
-    output = run_git(["diff", "--cached", "--name-only", "--diff-filter=ACMRD"])
+def get_changed_files(base: str | None = None, head: str | None = None) -> list[str]:
+    """Get list of changed files.
+
+    If base/head provided, compare those refs.
+    Otherwise, use staged changes.
+    """
+    if base and head:
+        output = run_git(["diff", "--name-only", "--diff-filter=ACMRD", f"{base}...{head}"])
+    else:
+        output = run_git(["diff", "--cached", "--name-only", "--diff-filter=ACMRD"])
     return [f for f in output.split("\n") if f]
 
 
-def get_staged_diff() -> str:
-    """Get the full staged diff."""
-    return run_git(["diff", "--cached"])
-
-
-def get_file_diff(filepath: str) -> str:
+def get_file_diff(filepath: str, base: str | None = None, head: str | None = None) -> str:
     """Get the diff for a specific file."""
-    return run_git(["diff", "--cached", "--", filepath])
+    if base and head:
+        return run_git(["diff", f"{base}...{head}", "--", filepath])
+    else:
+        return run_git(["diff", "--cached", "--", filepath])
 
 
 def categorize_file(filepath: str) -> str:
@@ -49,6 +65,7 @@ def categorize_file(filepath: str) -> str:
     path = Path(filepath)
     ext = path.suffix.lower()
     name = path.name.lower()
+    parts = path.parts
 
     # Special files
     if name in ("readme.md", "readme.rst", "readme.txt", "readme"):
@@ -59,11 +76,22 @@ def categorize_file(filepath: str) -> str:
         return "dependencies"
     if name in (".gitignore", ".env.example", "dockerfile", "docker-compose.yml"):
         return "configuration"
-    if "test" in str(path).lower() or name.startswith("test_"):
+
+    # Test detection - check directory names and file prefixes/suffixes
+    if (
+        "tests" in parts
+        or "test" in parts
+        or "__tests__" in parts
+        or name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.endswith(".test.ts")
+        or name.endswith(".test.js")
+        or name.endswith(".spec.ts")
+        or name.endswith(".spec.js")
+    ):
         return "tests"
 
     # By directory
-    parts = path.parts
     if ".github" in parts:
         return "ci-cd"
     if ".claude" in parts:
@@ -176,11 +204,15 @@ def infer_change_type(categories: dict, patterns: dict) -> str:
     return "chore"
 
 
-def generate_context(staged_files: list[str]) -> dict:
-    """Generate context document for staged changes."""
-    if not staged_files:
+def generate_context(
+    changed_files: list[str],
+    base: str | None = None,
+    head: str | None = None,
+) -> dict:
+    """Generate context document for changes."""
+    if not changed_files:
         return {
-            "summary": "No staged changes",
+            "summary": "No changes detected",
             "files": [],
             "categories": {},
             "change_type": "none",
@@ -190,14 +222,14 @@ def generate_context(staged_files: list[str]) -> dict:
     categories: dict[str, list[str]] = {}
     file_analyses: dict[str, dict] = {}
 
-    for filepath in staged_files:
+    for filepath in changed_files:
         category = categorize_file(filepath)
         if category not in categories:
             categories[category] = []
         categories[category].append(filepath)
 
         # Analyze the diff for this file
-        diff = get_file_diff(filepath)
+        diff = get_file_diff(filepath, base, head)
         file_analyses[filepath] = analyze_diff(diff)
 
     # Infer change type
@@ -205,37 +237,33 @@ def generate_context(staged_files: list[str]) -> dict:
     change_type = infer_change_type(set(categories.keys()), patterns_by_file)
 
     # Generate summary
-    total_files = len(staged_files)
+    total_files = len(changed_files)
     total_additions = sum(a["additions"] for a in file_analyses.values())
     total_deletions = sum(a["deletions"] for a in file_analyses.values())
-
-    summary_parts = []
-    for cat, files in sorted(categories.items(), key=lambda x: -len(x[1])):
-        if len(files) == 1:
-            summary_parts.append(f"{cat}: {files[0]}")
-        else:
-            summary_parts.append(f"{cat}: {len(files)} files")
 
     summary = f"{total_files} file(s) changed (+{total_additions}/-{total_deletions})"
 
     return {
         "summary": summary,
-        "files": staged_files,
+        "files": changed_files,
         "categories": categories,
         "file_analyses": file_analyses,
         "change_type": change_type,
         "total_additions": total_additions,
         "total_deletions": total_deletions,
         "timestamp": datetime.now().isoformat(),
+        "mode": "pr-diff" if base and head else "staged",
     }
 
 
 def format_markdown(context: dict) -> str:
     """Format context as markdown."""
+    mode_label = "PR Diff" if context.get("mode") == "pr-diff" else "Staged Changes"
     lines = [
         "# Commit Context",
         "",
         f"**Generated:** {context.get('timestamp', 'unknown')}",
+        f"**Mode:** {mode_label}",
         f"**Change Type:** `{context.get('change_type', 'unknown')}`",
         "",
         "## Summary",
@@ -292,55 +320,103 @@ def format_json(context: dict) -> str:
         "total_additions": context.get("total_additions"),
         "total_deletions": context.get("total_deletions"),
         "timestamp": context.get("timestamp"),
+        "mode": context.get("mode"),
     }
     return json.dumps(clean, indent=2)
 
 
 def main():
     """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Generate context documentation for code changes"
+    )
+    parser.add_argument(
+        "--base",
+        help="Base ref for comparison (e.g., origin/main). If not provided, uses staged changes.",
+    )
+    parser.add_argument(
+        "--head",
+        help="Head ref for comparison (e.g., HEAD). Required if --base is provided.",
+    )
+    parser.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Output markdown to stdout only (don't write files)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output JSON instead of markdown (implies --stdout)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=".claude/artifacts",
+        help="Directory to write output files (default: .claude/artifacts)",
+    )
+
+    args = parser.parse_args()
+
+    # Validate args
+    if args.base and not args.head:
+        parser.error("--head is required when --base is provided")
+    if args.head and not args.base:
+        parser.error("--base is required when --head is provided")
+
     # Read stdin (hook input) - ignored for now but could be used
     try:
-        stdin_data = sys.stdin.read()
+        if not sys.stdin.isatty():
+            _ = sys.stdin.read()
     except Exception:
-        stdin_data = ""
+        pass
 
-    staged_files = get_staged_files()
+    # Get changed files
+    changed_files = get_changed_files(args.base, args.head)
 
-    if not staged_files:
-        print("📝 No staged changes to document")
+    if not changed_files:
+        if args.json:
+            print(json.dumps({"summary": "No changes", "files": [], "change_type": "none"}))
+        else:
+            print("No changes to document")
         sys.exit(0)
 
-    context = generate_context(staged_files)
+    # Generate context
+    context = generate_context(changed_files, args.base, args.head)
 
-    # Ensure artifacts directory exists
-    artifacts_dir = Path(".claude/artifacts")
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    # Output
+    if args.json:
+        print(format_json(context))
+    elif args.stdout:
+        print(format_markdown(context))
+    else:
+        # Write files and print summary
+        artifacts_dir = Path(args.output_dir)
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save markdown context
-    md_content = format_markdown(context)
-    md_path = artifacts_dir / "commit-context.md"
-    md_path.write_text(md_content)
+        # Save markdown context
+        md_content = format_markdown(context)
+        md_path = artifacts_dir / "commit-context.md"
+        md_path.write_text(md_content)
 
-    # Save JSON context for machine consumption
-    json_content = format_json(context)
-    json_path = artifacts_dir / "commit-context.json"
-    json_path.write_text(json_content)
+        # Save JSON context for machine consumption
+        json_content = format_json(context)
+        json_path = artifacts_dir / "commit-context.json"
+        json_path.write_text(json_content)
 
-    # Print summary to stdout
-    print("📝 Commit Context Generated")
-    print("━" * 40)
-    print(f"Type: {context['change_type']}")
-    print(f"Files: {len(staged_files)}")
-    print(f"Changes: +{context['total_additions']}/-{context['total_deletions']}")
-    print("")
-    print("Categories:")
-    for cat, files in sorted(context.get("categories", {}).items()):
-        print(f"  • {cat}: {len(files)} file(s)")
-    print("")
-    print(f"Context saved to: {md_path}")
-    print("━" * 40)
+        # Print summary to stdout
+        mode = "PR diff" if args.base else "staged changes"
+        print(f"Commit Context Generated ({mode})")
+        print("=" * 40)
+        print(f"Type: {context['change_type']}")
+        print(f"Files: {len(changed_files)}")
+        print(f"Changes: +{context['total_additions']}/-{context['total_deletions']}")
+        print("")
+        print("Categories:")
+        for cat, files in sorted(context.get("categories", {}).items()):
+            print(f"  - {cat}: {len(files)} file(s)")
+        print("")
+        print(f"Context saved to: {md_path}")
+        print("=" * 40)
 
-    # Exit 0 to allow commit to proceed
     sys.exit(0)
 
 

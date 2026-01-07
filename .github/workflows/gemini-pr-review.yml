@@ -59,12 +59,13 @@ jobs:
           echo "Getting commit messages..."
           git log "$BASE...$HEAD" --pretty=format:"### %s%n%n%b%n---" > /tmp/commit_messages.txt
 
-          # Check for commit context file
-          if [ -f ".claude/artifacts/commit-context.md" ]; then
-            cp .claude/artifacts/commit-context.md /tmp/commit_context.md
-            echo "Found commit context file"
+          # Generate commit context dynamically using the context generator
+          # This analyzes the PR diff and generates structured context
+          if [ -f ".claude/hooks/commit-context-generator.py" ]; then
+            echo "Generating commit context from PR diff..."
+            python3 .claude/hooks/commit-context-generator.py --base "$BASE" --head "$HEAD" --stdout > /tmp/commit_context.md 2>/dev/null || echo "Context generation failed" > /tmp/commit_context.md
           else
-            echo "No commit context file found" > /tmp/commit_context.md
+            echo "No commit context generator found" > /tmp/commit_context.md
           fi
 
           # Get PR body for additional context
@@ -132,7 +133,7 @@ jobs:
           {pr_body}
           """
 
-          if commit_context.strip() and "No commit context file found" not in commit_context:
+          if commit_context.strip() and not any(x in commit_context for x in ["No commit context", "Context generation failed", "No changes"]):
               context_section += f"""
           ## Auto-Generated Change Context
           {commit_context}
