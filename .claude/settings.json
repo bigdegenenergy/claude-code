@@ -47,6 +47,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 .claude/hooks/commit-context-generator.py"
+          },
+          {
+            "type": "command",
             "command": "bash .claude/hooks/pre-commit.sh"
           }
         ]
