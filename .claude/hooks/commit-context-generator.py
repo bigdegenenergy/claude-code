@@ -21,6 +21,8 @@ Output:
 - Saves full context to .claude/artifacts/commit-context.md (unless --stdout)
 """
 
+from __future__ import annotations  # Enable PEP 604 syntax on Python 3.7+
+
 import argparse
 import json
 import re
@@ -70,6 +72,7 @@ def parse_diff_by_file(full_diff: str) -> dict[str, str]:
 
     Returns a dict mapping filepath to its diff content.
     Handles both regular files and renamed files.
+    Also handles quoted filenames (for paths with spaces or special chars).
     """
     if not full_diff.strip():
         return {}
@@ -81,7 +84,8 @@ def parse_diff_by_file(full_diff: str) -> dict[str, str]:
     # Pattern to match diff headers
     # Handles: diff --git a/path/file b/path/file
     # Also handles renames: diff --git a/old/path b/new/path
-    diff_header_pattern = re.compile(r"^diff --git a/(.+?) b/(.+)$")
+    # Also handles quoted paths: diff --git "a/path with spaces" "b/path with spaces"
+    diff_header_pattern = re.compile(r'^diff --git "?a/(.+?)"? "?b/(.+?)"?$')
 
     for line in full_diff.split("\n"):
         match = diff_header_pattern.match(line)
