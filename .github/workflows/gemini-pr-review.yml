@@ -46,17 +46,17 @@ jobs:
       - name: Get PR diff and context
         if: steps.check-key.outputs.skip != 'true'
         id: diff
+        env:
+          # Pass PR body via env var to prevent shell injection
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
 
           echo "Comparing $BASE...$HEAD"
-          DIFF=$(git diff "$BASE...$HEAD" --stat)
-          DIFF_FULL=$(git diff "$BASE...$HEAD")
-
-          # Save to files for the review step
-          echo "$DIFF" > /tmp/diff_stat.txt
-          echo "$DIFF_FULL" > /tmp/diff_full.txt
+          # Use explicit git config to ensure consistent diff format
+          git -c diff.noprefix=false diff "$BASE...$HEAD" --stat > /tmp/diff_stat.txt
+          git -c diff.noprefix=false diff "$BASE...$HEAD" > /tmp/diff_full.txt
 
           # Get changed files list
           git diff --name-only "$BASE...$HEAD" > /tmp/changed_files.txt
@@ -74,8 +74,8 @@ jobs:
             echo "No commit context generator found" > /tmp/commit_context.md
           fi
 
-          # Get PR body for additional context
-          echo "${{ github.event.pull_request.body }}" > /tmp/pr_body.txt
+          # Get PR body safely (via env var to prevent shell injection)
+          printf '%s' "$PR_BODY" > /tmp/pr_body.txt
 
       - name: Install Google Gen AI SDK
         if: steps.check-key.outputs.skip != 'true'

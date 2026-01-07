@@ -47,11 +47,12 @@ def get_full_diff(base: str | None = None, head: str | None = None) -> str:
 
     If base/head provided, compare those refs.
     Otherwise, use staged changes.
+    Uses explicit noprefix=false to ensure consistent a/ b/ prefixes.
     """
     if base and head:
-        return run_git(["diff", f"{base}...{head}"])
+        return run_git(["-c", "diff.noprefix=false", "diff", f"{base}...{head}"])
     else:
-        return run_git(["diff", "--cached"])
+        return run_git(["-c", "diff.noprefix=false", "diff", "--cached"])
 
 
 def get_changed_files(base: str | None = None, head: str | None = None) -> list[str]:
@@ -254,14 +255,8 @@ def infer_change_type(categories: set[str], patterns_by_file: dict[str, dict]) -
     if "ai-config" in categories or "commands" in categories or "skills" in categories:
         return "feat"
 
-    # Default based on additions vs deletions
-    total_add = 0
-    total_del = 0
-    for analysis in patterns_by_file.values():
-        # Note: patterns_by_file values are just patterns dicts, need file_analyses
-        pass
-
-    # If we can't determine, default to feat for additions or chore otherwise
+    # If we can't determine from categories/patterns, default to chore
+    # (stats-based refinement happens in generate_context after this)
     if all_patterns:
         return "feat"
     return "chore"
