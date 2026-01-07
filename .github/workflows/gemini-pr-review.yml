@@ -119,23 +119,6 @@ jobs:
           if len(diff_full) > max_diff_chars:
               diff_full = diff_full[:max_diff_chars] + "\n\n[... diff truncated due to size ...]"
 
-          # Sanitize inputs to prevent f-string breakage
-          # Must escape: triple quotes (Python docstrings) and curly braces (code)
-          def sanitize_for_fstring(text: str) -> str:
-              """Escape characters that would break f-string interpolation."""
-              # Escape curly braces first (critical for any code with {})
-              text = text.replace('{', '{{').replace('}', '}}')
-              # Then escape triple quotes
-              text = text.replace('"""', '\\"\\"\\"').replace("'''", "\\'\\'\\'")
-              return text
-
-          diff_full = sanitize_for_fstring(diff_full)
-          diff_stat = sanitize_for_fstring(diff_stat)
-          changed_files = sanitize_for_fstring(changed_files)
-          commit_messages = sanitize_for_fstring(commit_messages)
-          commit_context = sanitize_for_fstring(commit_context)
-          pr_body = sanitize_for_fstring(pr_body)
-
           # Build context section
           context_section = ""
           if commit_messages.strip():
