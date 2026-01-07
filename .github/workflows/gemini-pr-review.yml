@@ -37,7 +37,7 @@ jobs:
           fetch-depth: 0  # Full history for better diff analysis
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Get PR diff
+      - name: Get PR diff and context
         if: steps.check-key.outputs.skip != 'true'
         id: diff
         run: |
@@ -54,6 +54,21 @@ jobs:
 
           # Get changed files list
           git diff --name-only "$BASE...$HEAD" > /tmp/changed_files.txt
+
+          # Get commit messages for context (the "why")
+          echo "Getting commit messages..."
+          git log "$BASE...$HEAD" --pretty=format:"### %s%n%n%b%n---" > /tmp/commit_messages.txt
+
+          # Check for commit context file
+          if [ -f ".claude/artifacts/commit-context.md" ]; then
+            cp .claude/artifacts/commit-context.md /tmp/commit_context.md
+            echo "Found commit context file"
+          else
+            echo "No commit context file found" > /tmp/commit_context.md
+          fi
+
+          # Get PR body for additional context
+          echo "${{ github.event.pull_request.body }}" > /tmp/pr_body.txt
 
       - name: Set up Python
         if: steps.check-key.outputs.skip != 'true'
@@ -88,10 +103,40 @@ jobs:
           with open('/tmp/changed_files.txt') as f:
               changed_files = f.read()
 
+          # Read context files for the "why"
+          with open('/tmp/commit_messages.txt') as f:
+              commit_messages = f.read()
+
+          with open('/tmp/commit_context.md') as f:
+              commit_context = f.read()
+
+          with open('/tmp/pr_body.txt') as f:
+              pr_body = f.read()
+
           # Truncate if too long
           max_diff_chars = 50000
           if len(diff_full) > max_diff_chars:
               diff_full = diff_full[:max_diff_chars] + "\n\n[... diff truncated due to size ...]"
+
+          # Build context section
+          context_section = ""
+          if commit_messages.strip():
+              context_section += f"""
+          ## Commit Messages (Developer Intent)
+          {commit_messages}
+          """
+
+          if pr_body.strip() and pr_body.strip() != "null":
+              context_section += f"""
+          ## PR Description
+          {pr_body}
+          """
+
+          if commit_context.strip() and "No commit context file found" not in commit_context:
+              context_section += f"""
+          ## Auto-Generated Change Context
+          {commit_context}
+          """
 
           prompt = f"""You are a senior code reviewer. Review this pull request diff and provide constructive feedback.
 
@@ -100,7 +145,7 @@ jobs:
 
           ## Diff Statistics
           {diff_stat}
-
+          {context_section}
           ## Full Diff
           ```diff
           {diff_full}
@@ -113,6 +158,7 @@ jobs:
           2. **Important Issues** - Performance problems, maintainability concerns
           3. **Suggestions** - Style improvements, best practices
 
+          Consider the developer's intent from commit messages and PR description when reviewing.
           Be specific - reference file names and line numbers when possible.
           Be constructive - suggest solutions, not just problems.
           Be concise - focus on the most important issues.
@@ -230,9 +276,17 @@ jobs:
               else:
                   output += "No issues found. ✨\n"
 
-              # Add raw TOML in collapsible section
-              output += "\n<details>\n<summary>📄 Raw TOML Response</summary>\n\n```toml\n"
-              output += toml_content
+              # Add copyable TOML block (visible, not collapsed)
+              output += "\n---\n\n"
+              output += "### 📋 Review Data (TOML)\n\n"
+              output += "Copy this TOML for automation or tracking:\n\n"
+              output += "```toml\n"
+              output += toml_content.strip()
+              output += "\n```\n"
+
+              # Also keep collapsed raw response for debugging
+              output += "\n<details>\n<summary>🔍 Debug: Raw API Response</summary>\n\n```\n"
+              output += review_text
               output += "\n```\n</details>"
 
               formatted_review = output
