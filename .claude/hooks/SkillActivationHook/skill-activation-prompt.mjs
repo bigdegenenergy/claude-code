@@ -22,14 +22,19 @@ let input = '';
 try {
   input = readFileSync(0, 'utf-8');
 } catch (e) {
-  process.exit(0);
+  // CRITICAL: Exit with non-zero code on error
+  // Exit code 0 with no output would blank the user's prompt
+  // Non-zero exit tells Claude to ignore hook output and preserve original prompt
+  process.exit(1);
 }
 
 let promptData;
 try {
   promptData = JSON.parse(input);
 } catch (e) {
-  process.exit(0);
+  // CRITICAL: Exit with non-zero code on parse error
+  // This preserves the original prompt instead of blanking it
+  process.exit(1);
 }
 
 // Get the original prompt (preserve case for output)

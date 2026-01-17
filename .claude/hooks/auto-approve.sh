@@ -30,12 +30,21 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # This prevents attacks like "npm test; rm -rf /" or "npm test && malicious"
 contains_shell_metacharacters() {
     local cmd="$1"
-    # Check for command chaining operators: ; && || | ` $(
-    # Also check for ALL redirection (> >> >&) to prevent file overwrites
-    # Note: This blocks legitimate 2>&1 but is necessary for security
-    if [[ "$cmd" =~ [\;\&\|] ]] || \
-       [[ "$cmd" =~ \`|\$\( ]] || \
-       [[ "$cmd" =~ \> ]]; then
+
+    # Define forbidden patterns in variables for clarity and safety
+    # Pattern 1: Command chaining operators (;, &, |)
+    local CHAIN_CHARS='[;&|]'
+    # Pattern 2: Command substitution (backticks or $())
+    local CMD_SUBST='(`|\$\()'
+    # Pattern 3: Output redirection (>)
+    local REDIRECT='>'
+    # Pattern 4: Newlines (critical - "npm test\nrm -rf /" bypass)
+    local NEWLINES=$'[\r\n]'
+
+    if [[ "$cmd" =~ $CHAIN_CHARS ]] || \
+       [[ "$cmd" =~ $CMD_SUBST ]] || \
+       [[ "$cmd" =~ $REDIRECT ]] || \
+       [[ "$cmd" =~ $NEWLINES ]]; then
         return 0  # true - contains dangerous chars
     fi
     return 1  # false - safe

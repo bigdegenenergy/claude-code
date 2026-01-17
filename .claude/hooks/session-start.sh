@@ -46,24 +46,19 @@ fi
 
 echo "### Active TODOs in Codebase"
 echo '```'
-# Search for TODOs, excluding common directories efficiently with --exclude-dir
-# This prevents scanning node_modules, .git, dist, build which greatly improves performance
-TODO_COUNT=$(grep -r "TODO:" \
+# Search for TODOs, capturing output once to avoid double I/O
+# Excludes common non-source directories for performance
+TODO_OUTPUT=$(grep -r "TODO:" \
     --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
     --include="*.py" --include="*.go" --include="*.rs" \
     --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist \
     --exclude-dir=build --exclude-dir=.next --exclude-dir=__pycache__ \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=target \
-    . 2>/dev/null | wc -l)
+    . 2>/dev/null)
 
-if [ "$TODO_COUNT" -gt 0 ]; then
-    grep -r "TODO:" \
-        --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
-        --include="*.py" --include="*.go" --include="*.rs" \
-        --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist \
-        --exclude-dir=build --exclude-dir=.next --exclude-dir=__pycache__ \
-        --exclude-dir=.venv --exclude-dir=venv --exclude-dir=target \
-        . 2>/dev/null | head -10
+if [ -n "$TODO_OUTPUT" ]; then
+    TODO_COUNT=$(echo "$TODO_OUTPUT" | wc -l)
+    echo "$TODO_OUTPUT" | head -10
     if [ "$TODO_COUNT" -gt 10 ]; then
         echo "... and $((TODO_COUNT - 10)) more TODOs"
     fi
