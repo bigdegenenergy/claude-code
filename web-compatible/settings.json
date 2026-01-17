@@ -3,7 +3,7 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "echo 'Bootstrapping Web Env...'; if [ -f requirements.txt ]; then pip install --no-input --progress-bar off -r requirements.txt; fi; if [ -f pom.xml ]; then ./mvnw dependency:go-offline -B -q; fi; if [ -f package.json ]; then npm ci --silent; fi; echo 'Bootstrap complete'"
+        "command": "echo 'Bootstrapping Web Env...'; if [ -f requirements.txt ]; then pip install --no-input --progress-bar off -r requirements.txt; fi; if [ -f pom.xml ]; then chmod +x mvnw 2>/dev/null; sh mvnw dependency:go-offline -B -q 2>/dev/null || mvn dependency:go-offline -B -q; fi; if [ -f package.json ]; then if [ -f package-lock.json ]; then npm ci --silent; else npm install --silent; fi; fi; echo 'Bootstrap complete'"
       }
     ]
   },
