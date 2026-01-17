@@ -8,6 +8,7 @@
 > **IMPORTANT:** This is the bigdegenenergy/claude-code repository, NOT whatever repo you are currently in. Even if this prompt was copied into a different project, you must read the source repository above first.
 >
 > Use WebFetch to read that repository and understand:
+>
 > - All documentation files (README.md, CLAUDE.md, etc.)
 > - The .claude/ directory structure and contents
 > - Existing patterns and conventions
@@ -23,100 +24,111 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 **Architecture:** Configuration-as-code approach using Claude Code's native features (slash commands, hooks, subagents, skills).
 
 **Capabilities:**
+
 - **18 Specialized Agents** for different development domains
 - **10 Auto-Discovered Skills** for domain expertise
 - **21 Slash Commands** for workflows and orchestration
-- **5 Automated Hooks** for quality gates
+- **8 Automated Hooks** for quality gates and friction elimination
 
 ## The Virtual Team
 
 ### Commands (Slash)
 
 #### Core Workflows
-| Role | Command | When to Use |
-|------|---------|-------------|
-| **Architect** | `/plan` | Before implementing complex features |
-| **QA Engineer** | `/qa` | When tests fail or need verification |
-| **TDD** | `/test-driven` | Red-green-refactor development |
-| **Gatekeeper** | `/test-and-commit` | Only commit if tests pass |
-| **Reviewer** | `/review` | Critical code review (read-only) |
-| **Refactorer** | `/simplify` | After implementing features |
-| **DevOps** | `/ship` | When ready to commit and PR |
-| **Deploy** | `/deploy-staging` | Build and deploy to staging |
+
+| Role            | Command            | When to Use                          |
+| --------------- | ------------------ | ------------------------------------ |
+| **Architect**   | `/plan`            | Before implementing complex features |
+| **QA Engineer** | `/qa`              | When tests fail or need verification |
+| **TDD**         | `/test-driven`     | Red-green-refactor development       |
+| **Gatekeeper**  | `/test-and-commit` | Only commit if tests pass            |
+| **Reviewer**    | `/review`          | Critical code review (read-only)     |
+| **Refactorer**  | `/simplify`        | After implementing features          |
+| **DevOps**      | `/ship`            | When ready to commit and PR          |
+| **Deploy**      | `/deploy-staging`  | Build and deploy to staging          |
 
 #### Orchestration Workflows
-| Workflow | Command | Description |
-|----------|---------|-------------|
-| **Feature Dev** | `/feature-workflow` | Full-stack feature with multi-agent coordination |
-| **Security** | `/security-hardening` | Security audit, remediation, verification |
-| **Incidents** | `/incident-response` | Production incident response guide |
-| **Audit** | `/codebase-audit` | Comprehensive code quality audit |
+
+| Workflow        | Command               | Description                                      |
+| --------------- | --------------------- | ------------------------------------------------ |
+| **Feature Dev** | `/feature-workflow`   | Full-stack feature with multi-agent coordination |
+| **Security**    | `/security-hardening` | Security audit, remediation, verification        |
+| **Incidents**   | `/incident-response`  | Production incident response guide               |
+| **Audit**       | `/codebase-audit`     | Comprehensive code quality audit                 |
 
 ### Agents (Subagents)
 
 #### Quality & Review
-| Role | Agent | Specialty |
-|------|-------|-----------|
-| **Code Reviewer** | `@code-reviewer` | Critical code review (read-only) |
+
+| Role                 | Agent               | Specialty                            |
+| -------------------- | ------------------- | ------------------------------------ |
+| **Code Reviewer**    | `@code-reviewer`    | Critical code review (read-only)     |
 | **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning |
-| **Test Automator** | `@test-automator` | Unit, integration, E2E test creation |
-| **Code Simplifier** | `@code-simplifier` | Refactoring, code hygiene |
-| **QA Verifier** | `@verify-app` | End-to-end testing |
+| **Test Automator**   | `@test-automator`   | Unit, integration, E2E test creation |
+| **Code Simplifier**  | `@code-simplifier`  | Refactoring, code hygiene            |
+| **QA Verifier**      | `@verify-app`       | End-to-end testing                   |
 
 #### Architecture & Design
-| Role | Agent | Specialty |
-|------|-------|-----------|
-| **Backend Architect** | `@backend-architect` | API design, microservices, system design |
-| **Database Architect** | `@database-architect` | Schema design, query optimization |
-| **Kubernetes Architect** | `@kubernetes-architect` | K8s, GitOps, service mesh |
+
+| Role                     | Agent                   | Specialty                                |
+| ------------------------ | ----------------------- | ---------------------------------------- |
+| **Backend Architect**    | `@backend-architect`    | API design, microservices, system design |
+| **Database Architect**   | `@database-architect`   | Schema design, query optimization        |
+| **Kubernetes Architect** | `@kubernetes-architect` | K8s, GitOps, service mesh                |
 
 #### Language Specialists
-| Role | Agent | Specialty |
-|------|-------|-----------|
-| **Python Pro** | `@python-pro` | Python 3.12+, FastAPI, Django, async |
-| **TypeScript Pro** | `@typescript-pro` | Advanced types, Node.js backend |
-| **Frontend Specialist** | `@frontend-specialist` | React, accessibility, UI/UX |
+
+| Role                    | Agent                  | Specialty                            |
+| ----------------------- | ---------------------- | ------------------------------------ |
+| **Python Pro**          | `@python-pro`          | Python 3.12+, FastAPI, Django, async |
+| **TypeScript Pro**      | `@typescript-pro`      | Advanced types, Node.js backend      |
+| **Frontend Specialist** | `@frontend-specialist` | React, accessibility, UI/UX          |
 
 #### Operations
-| Role | Agent | Specialty |
-|------|-------|-----------|
-| **Infrastructure Engineer** | `@infrastructure-engineer` | Docker, Terraform, CI/CD |
-| **DevOps Troubleshooter** | `@devops-troubleshooter` | Production debugging, incidents |
-| **Performance Analyzer** | `@performance-analyzer` | Profiling, optimization |
+
+| Role                        | Agent                      | Specialty                       |
+| --------------------------- | -------------------------- | ------------------------------- |
+| **Infrastructure Engineer** | `@infrastructure-engineer` | Docker, Terraform, CI/CD        |
+| **DevOps Troubleshooter**   | `@devops-troubleshooter`   | Production debugging, incidents |
+| **Performance Analyzer**    | `@performance-analyzer`    | Profiling, optimization         |
 
 #### Specialized
-| Role | Agent | Specialty |
-|------|-------|-----------|
-| **AI Engineer** | `@ai-engineer` | LLM apps, RAG, embeddings |
-| **Bug Tracker** | `@bug-tracker` | Issue triage, prioritization |
-| **Docs Updater** | `@docs-updater` | Documentation generation |
+
+| Role             | Agent           | Specialty                    |
+| ---------------- | --------------- | ---------------------------- |
+| **AI Engineer**  | `@ai-engineer`  | LLM apps, RAG, embeddings    |
+| **Bug Tracker**  | `@bug-tracker`  | Issue triage, prioritization |
+| **Docs Updater** | `@docs-updater` | Documentation generation     |
 
 ### Hooks (Automatic)
 
-| Hook | Type | Function |
-|------|------|----------|
-| **Safety Net** | PreToolUse | Blocks dangerous commands |
-| **Commit Context** | PreToolUse | Documents changes for PR review context |
-| **Pre-Commit** | PreToolUse | Runs linters & checks formatting before `git commit` |
-| **Formatter** | PostToolUse | Auto-formats code after edits |
-| **Quality Gate** | Stop | Runs tests at end of turn |
+| Hook                  | Type              | Function                                             |
+| --------------------- | ----------------- | ---------------------------------------------------- |
+| **Context Injection** | SessionStart      | Injects git status, TODOs, project info at start     |
+| **Skill Activation**  | UserPromptSubmit  | Auto-activates relevant skills based on your prompt  |
+| **Auto-Approve**      | PermissionRequest | Auto-approves safe commands (tests, lint, build)     |
+| **Safety Net**        | PreToolUse        | Blocks dangerous commands                            |
+| **Commit Context**    | PreToolUse        | Documents changes for PR review context              |
+| **Pre-Commit**        | PreToolUse        | Runs linters & checks formatting before `git commit` |
+| **Formatter**         | PostToolUse       | Auto-formats code after edits                        |
+| **Quality Gate**      | Stop              | Runs tests at end of turn                            |
 
 ### Skills (Auto-Discovered)
 
 Skills are context-aware expertise modules that auto-trigger based on the task at hand.
 
-| Skill | Auto-Triggers When |
-|-------|-------------------|
-| **tdd** | Writing tests first, TDD workflow |
-| **security-review** | Reviewing for vulnerabilities, auth code |
-| **api-design** | Designing REST/GraphQL endpoints |
-| **async-patterns** | Implementing concurrent code |
-| **debugging** | Investigating bugs, analyzing errors |
-| **refactoring** | Cleaning up code, reducing complexity |
-| **testing-patterns** | Writing test suites, improving coverage |
-| **k8s-operations** | Working with Kubernetes, containers |
-| **cicd-automation** | Setting up pipelines, GitHub Actions |
-| **observability** | Implementing logging, metrics, tracing |
+| Skill                | Auto-Triggers When                       |
+| -------------------- | ---------------------------------------- |
+| **tdd**              | Writing tests first, TDD workflow        |
+| **security-review**  | Reviewing for vulnerabilities, auth code |
+| **api-design**       | Designing REST/GraphQL endpoints         |
+| **async-patterns**   | Implementing concurrent code             |
+| **debugging**        | Investigating bugs, analyzing errors     |
+| **refactoring**      | Cleaning up code, reducing complexity    |
+| **testing-patterns** | Writing test suites, improving coverage  |
+| **k8s-operations**   | Working with Kubernetes, containers      |
+| **cicd-automation**  | Setting up pipelines, GitHub Actions     |
+| **observability**    | Implementing logging, metrics, tracing   |
 
 Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
 
@@ -206,13 +218,17 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 ## Known Patterns
 
 ### Pre-compute Context
+
 Use inline bash in slash commands for real-time data:
+
 ```markdown
 - **Git Status:** !`git status -sb`
 ```
 
 ### Iterative Loops
+
 QA commands should loop until green:
+
 ```markdown
 1. Run tests
 2. If fail: analyze, fix, goto 1
@@ -220,7 +236,9 @@ QA commands should loop until green:
 ```
 
 ### Critical Subagents
+
 Use "be critical" and "be honest" in prompts:
+
 ```markdown
 **Be critical, not agreeable.** Find problems.
 ```
@@ -229,15 +247,15 @@ Use "be critical" and "be honest" in prompts:
 
 The `.github/workflows/` directory contains automated CI/CD workflows:
 
-| Workflow | Purpose |
-|----------|---------|
-| `ci.yml` | Linting, config validation, docs checks |
-| `security.yml` | Secret scanning, security analysis, PII detection |
-| `pii-scan-content.yml` | Scans issues/PRs for personal information |
-| `gemini-pr-review.yml` | AI-powered code review with structured TOML output |
-| `agent-reminder.yml` | Reminds agents to read source repo |
-| `label-agent-prs.yml` | Auto-labels AI-generated PRs |
-| `notify-on-failure.yml` | Sends failure notifications |
+| Workflow                | Purpose                                            |
+| ----------------------- | -------------------------------------------------- |
+| `ci.yml`                | Linting, config validation, docs checks            |
+| `security.yml`          | Secret scanning, security analysis, PII detection  |
+| `pii-scan-content.yml`  | Scans issues/PRs for personal information          |
+| `gemini-pr-review.yml`  | AI-powered code review with structured TOML output |
+| `agent-reminder.yml`    | Reminds agents to read source repo                 |
+| `label-agent-prs.yml`   | Auto-labels AI-generated PRs                       |
+| `notify-on-failure.yml` | Sends failure notifications                        |
 
 ### Setting Up GitHub Actions
 
@@ -254,14 +272,14 @@ Configure notifications to alert you when tasks or CI/CD fail.
 
 ### Supported Platforms
 
-| Platform | Local | GitHub Actions |
-|----------|-------|----------------|
-| Slack | ✅ | ✅ |
-| Telegram | ✅ | ✅ |
-| Discord | ✅ | ✅ |
-| ntfy | ✅ | ✅ |
-| Email | ✅ | ✅ |
-| Custom Webhook | ✅ | ✅ |
+| Platform       | Local | GitHub Actions |
+| -------------- | ----- | -------------- |
+| Slack          | ✅    | ✅             |
+| Telegram       | ✅    | ✅             |
+| Discord        | ✅    | ✅             |
+| ntfy           | ✅    | ✅             |
+| Email          | ✅    | ✅             |
+| Custom Webhook | ✅    | ✅             |
 
 ### Local Setup
 
@@ -326,17 +344,19 @@ The commit context generator hook automatically documents changes before each co
 ### Output Files
 
 Context is saved to `.claude/artifacts/` (gitignored):
+
 - `commit-context.md` - Human-readable markdown
 - `commit-context.json` - Machine-readable JSON
 
 ### Integration with Gemini PR Review
 
 The Gemini PR review workflow automatically reads:
+
 1. **Commit messages** - Developer intent and explanations
 2. **PR description** - Summary and test plan
 3. **Commit context** - Auto-generated change analysis
 
-This gives Gemini rich context about *what* changed and *why*, resulting in more relevant and actionable code review feedback.
+This gives Gemini rich context about _what_ changed and _why_, resulting in more relevant and actionable code review feedback.
 
 ## Pre-Commit Hook (Linting & Formatting)
 
@@ -345,6 +365,7 @@ The pre-commit hook automatically runs before any `git commit` command to ensure
 ### What It Checks
 
 **Linting:**
+
 - JavaScript/TypeScript: ESLint
 - Python: Ruff or Flake8
 - Go: staticcheck or golint
@@ -352,6 +373,7 @@ The pre-commit hook automatically runs before any `git commit` command to ensure
 - Shell scripts: ShellCheck
 
 **Formatting:**
+
 - JavaScript/TypeScript/Web: Prettier
 - Python: Black
 - Go: gofmt
@@ -359,11 +381,13 @@ The pre-commit hook automatically runs before any `git commit` command to ensure
 - Shell scripts: shfmt
 
 **Security:**
+
 - Detects potential secrets (API keys, passwords)
 - Blocks `.env` files from being committed
 - Warns about debug statements
 
 **PII (Personal Information) Scan:**
+
 - Email addresses (excluding test/example domains)
 - Phone numbers (various formats)
 - Social Security Numbers (blocks commit)
@@ -407,15 +431,15 @@ Multiple layers of protection against accidentally committing or exposing person
 
 The pre-commit hook scans staged files for:
 
-| Pattern | Action |
-|---------|--------|
-| Email addresses | **Blocks commit** |
-| Phone numbers | **Blocks commit** |
-| SSN (xxx-xx-xxxx) | **Blocks commit** |
-| Credit card numbers | **Blocks commit** |
-| Public IP addresses | **Blocks commit** |
-| AWS Account IDs | **Blocks commit** |
-| Physical addresses | **Blocks commit** |
+| Pattern                 | Action            |
+| ----------------------- | ----------------- |
+| Email addresses         | **Blocks commit** |
+| Phone numbers           | **Blocks commit** |
+| SSN (xxx-xx-xxxx)       | **Blocks commit** |
+| Credit card numbers     | **Blocks commit** |
+| Public IP addresses     | **Blocks commit** |
+| AWS Account IDs         | **Blocks commit** |
+| Physical addresses      | **Blocks commit** |
 | Full names (First Last) | **Blocks commit** |
 
 **All PII patterns block commits** because this is a public repository. Once data is in git history, it's permanently exposed and cannot be fully removed.
@@ -427,6 +451,7 @@ The `security.yml` workflow scans all code on push/PR for PII patterns.
 ### Issue/PR Content Scan
 
 The `pii-scan-content.yml` workflow automatically scans:
+
 - Issue descriptions and comments
 - PR descriptions and review comments
 
@@ -443,6 +468,7 @@ If PII is detected, it posts a warning comment and fails on critical findings.
 ### Common False Positives
 
 Some patterns may trigger false positives:
+
 - Test data with placeholder values (use `example.com` for emails)
 - Documentation examples (mark with `<!-- pii-ignore -->`)
 - UUID/hash strings that match patterns
@@ -476,6 +502,11 @@ Track improvements to this configuration:
   - Gemini PR review now reads commit messages, PR body, and auto-generated context
   - TOML review output now displayed in visible, copyable markdown block
   - Total: 18 agents, 10 skills, 21 commands, 5 hooks
+- **2026-01-17**: **Friction Elimination** - Added 3 new hooks to eliminate developer friction:
+  - New `session-start.sh` (SessionStart) injects git status, TODOs, and project context automatically
+  - New `auto-approve.sh` (PermissionRequest) auto-approves safe commands (tests, lint, build, git read ops)
+  - New `skill-activation-prompt.mjs` (UserPromptSubmit) auto-activates relevant skills based on prompt keywords
+  - Total: 18 agents, 10 skills, 21 commands, 8 hooks
 
 ---
 
