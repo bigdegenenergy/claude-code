@@ -453,11 +453,11 @@ jobs:
           # Use HTML to avoid Markdown escaping footguns
           MESSAGE="🤖 <b>PR Review Complete</b>
 
-<b>PR #${PR_NUMBER}:</b> ${PR_TITLE}
-<b>Author:</b> ${{ github.actor }}
-<b>Malicious Verdict:</b> ${VERDICT}
+          <b>PR #${PR_NUMBER}:</b> ${PR_TITLE}
+          <b>Author:</b> ${{ github.actor }}
+          <b>Malicious Verdict:</b> ${VERDICT}
 
-<a href=\"${PR_URL}\">View PR</a>"
+          <a href=\"${PR_URL}\">View PR</a>"
 
           python << 'PY'
           import os, json, urllib.request
@@ -478,12 +478,3 @@ jobs:
           with urllib.request.urlopen(req) as r:
             print("Telegram sent:", r.status)
           PY
-        env:
-          MESSAGE: |
-            🤖 <b>PR Review Complete</b>
-
-            <b>PR #${{ github.event.pull_request.number }}:</b> ${{ github.event.pull_request.title }}
-            <b>Author:</b> ${{ github.actor }}
-            <b>Malicious Verdict:</b> $(cat /tmp/pr/verdict.txt 2>/dev/null || echo UNKNOWN)
-
-            <a href="https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}">View PR</a>
