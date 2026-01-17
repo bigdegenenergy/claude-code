@@ -26,8 +26,8 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 **Capabilities:**
 
 - **18 Specialized Agents** for different development domains
-- **10 Auto-Discovered Skills** for domain expertise
-- **21 Slash Commands** for workflows and orchestration
+- **11 Auto-Discovered Skills** for domain expertise
+- **22 Slash Commands** for workflows and orchestration
 - **8 Automated Hooks** for quality gates and friction elimination
 
 ## The Virtual Team
@@ -39,6 +39,7 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 | Role            | Command            | When to Use                          |
 | --------------- | ------------------ | ------------------------------------ |
 | **Architect**   | `/plan`            | Before implementing complex features |
+| **Autonomous**  | `/ralph`           | Iterative development until complete |
 | **QA Engineer** | `/qa`              | When tests fail or need verification |
 | **TDD**         | `/test-driven`     | Red-green-refactor development       |
 | **Gatekeeper**  | `/test-and-commit` | Only commit if tests pass            |
@@ -117,18 +118,19 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 
 Skills are context-aware expertise modules that auto-trigger based on the task at hand.
 
-| Skill                | Auto-Triggers When                       |
-| -------------------- | ---------------------------------------- |
-| **tdd**              | Writing tests first, TDD workflow        |
-| **security-review**  | Reviewing for vulnerabilities, auth code |
-| **api-design**       | Designing REST/GraphQL endpoints         |
-| **async-patterns**   | Implementing concurrent code             |
-| **debugging**        | Investigating bugs, analyzing errors     |
-| **refactoring**      | Cleaning up code, reducing complexity    |
-| **testing-patterns** | Writing test suites, improving coverage  |
-| **k8s-operations**   | Working with Kubernetes, containers      |
-| **cicd-automation**  | Setting up pipelines, GitHub Actions     |
-| **observability**    | Implementing logging, metrics, tracing   |
+| Skill                | Auto-Triggers When                        |
+| -------------------- | ----------------------------------------- |
+| **autonomous-loop**  | Running iteratively until task completion |
+| **tdd**              | Writing tests first, TDD workflow         |
+| **security-review**  | Reviewing for vulnerabilities, auth code  |
+| **api-design**       | Designing REST/GraphQL endpoints          |
+| **async-patterns**   | Implementing concurrent code              |
+| **debugging**        | Investigating bugs, analyzing errors      |
+| **refactoring**      | Cleaning up code, reducing complexity     |
+| **testing-patterns** | Writing test suites, improving coverage   |
+| **k8s-operations**   | Working with Kubernetes, containers       |
+| **cicd-automation**  | Setting up pipelines, GitHub Actions      |
+| **observability**    | Implementing logging, metrics, tracing    |
 
 Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
 
@@ -150,6 +152,9 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 # Planning & Architecture
 /plan                    # Think before coding
 /feature-workflow        # Full-stack feature orchestration
+
+# Autonomous Development
+/ralph                   # Iterative loop until complete (with safeguards)
 
 # Quality & Security
 /qa                      # Run tests, fix until green
@@ -474,6 +479,65 @@ Some patterns may trigger false positives:
 - UUID/hash strings that match patterns
 - Version numbers that look like phone numbers
 
+## Ralph: Autonomous Development Loop
+
+Based on [Geoffrey Huntley's technique](https://github.com/frankbria/ralph-claude-code), Ralph enables continuous autonomous development with built-in safeguards.
+
+### Core Concept: Dual-Condition Exit Gate
+
+Claude only exits when BOTH conditions are met:
+
+1. **Completion indicators**: Tests pass, tasks complete, no errors
+2. **Explicit EXIT_SIGNAL**: Claude confirms `EXIT_SIGNAL: true`
+
+This prevents premature exits during productive work phases.
+
+### Circuit Breaker Pattern
+
+Prevents infinite loops by halting when:
+
+| Condition         | Threshold     | Action              |
+| ----------------- | ------------- | ------------------- |
+| No progress loops | 3 consecutive | Stop and report     |
+| Repeated errors   | 5 identical   | Stop and analyze    |
+| Test-only loops   | 3 consecutive | Stop (likely stuck) |
+
+### Structured Status Reporting
+
+Every response ends with a mandatory status block:
+
+```
+## Status Report
+
+STATUS: IN_PROGRESS | COMPLETE | BLOCKED
+EXIT_SIGNAL: false | true
+TASKS_COMPLETED: [what was finished]
+FILES_MODIFIED: [changed files]
+TESTS: [pass/fail count]
+NEXT: [next action]
+```
+
+### Usage
+
+```bash
+# Start autonomous mode
+/ralph
+
+# Ralph will:
+# 1. Read @fix_plan.md for tasks
+# 2. Execute ONE task per loop
+# 3. Report status after each loop
+# 4. Continue until EXIT_SIGNAL: true or BLOCKED
+```
+
+### Project Templates
+
+Templates for Ralph-style projects are in `.claude/templates/ralph/`:
+
+- `PROMPT.md` - Development instructions
+- `fix_plan.md` - Prioritized task list
+- `AGENT.md` - Build/run specifications
+
 ## Update Log
 
 Track improvements to this configuration:
@@ -507,6 +571,11 @@ Track improvements to this configuration:
   - New `auto-approve.sh` (PermissionRequest) auto-approves safe commands (tests, lint, build, git read ops)
   - New `skill-activation-prompt.mjs` (UserPromptSubmit) auto-activates relevant skills based on prompt keywords
   - Total: 18 agents, 10 skills, 21 commands, 8 hooks
+- **2026-01-17**: **Ralph Integration** - Added autonomous development loop from [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code):
+  - New `/ralph` command for autonomous iterative development with circuit breaker safeguards
+  - New `autonomous-loop` skill with dual-condition exit gate and structured status reporting
+  - Added project templates (`PROMPT.md`, `fix_plan.md`, `AGENT.md`) in `.claude/templates/ralph/`
+  - Total: 18 agents, 11 skills, 22 commands, 8 hooks
 
 ---
 
