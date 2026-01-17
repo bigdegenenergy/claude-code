@@ -205,29 +205,25 @@ if [ -n "$YAML_FILES" ]; then
         echo "     Install with: pip install pyyaml"
     else
         YAML_ERRORS=""
-        for file in $YAML_FILES; do
+        # Use while read to handle filenames with spaces safely
+        echo "$YAML_FILES" | while IFS= read -r file; do
             if [ -f "$file" ]; then
-                # Use Python's yaml module for validation
-                YAML_CHECK=$(python3 -c "
-import yaml
-import sys
-try:
-    with open('$file', 'r') as f:
-        yaml.safe_load(f)
-    sys.exit(0)
-except yaml.YAMLError as e:
-    print(f'$file: {e}')
-    sys.exit(1)
-" 2>&1) || {
-                    YAML_ERRORS="${YAML_ERRORS}${YAML_CHECK}\n"
-                    EXIT_CODE=2
-                }
+                # Pass filename via sys.argv to avoid code injection
+                if ! python3 -c "import sys, yaml; yaml.safe_load(open(sys.argv[1], 'r'))" "$file" 2>/dev/null; then
+                    echo "  ⛔ YAML syntax error in: $file"
+                    # Write to temp file since we're in a subshell
+                    echo "$file" >> /tmp/yaml_errors_$$
+                fi
             fi
         done
 
-        if [ -n "$YAML_ERRORS" ]; then
-            echo "  ⛔ YAML syntax errors found:"
-            echo -e "$YAML_ERRORS" | sed 's/^/     /'
+        # Check if any errors were found
+        if [ -f /tmp/yaml_errors_$$ ]; then
+            YAML_ERRORS=$(cat /tmp/yaml_errors_$$)
+            rm -f /tmp/yaml_errors_$$
+            EXIT_CODE=2
+            echo "  ⛔ YAML syntax errors found in:"
+            echo "$YAML_ERRORS" | sed 's/^/     /'
         else
             echo "  ✓ All YAML files valid"
         fi
