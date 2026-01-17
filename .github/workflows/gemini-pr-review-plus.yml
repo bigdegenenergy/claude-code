@@ -106,7 +106,7 @@ jobs:
 
           PR_DIR = Path("/tmp/pr")
           client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-          MODEL = "gemini-3-pro-preview"
+          MODEL = "gemini-2.0-flash"
 
           def read(p: Path) -> str:
             try:
