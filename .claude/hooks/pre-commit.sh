@@ -216,7 +216,7 @@ for line in sys.stdin:
     if not filepath:
         continue
     try:
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             yaml.safe_load(f)
     except yaml.YAMLError as e:
         errors.append(f"{filepath}: {e}")
