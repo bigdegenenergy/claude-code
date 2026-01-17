@@ -36,7 +36,10 @@ try {
 const originalPrompt = promptData.prompt || promptData.user_prompt || '';
 const userPromptLower = originalPrompt.toLowerCase();
 
+// CRITICAL: For UserPromptSubmit hooks, we MUST always output the prompt
+// If we exit without output, the user's prompt gets blanked out
 if (!userPromptLower) {
+  // Empty prompt - just pass through (output nothing, let default behavior occur)
   process.exit(0);
 }
 
@@ -225,6 +228,8 @@ const activeSkills = matchedSkills.slice(0, 2);
 
 if (activeSkills.length === 0) {
   // No skills matched - pass through original prompt unchanged
+  // CRITICAL: Must output prompt or it gets blanked
+  console.log(originalPrompt);
   process.exit(0);
 }
 
@@ -259,6 +264,8 @@ if (skillContext) {
   console.log(skillContext);
   console.log('</skill-context>');
 } else {
-  // No skill content loaded - just pass through
+  // No skill content loaded - pass through original prompt
+  // CRITICAL: Must output prompt or it gets blanked
+  console.log(originalPrompt);
   process.exit(0);
 }
