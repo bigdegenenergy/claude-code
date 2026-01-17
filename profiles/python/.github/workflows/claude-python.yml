@@ -1,0 +1,95 @@
+name: Claude Code Python CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task for Claude to perform'
+        required: false
+        default: 'Run tests and fix any failures'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  claude-python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-input -r requirements.txt || true
+          pip install --no-input -r requirements-dev.txt || true
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--dangerously-skip-permissions"
+          task: |
+            You are running in a headless CI environment. Follow these rules:
+
+            1. NEVER use interactive commands - always use --no-input, -y, or -B flags
+            2. Keep output concise to save tokens
+            3. Save any visualizations to files (never call plt.show())
+
+            Project type: Python
+
+            Available commands:
+            - pytest -v --tb=short --maxfail=3  (run tests)
+            - ruff check . --fix && black .     (lint and format)
+            - pip install --no-input -r requirements.txt
+
+            Task: ${{ github.event.inputs.task || 'Run tests. If any fail, analyze and fix them. Then run lint-fix.' }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            .pytest_cache/
+            htmlcov/
+            coverage.xml
+          retention-days: 7
+
+  lint-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linters
+        run: |
+          pip install --no-input ruff black mypy
+
+      - name: Run ruff
+        run: ruff check . --output-format=github
+
+      - name: Run black
+        run: black --check --diff .
+
+      - name: Run mypy
+        run: mypy src/ --ignore-missing-imports || true
+        continue-on-error: true

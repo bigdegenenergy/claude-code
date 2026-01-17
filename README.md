@@ -14,11 +14,13 @@ This repository contains the "DNA" for a high-performance, automated software en
 You are currently viewing the **Source of Truth**. Your goal is likely to configure a **Target Repository** (the project you are actively working on) to have these capabilities.
 
 **YOUR PRIME DIRECTIVE:**
+
 1.  **READ** this repository to understand the available tools.
 2.  **INSTALL** the configuration into your current working directory (the Target).
 3.  **ADOPT** the workflows defined below for all future interactions.
 
 ### ⚠️ The "Source of Truth" Rule
+
 Do not hallucinate tools. Before creating plans or writing code in your target repository, you **MUST** ensure you have the latest configuration installed.
 
 ---
@@ -28,6 +30,7 @@ Do not hallucinate tools. Before creating plans or writing code in your target r
 To transform any repository into a Professional Engineering Environment, you must inject both the Claude Code configuration and the GitHub Actions workflows.
 
 ### Prerequisites
+
 - You must be in the root of the **Target Repository**.
 - You must have **git** installed.
 
@@ -45,21 +48,100 @@ If you are performing this manually, you must copy **two** distinct directories:
 2.  **The Nervous System (.github):** Contains CI/CD pipelines and PR automation.
 
     # 1. Clone Source Temporarily
+
     git clone [https://github.com/bigdegenenergy/claude-code.git](https://github.com/bigdegenenergy/claude-code.git) /tmp/claude-dna
 
     # 2. Install Claude Code Configuration
+
     cp -r /tmp/claude-dna/.claude ./.claude
     cp /tmp/claude-dna/CLAUDE.md ./CLAUDE.md
 
     # 3. Install GitHub Actions Workflows
+
     cp -r /tmp/claude-dna/.github ./.github
 
     # 4. Set Executable Permissions
-    chmod +x .claude/hooks/*.sh
-    chmod +x .claude/hooks/*.py
+
+    chmod +x .claude/hooks/_.sh
+    chmod +x .claude/hooks/_.py
 
     # 5. Clean Up
+
     rm -rf /tmp/claude-dna
+
+---
+
+## 📦 Language & Environment Profiles
+
+This repository includes ready-to-use starter packs for specific languages and environments. Copy the contents of the desired profile to your project root to get started.
+
+### Web-Compatible Configuration (Headless/Ephemeral)
+
+For **Claude Code Web** (browser-based, headless) environments where interactive prompts fail:
+
+```bash
+# Copy web-compatible configuration
+cp -r profiles/web-compatible/* /path/to/your/project/
+```
+
+**Key Features:**
+
+- `SessionStart` hook auto-detects and installs dependencies
+- Non-interactive flags (`-B`, `--no-input`, `-y`) for all commands
+- Token-efficient patterns (quiet modes, truncated output)
+- Guidelines for saving visualizations to files instead of GUI
+
+See: [`web-compatible/CLAUDE.md`](web-compatible/CLAUDE.md)
+
+### Python Profile
+
+Complete Python development configuration with modern tooling:
+
+```bash
+# Copy Python profile to your project
+cp -r profiles/python/* /path/to/your/project/
+```
+
+**Includes:**
+
+- `CLAUDE.md` - Python conventions, pytest, ruff, black, mypy
+- `/test` command - Run pytest with concise output
+- `/lint-fix` command - Auto-fix with ruff and black
+- `add-dep` skill - Safely install and pin dependencies
+- GitHub Action - Headless CI with `--dangerously-skip-permissions`
+
+See: [`profiles/python/CLAUDE.md`](profiles/python/CLAUDE.md)
+
+### Java / Spring Boot Profile
+
+Complete Java development configuration for Maven/Gradle projects:
+
+```bash
+# Copy Java profile to your project
+cp -r profiles/java/* /path/to/your/project/
+```
+
+**Includes:**
+
+- `CLAUDE.md` - Critical batch mode rules (`-B` for Maven, `--no-daemon` for Gradle)
+- `/build` command - Clean Maven build (skips tests)
+- `/test-class` command - Run tests for a specific class
+- `create-test` skill - Scaffold JUnit 5 tests with proper structure
+- GitHub Action - Headless CI with Temurin JDK 17
+
+See: [`profiles/java/CLAUDE.md`](profiles/java/CLAUDE.md)
+
+### Using Profiles
+
+1. **Choose your profile** based on your project's primary language
+2. **Copy the profile contents** to your project root:
+   ```bash
+   cp -r profiles/<language>/* /path/to/your/project/
+   ```
+3. **Merge with existing configuration** if you already have `.claude/` or `CLAUDE.md`
+4. **Customize** the `CLAUDE.md` for your specific project needs
+
+**Note:** Profiles are designed to work alongside the main "Ultimate CLI" configuration. You can use both by merging the profile's commands and skills into your existing `.claude/` directory.
 
 ---
 
@@ -68,16 +150,19 @@ If you are performing this manually, you must copy **two** distinct directories:
 Files alone are not enough. You must connect the wires for the team to function.
 
 ### 1. Notifications (Local & Remote)
+
 To ensure the **DevOps** and **QA** roles can alert the user:
 
-* **Local:** Copy **.claude/notifications.json.template** to **.claude/notifications.json** and add webhooks.
-* **GitHub (Remote):** Add the corresponding Secrets to the GitHub Repository (e.g., **SLACK_WEBHOOK_URL**, **DISCORD_WEBHOOK_URL**).
+- **Local:** Copy **.claude/notifications.json.template** to **.claude/notifications.json** and add webhooks.
+- **GitHub (Remote):** Add the corresponding Secrets to the GitHub Repository (e.g., **SLACK_WEBHOOK_URL**, **DISCORD_WEBHOOK_URL**).
 
 ### 2. The GH_TOKEN (Critical for CI/CD)
+
 The default **GITHUB_TOKEN** is too weak for full automation.
+
 1.  Create a **Classic Personal Access Token** with **repo** scope.
 2.  Add it as a Repository Secret named **GH_TOKEN**.
-3.  *Why?* This allows agents to comment on PRs, trigger cross-repo dispatches, and manage project boards.
+3.  _Why?_ This allows agents to comment on PRs, trigger cross-repo dispatches, and manage project boards.
 
 ---
 
@@ -85,41 +170,46 @@ The default **GITHUB_TOKEN** is too weak for full automation.
 
 Once installed, the single "Claude" entity splits into distinct specialized roles based on the command used.
 
-| Role | Command | Function |
-| :--- | :--- | :--- |
-| **The Architect** | **/plan** | **THINKING MODE.** Creates **PLAN.md**. No code is written until the plan is approved. |
-| **The Builder** | *(Default)* | Writes code. **The Janitor** (Hook) automatically formats code after every save. |
-| **The QA Engineer** | **/qa** | **LOOP MODE.** Runs tests, analyzes errors, fixes code, repeats until GREEN. |
-| **The DevOps** | **/ship** | Automates the Git lifecycle: Status check → Add → Commit → Push → PR. |
-| **Refactorer** | **/simplify** | Cleans code structure without altering behavior. |
-| **Security Auditor** | **@security-auditor** | Read-only scan for vulnerabilities. |
+| Role                 | Command               | Function                                                                               |
+| :------------------- | :-------------------- | :------------------------------------------------------------------------------------- |
+| **The Architect**    | **/plan**             | **THINKING MODE.** Creates **PLAN.md**. No code is written until the plan is approved. |
+| **The Builder**      | _(Default)_           | Writes code. **The Janitor** (Hook) automatically formats code after every save.       |
+| **The QA Engineer**  | **/qa**               | **LOOP MODE.** Runs tests, analyzes errors, fixes code, repeats until GREEN.           |
+| **The DevOps**       | **/ship**             | Automates the Git lifecycle: Status check → Add → Commit → Push → PR.                  |
+| **Refactorer**       | **/simplify**         | Cleans code structure without altering behavior.                                       |
+| **Security Auditor** | **@security-auditor** | Read-only scan for vulnerabilities.                                                    |
 
 ---
 
 ## 🔄 The Workflows
 
 ### 1. The "Think, Then Code" Loop (Architect)
-*Used for complex features or architectural changes.*
+
+_Used for complex features or architectural changes._
+
 1.  **User:** "I need to add OAuth."
 2.  **Agent:** Runs **/plan**.
 3.  **Output:** Generates **PLAN.md** mapping dependencies and edge cases.
 4.  **Hold:** Agent waits for user approval before modifying code.
 
 ### 2. The "Green Build" Loop (QA)
-*Used for verifying changes.*
+
+_Used for verifying changes._
+
 1.  **Agent:** Runs **/qa**.
 2.  **System:** Executes tests (defined in **settings.json**).
 3.  **Loop:**
-    * If **Pass**: Returns exit code 0.
-    * If **Fail**: Reads logs, implements fix, re-runs tests.
-    * *Self-healing continues until success.*
+    - If **Pass**: Returns exit code 0.
+    - If **Fail**: Reads logs, implements fix, re-runs tests.
+    - _Self-healing continues until success._
 
 ### 3. Parallel Orchestration (Advanced)
 
 For large tasks, do not run sequentially. Use **Git Worktrees** to run multiple agents in parallel.
+
 1.  **Main:** Generate **PLAN.md**.
 2.  **Split:**
-    
+
     git worktree add ../frontend
 
 3.  **Dispatch:** Assign "Frontend Agent" to the new directory to execute that specific part of the plan.
@@ -148,12 +238,14 @@ For large tasks, do not run sequentially. Use **Git Worktrees** to run multiple 
 ## 🧪 Best Practices
 
 ### The Feedback Loop
+
 **"Give Claude a way to verify its work."**
 Never treat a task as done until the **stop.sh** hook returns exit code 0.
 
 ### The "No-Ghost" Rule
+
 Every agent session must end with a clear artifact:
+
 1.  A merged PR.
 2.  A passing test suite.
 3.  A strictly defined **PLAN.md**.
-
