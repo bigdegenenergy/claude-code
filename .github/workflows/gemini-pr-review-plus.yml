@@ -375,17 +375,15 @@ jobs:
             md.append("### Malicious Intent Scan")
             md.append("⚠️ Failed to parse malicious TOML; see raw blocks below.")
 
-          # Copyable TOML blocks
+          # Copyable TOML block (combined Quality + Malicious)
           md.append("\n---\n")
           md.append("### 📋 Review Data (TOML)")
           md.append("")
           md.append("```toml")
-          md.append("# Quality")
+          md.append("# Quality Review")
           md.append(q_toml.strip())
-          md.append("```")
           md.append("")
-          md.append("```toml")
-          md.append("# Malicious")
+          md.append("# Malicious Intent Scan")
           md.append(m_toml.strip())
           md.append("```")
 
@@ -451,7 +449,8 @@ jobs:
           VERDICT="$(cat /tmp/pr/verdict.txt 2>/dev/null || echo UNKNOWN)"
 
           # Use HTML to avoid Markdown escaping footguns
-          MESSAGE="🤖 <b>PR Review Complete</b>
+          # Export so Python subprocess can access via os.environ
+          export MESSAGE="🤖 <b>PR Review Complete</b>
 
           <b>PR #${PR_NUMBER}:</b> ${PR_TITLE}
           <b>Author:</b> ${{ github.actor }}
