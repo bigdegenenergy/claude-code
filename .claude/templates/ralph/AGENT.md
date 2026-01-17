@@ -96,5 +96,5 @@ npm start
 ## Notes
 
 - Always run tests before marking task complete
-- Update @fix_plan.md as you work
+- Update fix_plan.md as you work
 - Report blockers clearly in status
