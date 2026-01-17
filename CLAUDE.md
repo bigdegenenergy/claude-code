@@ -30,6 +30,24 @@ This is a **Claude Code meta repository** - a template that configures Claude Co
 - **22 Slash Commands** for workflows and orchestration
 - **8 Automated Hooks** for quality gates and friction elimination
 
+## Environment Modes
+
+**This configuration is optimized for Claude Code CLI (Terminal).** If you are running in a different environment, use the appropriate profile:
+
+| Environment                    | Configuration                        | Key Differences                                              |
+| ------------------------------ | ------------------------------------ | ------------------------------------------------------------ |
+| **Claude Code CLI** (Terminal) | This root config                     | Full hooks, interactive prompts OK, persistent sessions      |
+| **Claude Code Web** (Browser)  | `web-compatible/`                    | Headless, non-interactive flags required, ephemeral sessions |
+| **GitHub Actions CI**          | `web-compatible/` + language profile | Autonomous, `--dangerously-skip-permissions`                 |
+
+**How to know you're in Claude Code Web:**
+
+- Sessions restart unexpectedly
+- Interactive commands hang forever (no user to respond)
+- Must use `-B`, `--no-input`, `-y`, `--silent` flags
+
+**If you are in Claude Code Web, read `web-compatible/CLAUDE.md` instead of continuing here.**
+
 ## The Virtual Team
 
 ### Commands (Slash)

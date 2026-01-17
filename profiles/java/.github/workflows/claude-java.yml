@@ -1,0 +1,121 @@
+name: Claude Code Java CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Task for Claude to perform'
+        required: false
+        default: 'Run tests and fix any failures'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw || true
+
+      - name: Build and Test
+        run: |
+          if [ -f "mvnw" ]; then
+            ./mvnw clean verify -B
+          elif [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew build --no-daemon
+          else
+            mvn clean verify -B
+          fi
+
+      - name: Check for Checkstyle
+        run: |
+          if grep -q "maven-checkstyle-plugin" pom.xml 2>/dev/null; then
+            ./mvnw checkstyle:check -B || true
+          fi
+        continue-on-error: true
+
+  claude-java:
+    runs-on: ubuntu-latest
+    needs: build-check
+    # Only run on PR failures from the same repo (forks don't have access to secrets)
+    if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw || true
+
+      - name: Download dependencies
+        run: |
+          if [ -f "mvnw" ]; then
+            ./mvnw dependency:go-offline -B
+          elif [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew dependencies --no-daemon
+          fi
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--dangerously-skip-permissions"
+          task: |
+            You are running in a headless CI environment. Follow these CRITICAL rules:
+
+            1. ALWAYS use -B flag for Maven commands (batch mode)
+            2. ALWAYS use --no-daemon for Gradle commands
+            3. NEVER use interactive commands
+            4. Keep output concise to save tokens
+
+            Project type: Java (Maven or Gradle)
+
+            Available commands:
+            - ./mvnw clean package -DskipTests -B    (build)
+            - ./mvnw test -B                          (run all tests)
+            - ./mvnw -Dtest=ClassName test -B         (run single test class)
+            - ./mvnw dependency:tree -B               (show dependencies)
+
+            CRITICAL: Every Maven command MUST include -B flag!
+
+            Task: ${{ github.event.inputs.task || 'Run tests with ./mvnw test -B. If any fail, analyze and fix them.' }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+            build/test-results/
+          retention-days: 7
