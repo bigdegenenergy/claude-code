@@ -66,7 +66,8 @@ jobs:
   claude-python:
     runs-on: ubuntu-latest
     needs: [lint-check, test-check]
-    if: failure() && github.event_name == 'pull_request'
+    # Only run on PR failures from the same repo (forks don't have access to secrets)
+    if: failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     timeout-minutes: 30
 
     steps:
