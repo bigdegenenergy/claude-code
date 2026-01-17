@@ -31,10 +31,11 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 contains_shell_metacharacters() {
     local cmd="$1"
     # Check for command chaining operators: ; && || | ` $(
-    # Also check for redirection that could overwrite files: > >>
+    # Also check for ALL redirection (> >> >&) to prevent file overwrites
+    # Note: This blocks legitimate 2>&1 but is necessary for security
     if [[ "$cmd" =~ [\;\&\|] ]] || \
        [[ "$cmd" =~ \`|\$\( ]] || \
-       [[ "$cmd" =~ \>[^\&] ]]; then
+       [[ "$cmd" =~ \> ]]; then
         return 0  # true - contains dangerous chars
     fi
     return 1  # false - safe
@@ -43,6 +44,13 @@ contains_shell_metacharacters() {
 # ============================================
 # TRUSTED BASH COMMANDS - AUTO APPROVE
 # ============================================
+#
+# SECURITY NOTE: These patterns use prefix matching (^command).
+# This means "npm test --some-flag" will also be approved.
+# This is intentional to allow legitimate flags like --watch, --coverage.
+# The shell metacharacter check above prevents dangerous chaining.
+# If a specific tool has file output flags (e.g., --output-file),
+# consider adding it to the deny list or using exact matching.
 
 if [[ "$TOOL_NAME" == "Bash" ]] && [[ -n "$BASH_COMMAND" ]]; then
     # SECURITY: Never auto-approve commands with shell metacharacters

@@ -119,10 +119,14 @@ echo ""
 # FAILING TESTS (if cached)
 # ============================================
 
-if [ -f "/tmp/claude_test_output.log" ]; then
+# Use project-relative path or environment variable for test output
+# This avoids security issues with hardcoded global /tmp paths
+TEST_LOG="${CLAUDE_TEST_OUTPUT_LOG:-.claude/artifacts/test_output.log}"
+
+if [ -f "$TEST_LOG" ]; then
     # Check if the log is recent (within last hour)
-    if [ "$(find /tmp/claude_test_output.log -mmin -60 2>/dev/null)" ]; then
-        FAILED_TESTS=$(grep -E "(FAIL|ERROR|failed)" /tmp/claude_test_output.log 2>/dev/null | head -5)
+    if [ "$(find "$TEST_LOG" -mmin -60 2>/dev/null)" ]; then
+        FAILED_TESTS=$(grep -E "(FAIL|ERROR|failed)" "$TEST_LOG" 2>/dev/null | head -5)
         if [ -n "$FAILED_TESTS" ]; then
             echo "### Recent Test Failures"
             echo '```'
