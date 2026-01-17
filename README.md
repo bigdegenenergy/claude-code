@@ -70,6 +70,42 @@ If you are performing this manually, you must copy **two** distinct directories:
 
 ---
 
+## 🖥️ Environment Modes: CLI vs Web
+
+**IMPORTANT FOR AGENTS:** This repository supports TWO distinct runtime environments. Choose the correct configuration based on where you are running.
+
+| Environment                    | Description                                                                    | Configuration                 |
+| ------------------------------ | ------------------------------------------------------------------------------ | ----------------------------- |
+| **Claude Code CLI** (Terminal) | Interactive terminal with full system access, hooks, and local file operations | Root `.claude/` + `CLAUDE.md` |
+| **Claude Code Web** (Browser)  | Ephemeral, headless, non-interactive sessions via browser                      | `web-compatible/` profile     |
+
+### How to Detect Your Environment
+
+**You are in Claude Code CLI (Terminal) if:**
+
+- You can run interactive commands
+- Hooks execute automatically (SessionStart, PreToolUse, etc.)
+- You have persistent file system access
+- User can respond to prompts
+
+**You are in Claude Code Web (Browser) if:**
+
+- Sessions may restart unexpectedly
+- Interactive prompts will HANG FOREVER
+- No GUI operations possible (no `plt.show()`, no `webbrowser.open()`)
+- Must use non-interactive flags (`-B`, `--no-input`, `-y`, `--silent`)
+
+### Which Configuration to Use
+
+| Scenario                                        | Use This                                |
+| ----------------------------------------------- | --------------------------------------- |
+| Running Claude Code in terminal/IDE             | Root config (`.claude/`, `CLAUDE.md`)   |
+| Running Claude Code in browser (claude.ai/code) | `web-compatible/` profile               |
+| GitHub Actions CI/CD                            | `web-compatible/` + language profile    |
+| Local development with full features            | Root config + optional language profile |
+
+---
+
 ## 📦 Language & Environment Profiles
 
 This repository includes ready-to-use starter packs for specific languages and environments. Copy the contents of the desired profile to your project root to get started.
