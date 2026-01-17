@@ -436,6 +436,10 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
           if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
@@ -443,26 +447,29 @@ jobs:
             exit 0
           fi
 
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          PR_URL="https://github.com/${{ github.repository }}/pull/${PR_NUMBER}"
+          # Read verdict from file
           VERDICT="$(cat /tmp/pr/verdict.txt 2>/dev/null || echo UNKNOWN)"
+          export VERDICT
 
-          # Use HTML to avoid Markdown escaping footguns
-          # Export so Python subprocess can access via os.environ
-          export MESSAGE="🤖 <b>PR Review Complete</b>
-
-          <b>PR #${PR_NUMBER}:</b> ${PR_TITLE}
-          <b>Author:</b> ${{ github.actor }}
-          <b>Malicious Verdict:</b> ${VERDICT}
-
-          <a href=\"${PR_URL}\">View PR</a>"
-
-          python << 'PY'
+          # Use Python directly to send - avoids shell injection from PR title
+          python3 << 'PY'
           import os, json, urllib.request
+
           bot = os.environ["TELEGRAM_BOT_TOKEN"]
           chat = os.environ["TELEGRAM_CHAT_ID"]
-          msg = os.environ["MESSAGE"] if "MESSAGE" in os.environ else ""
+          pr_number = os.environ.get("PR_NUMBER", "?")
+          pr_title = os.environ.get("PR_TITLE", "Unknown")
+          pr_url = os.environ.get("PR_URL", "")
+          verdict = os.environ.get("VERDICT", "UNKNOWN")
+          author = os.environ.get("AUTHOR", "unknown")
+
+          msg = f"""🤖 <b>PR Review Complete</b>
+
+          <b>PR #{pr_number}:</b> {pr_title}
+          <b>Author:</b> {author}
+          <b>Malicious Verdict:</b> {verdict}
+
+          <a href="{pr_url}">View PR</a>"""
           payload = {
             "chat_id": chat,
             "text": msg,

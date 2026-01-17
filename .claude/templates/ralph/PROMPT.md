@@ -27,7 +27,7 @@ project/
 ├── src/           # Source code
 ├── tests/         # Test files
 ├── docs/          # Documentation
-└── @fix_plan.md   # Task tracking
+└── fix_plan.md   # Task tracking
 ```
 
 ## Development Rules
@@ -54,7 +54,7 @@ npm run build  # or make build
 
 The project is complete when:
 
-- [ ] All @fix_plan.md items marked complete
+- [ ] All fix_plan.md items marked complete
 - [ ] All tests passing
 - [ ] No errors in build/test output
 - [ ] Core requirements implemented
