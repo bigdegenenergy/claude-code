@@ -274,16 +274,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           # Commit changes
-          git commit -m "$(cat <<'EOF'
-          chore: sync Claude Code config from upstream
-
-          Synced from: ${{ env.SOURCE_REPO }}@${{ steps.version.outputs.commit_sha }}
-          Date: ${{ steps.version.outputs.commit_date }}
-
-          This is an automated sync of the Claude Code configuration.
-          Review the changes and merge if appropriate.
-          EOF
-          )"
+          git commit -m "chore: sync Claude Code config from ${{ env.SOURCE_REPO }}@${{ steps.version.outputs.commit_sha }}"
 
           echo "✅ Created branch: $BRANCH_NAME"
 
@@ -297,27 +288,36 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ env.SOURCE_REPO }}
+          COMMIT_SHA: ${{ steps.version.outputs.commit_sha }}
+          COMMIT_DATE: ${{ steps.version.outputs.commit_date }}
+          SYNC_WORKFLOWS: ${{ inputs.sync_github_workflows }}
         run: |
-          PR_BODY=$(cat <<'EOF'
-          ## 🔄 Claude Code Configuration Sync
+          # Build PR body
+          WORKFLOW_LINE=""
+          if [ "$SYNC_WORKFLOWS" == "true" ]; then
+            WORKFLOW_LINE="- \`.github/workflows/\` (CI/CD workflows)"
+          fi
+
+          PR_BODY="## 🔄 Claude Code Configuration Sync
 
           This PR syncs the latest Claude Code configuration from the upstream repository.
 
           ### Source
-          - **Repository:** [${{ env.SOURCE_REPO }}](https://github.com/${{ env.SOURCE_REPO }})
-          - **Commit:** `${{ steps.version.outputs.commit_sha }}`
-          - **Date:** ${{ steps.version.outputs.commit_date }}
+          - **Repository:** [${SOURCE_REPO}](https://github.com/${SOURCE_REPO})
+          - **Commit:** \`${COMMIT_SHA}\`
+          - **Date:** ${COMMIT_DATE}
 
           ### Changes Synced
-          - `.claude/` directory (commands, hooks, agents, skills)
-          - `CLAUDE.md` (main configuration file)
-          ${{ inputs.sync_github_workflows == true && '- `.github/workflows/` (CI/CD workflows)' || '' }}
+          - \`.claude/\` directory (commands, hooks, agents, skills)
+          - \`CLAUDE.md\` (main configuration file)
+          ${WORKFLOW_LINE}
 
           ### ⚠️ CI Note
           If this PR was created using the default GITHUB_TOKEN, CI workflows
           may not have triggered automatically. To run CI:
           - Close and reopen this PR, OR
-          - Push an empty commit: \`git commit --allow-empty -m "trigger ci"\`
+          - Push an empty commit: \`git commit --allow-empty -m \"trigger ci\"\`
 
           ### Review Checklist
           - [ ] Review changes for compatibility with this project
@@ -327,17 +327,15 @@ jobs:
 
           ### Local Files Preserved
           The following local files were **not** overwritten:
-          - `.claude/notifications.json` (notification settings)
-          - `.claude/local-settings.json` (local overrides)
-          - `.claude/artifacts/` (generated artifacts)
+          - \`.claude/notifications.json\` (notification settings)
+          - \`.claude/local-settings.json\` (local overrides)
+          - \`.claude/artifacts/\` (generated artifacts)
 
           ---
-          *This PR was automatically created by the [sync-claude-config](.github/workflows/sync-claude-config.yml) workflow.*
-          EOF
-          )
+          *This PR was automatically created by the [sync-claude-config](.github/workflows/sync-claude-config.yml) workflow.*"
 
           gh pr create \
-            --title "chore: sync Claude Code config (${{ steps.version.outputs.commit_date }})" \
+            --title "chore: sync Claude Code config (${COMMIT_DATE})" \
             --body "$PR_BODY" \
             --label "automated,claude-code" \
             --head "${{ steps.branch.outputs.branch_name }}" \
