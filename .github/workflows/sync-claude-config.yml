@@ -274,13 +274,16 @@ jobs:
           git checkout -b "$BRANCH_NAME"
 
           # Commit changes
-          git commit -m "chore: sync Claude Code config from upstream
+          git commit -m "$(cat <<'EOF'
+          chore: sync Claude Code config from upstream
 
-Synced from: ${{ env.SOURCE_REPO }}@${{ steps.version.outputs.commit_sha }}
-Date: ${{ steps.version.outputs.commit_date }}
+          Synced from: ${{ env.SOURCE_REPO }}@${{ steps.version.outputs.commit_sha }}
+          Date: ${{ steps.version.outputs.commit_date }}
 
-This is an automated sync of the Claude Code configuration.
-Review the changes and merge if appropriate."
+          This is an automated sync of the Claude Code configuration.
+          Review the changes and merge if appropriate.
+          EOF
+          )"
 
           echo "✅ Created branch: $BRANCH_NAME"
 
