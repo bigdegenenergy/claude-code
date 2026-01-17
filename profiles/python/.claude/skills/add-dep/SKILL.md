@@ -57,11 +57,11 @@ Add the exact installed version to `requirements.txt` with robust duplicate chec
 # Get the exact version using pip show (not grep which can match partial names)
 VERSION=$(pip show PACKAGE_NAME | grep "^Version:" | cut -d' ' -f2)
 
-# Check if package already exists (case-insensitive, any version specifier)
-# Matches: package==1.0, package>=1.0, package~=1.0, Package==1.0, etc.
-if grep -iq "^PACKAGE_NAME[<>=!~\[]" requirements.txt 2>/dev/null || grep -iq "^PACKAGE_NAME$" requirements.txt 2>/dev/null; then
-    # Update existing entry (case-insensitive replacement)
-    sed -i "s/^[Pp][Aa][Cc][Kk][Aa][Gg][Ee]_[Nn][Aa][Mm][Ee][<>=!~\[].*/PACKAGE_NAME==$VERSION/I" requirements.txt
+# Check if package already exists (case-insensitive, any version specifier, handles whitespace)
+# Matches: package==1.0, package >= 1.0, package~=1.0, Package==1.0, etc.
+if grep -iEq "^PACKAGE_NAME[[:space:]]*[<>=!~\[]" requirements.txt 2>/dev/null || grep -iq "^PACKAGE_NAME$" requirements.txt 2>/dev/null; then
+    # Update existing entry (handles optional whitespace around operators)
+    sed -i "s/^[Pp][Aa][Cc][Kk][Aa][Gg][Ee]_[Nn][Aa][Mm][Ee][[:space:]]*[<>=!~\[].*/PACKAGE_NAME==$VERSION/I" requirements.txt
     sed -i "s/^[Pp][Aa][Cc][Kk][Aa][Gg][Ee]_[Nn][Aa][Mm][Ee]$/PACKAGE_NAME==$VERSION/I" requirements.txt
     echo "Updated PACKAGE_NAME==$VERSION in requirements.txt"
 else
@@ -74,6 +74,7 @@ fi
 **Important Notes**:
 
 - Uses case-insensitive matching (`-i` flag) to catch `Requests` vs `requests`
+- Handles whitespace around operators (`requests >= 2.0` and `requests>=2.0`)
 - Detects any version specifier: `==`, `>=`, `<=`, `~=`, `!=`, `[extras]`
 - Also catches bare package names without version specifiers
 - Do NOT use `pip freeze | grep` as it can match partial names (e.g., `requests` matching `requests-oauthlib`)
@@ -107,9 +108,9 @@ pip install --no-input requests
 # 2. Verify
 python -c "import requests; print(requests.__version__)"
 
-# 3. Pin (with case-insensitive duplicate check)
+# 3. Pin (with case-insensitive duplicate check, handles whitespace)
 VERSION=$(pip show requests | grep "^Version:" | cut -d' ' -f2)
-if ! grep -iq "^requests[<>=!~\[]" requirements.txt 2>/dev/null; then
+if ! grep -iEq "^requests[[:space:]]*[<>=!~\[]" requirements.txt 2>/dev/null; then
     echo "requests==$VERSION" >> requirements.txt
 fi
 
@@ -144,7 +145,7 @@ For development-only dependencies (testing, linting), add to `requirements-dev.t
 ```bash
 pip install --no-input pytest
 VERSION=$(pip show pytest | grep "^Version:" | cut -d' ' -f2)
-if ! grep -iq "^pytest[<>=!~\[]" requirements-dev.txt 2>/dev/null; then
+if ! grep -iEq "^pytest[[:space:]]*[<>=!~\[]" requirements-dev.txt 2>/dev/null; then
     echo "pytest==$VERSION" >> requirements-dev.txt
 fi
 ```
