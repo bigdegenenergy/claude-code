@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "echo 'Bootstrapping Web Env...' && (test -f requirements.txt && pip install --no-input -r requirements.txt) || (test -f pom.xml && ./mvnw dependency:go-offline -B) || (test -f package.json && npm ci --silent) || echo 'No recognized dependency file found'"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python*)",
+      "Bash(pip*)",
+      "Bash(pytest*)",
+      "Bash(ruff*)",
+      "Bash(black*)",
+      "Bash(./mvnw*)",
+      "Bash(mvn*)",
+      "Bash(gradle*)",
+      "Bash(./gradlew*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(node*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(ls*)",
+      "Bash(cat*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)"
+    ],
+    "deny": []
+  },
+  "defaults": {
+    "thinking_enabled": true
+  }
+}
