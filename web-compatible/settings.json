@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "echo 'Bootstrapping Web Env...'; if [ -f requirements.txt ]; then pip install --no-input --progress-bar off -r requirements.txt; fi; if [ -f pom.xml ]; then if [ -f mvnw ]; then chmod +x mvnw 2>/dev/null; ./mvnw dependency:go-offline -B -q || mvn dependency:go-offline -B -q; else mvn dependency:go-offline -B -q; fi; fi; if [ -f package.json ]; then if [ -f package-lock.json ]; then npm ci --silent; else npm install --silent; fi; fi; echo 'Bootstrap complete'"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python*)",
+      "Bash(pip*)",
+      "Bash(pytest*)",
+      "Bash(ruff*)",
+      "Bash(black*)",
+      "Bash(./mvnw*)",
+      "Bash(mvn*)",
+      "Bash(gradle*)",
+      "Bash(./gradlew*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(node*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(ls*)",
+      "Bash(cat*)",
+      "Bash(head*)",
+      "Bash(tail*)",
+      "Read(*)",
+      "Glob(*)",
+      "Grep(*)"
+    ],
+    "deny": []
+  },
+  "defaults": {
+    "thinking_enabled": true
+  }
+}
