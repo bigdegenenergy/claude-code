@@ -1,6 +1,6 @@
 ---
 description: Autonomous development loop. Iteratively improves until completion with built-in safeguards.
-allowed-tools: Bash(*), Read(*), Edit(*), Write(*), Grep(*), Glob(*), Task(*)
+allowed-tools: Bash(*), Read(*), Edit(*), Write(*), Grep(*), Glob(*), Task(*), Fetch(*), Update(*)
 ---
 
 # Ralph: Autonomous Development Mode
