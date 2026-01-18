@@ -6,7 +6,7 @@ This guide helps you configure failure notifications for both Claude Code (local
 
 ## ⚠️ MANDATORY: Read Source Repository First
 
-Before configuring notifications, read **https://github.com/bigdegenenergy/claude-code** in full.
+Before configuring notifications, read **https://github.com/bigdegenenergy/ai-dev-toolkit** in full.
 
 ---
 
@@ -14,14 +14,14 @@ Before configuring notifications, read **https://github.com/bigdegenenergy/claud
 
 The notification system supports multiple platforms:
 
-| Platform | Local Support | GitHub Actions Support |
-|----------|---------------|----------------------|
-| Slack | ✅ | ✅ |
-| Telegram | ✅ | ✅ |
-| Discord | ✅ | ✅ |
-| ntfy | ✅ | ✅ |
-| Email | ✅ | ✅ |
-| Custom Webhook | ✅ | ✅ |
+| Platform       | Local Support | GitHub Actions Support |
+| -------------- | ------------- | ---------------------- |
+| Slack          | ✅            | ✅                     |
+| Telegram       | ✅            | ✅                     |
+| Discord        | ✅            | ✅                     |
+| ntfy           | ✅            | ✅                     |
+| Email          | ✅            | ✅                     |
+| Custom Webhook | ✅            | ✅                     |
 
 ---
 
@@ -90,6 +90,7 @@ export CUSTOM_WEBHOOK_URL="https://your-webhook.com/endpoint"
 ### Step 1: Add Repository Secrets
 
 Go to your GitHub repository:
+
 1. **Settings** → **Secrets and variables** → **Actions**
 2. Click **New repository secret**
 3. Add the relevant secrets for your platform(s)
@@ -100,71 +101,81 @@ Go to your GitHub repository:
 
 For private repositories, you MUST configure a `GH_TOKEN` with `repo` access for full workflow functionality:
 
-| Secret Name | Description |
-|-------------|-------------|
-| `GH_TOKEN` | Personal Access Token with `repo` scope |
+| Secret Name | Description                             |
+| ----------- | --------------------------------------- |
+| `GH_TOKEN`  | Personal Access Token with `repo` scope |
 
 **Why this is needed:**
+
 - The default `GITHUB_TOKEN` has limited permissions in private repos
 - Enables PR/issue comment automation (agent-reminder workflow)
 - Required for cross-repository access
 
 **How to get:**
+
 1. Go to GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
 2. Generate new token with `repo` scope
 3. Add as repository secret named `GH_TOKEN`
 
 #### Slack
-| Secret Name | Description |
-|-------------|-------------|
+
+| Secret Name         | Description                |
+| ------------------- | -------------------------- |
 | `SLACK_WEBHOOK_URL` | Slack incoming webhook URL |
 
 **How to get:** Slack App → Incoming Webhooks → Add New Webhook
 
 #### Telegram
-| Secret Name | Description |
-|-------------|-------------|
+
+| Secret Name          | Description               |
+| -------------------- | ------------------------- |
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
-| `TELEGRAM_CHAT_ID` | Chat/Group/Channel ID |
+| `TELEGRAM_CHAT_ID`   | Chat/Group/Channel ID     |
 
 **How to get:**
+
 1. Message @BotFather to create a bot
 2. Get chat ID by messaging @userinfobot or from the API
 
 #### Discord
-| Secret Name | Description |
-|-------------|-------------|
+
+| Secret Name           | Description         |
+| --------------------- | ------------------- |
 | `DISCORD_WEBHOOK_URL` | Discord webhook URL |
 
 **How to get:** Server Settings → Integrations → Webhooks → New Webhook
 
 #### ntfy
-| Secret Name | Description |
-|-------------|-------------|
-| `NTFY_TOPIC` | Your ntfy topic name |
+
+| Secret Name   | Description                       |
+| ------------- | --------------------------------- |
+| `NTFY_TOPIC`  | Your ntfy topic name              |
 | `NTFY_SERVER` | (Optional) Self-hosted server URL |
-| `NTFY_TOKEN` | (Optional) Access token |
+| `NTFY_TOKEN`  | (Optional) Access token           |
 
 **How to get:** Just pick a unique topic name at ntfy.sh
 
 #### Email
-| Secret Name | Description |
-|-------------|-------------|
-| `SMTP_HOST` | SMTP server (e.g., smtp.gmail.com) |
-| `SMTP_PORT` | SMTP port (usually 587) |
-| `SMTP_USER` | SMTP username |
-| `SMTP_PASSWORD` | SMTP password or app password |
-| `EMAIL_FROM` | Sender email address |
-| `EMAIL_TO` | Recipient email address |
+
+| Secret Name     | Description                        |
+| --------------- | ---------------------------------- |
+| `SMTP_HOST`     | SMTP server (e.g., smtp.gmail.com) |
+| `SMTP_PORT`     | SMTP port (usually 587)            |
+| `SMTP_USER`     | SMTP username                      |
+| `SMTP_PASSWORD` | SMTP password or app password      |
+| `EMAIL_FROM`    | Sender email address               |
+| `EMAIL_TO`      | Recipient email address            |
 
 **How to get (Gmail):**
+
 1. Enable 2FA on your Google account
 2. Generate an App Password
 3. Use the app password as SMTP_PASSWORD
 
 #### Custom Webhook
-| Secret Name | Description |
-|-------------|-------------|
+
+| Secret Name          | Description           |
+| -------------------- | --------------------- |
 | `CUSTOM_WEBHOOK_URL` | Your webhook endpoint |
 
 ---
@@ -292,6 +303,7 @@ fi
 ### Minimum Setup (Choose One)
 
 **Slack (Easiest):**
+
 ```bash
 # Local
 echo '{"slack":{"webhook_url":"YOUR_URL"}}' > .claude/notifications.json
@@ -301,6 +313,7 @@ echo '{"slack":{"webhook_url":"YOUR_URL"}}' > .claude/notifications.json
 ```
 
 **ntfy (No Account Required):**
+
 ```bash
 # Local
 echo '{"ntfy":{"topic":"my-unique-topic"}}' > .claude/notifications.json
@@ -310,6 +323,7 @@ echo '{"ntfy":{"topic":"my-unique-topic"}}' > .claude/notifications.json
 ```
 
 **Telegram (Free):**
+
 ```bash
 # Local
 echo '{"telegram":{"bot_token":"TOKEN","chat_id":"ID"}}' > .claude/notifications.json

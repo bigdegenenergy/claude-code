@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Claude Code Team Setup Script
-# Source: https://github.com/bigdegenenergy/claude-code
+# Source: https://github.com/bigdegenenergy/ai-dev-toolkit
 # Description: Hydrates a target repository with the Claude Code & GitHub DNA.
 # ==============================================================================
 
@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-SOURCE_REPO="https://github.com/bigdegenenergy/claude-code.git"
+SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
 TEMP_DIR=$(mktemp -d)
 
 echo -e "${BLUE}🤖 Claude Code Team Setup Initiated...${NC}"

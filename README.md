@@ -1,9 +1,9 @@
-# 🤖 Claude Code & GitHub Actions: Universal Team Configuration
+# 🤖 AI Dev Toolkit: Universal Team Configuration
 
-**Source Repository:** [https://github.com/bigdegenenergy/claude-code](https://github.com/bigdegenenergy/claude-code)
-**Version:** 2.0 (Universal)
+**Source Repository:** [https://github.com/bigdegenenergy/ai-dev-toolkit](https://github.com/bigdegenenergy/ai-dev-toolkit)
+**Version:** 2.1 (Universal)
 
-This repository contains the "DNA" for a high-performance, automated software engineering team. It combines **Claude Code** (local AI configuration) with **GitHub Actions** (CI/CD workflows) to create a robust, self-verifying development environment.
+This repository contains the "DNA" for a high-performance, automated software engineering team. It combines **AI coding assistants** (like Claude Code) with **GitHub Actions** (CI/CD workflows) to create a robust, self-verifying development environment.
 
 ---
 
@@ -43,35 +43,42 @@ To transform any repository into a Professional Engineering Environment, you mus
 - You must be in the root of the **Target Repository**.
 - You must have **git** installed.
 
-### Option A: Universal Setup Script (Recommended)
+### Option A: Install Script (Recommended)
 
-Run this one-liner to clone the source DNA and inject it into your current project:
+Run this one-liner to clone the toolkit and install it into your current project:
 
-    curl -sL [https://raw.githubusercontent.com/bigdegenenergy/claude-code/main/setup-claude-team.sh](https://raw.githubusercontent.com/bigdegenenergy/claude-code/main/setup-claude-team.sh) | bash
+```bash
+git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit && \
+/tmp/ai-dev-toolkit/install-claude-code.sh && \
+rm -rf /tmp/ai-dev-toolkit
+```
 
-### Option B: Manual Hydration
+Or via curl:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install-claude-code.sh | bash
+```
+
+### Option B: Manual Installation
 
 If you are performing this manually, you must copy **two** distinct directories:
 
 1.  **The Brain (.claude):** Contains local slash commands, hooks, and agent personas.
 2.  **The Nervous System (.github):** Contains CI/CD pipelines and PR automation.
 
-    # 1. Clone Source Temporarily
+````bash
+# 1. Clone Source Temporarily
+git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit
 
-    git clone [https://github.com/bigdegenenergy/claude-code.git](https://github.com/bigdegenenergy/claude-code.git) /tmp/claude-dna
+# 2. Install Configuration
+cp -r /tmp/ai-dev-toolkit/.claude ./.claude
+cp /tmp/ai-dev-toolkit/CLAUDE.md ./CLAUDE.md
 
-    # 2. Install Claude Code Configuration
+# 3. Install GitHub Actions Workflows
+cp -r /tmp/ai-dev-toolkit/.github ./.github
 
-    cp -r /tmp/claude-dna/.claude ./.claude
-    cp /tmp/claude-dna/CLAUDE.md ./CLAUDE.md
-
-    # 3. Install GitHub Actions Workflows
-
-    cp -r /tmp/claude-dna/.github ./.github
-
-    # 4. Set Executable Permissions (see setup-claude-team.sh for the exact command)
-
-    # Sets .sh and .py files in .claude/hooks/ as executable
+# 4. Set Executable Permissions
+find .claude/hooks -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} \;
 
     # 5. Cleanup
 
@@ -126,7 +133,7 @@ For **Claude Code Web** (browser-based, headless) environments where interactive
 ```bash
 # Copy web-compatible configuration
 cp -r profiles/web-compatible/* /path/to/your/project/
-```
+````
 
 **Key Features:**
 

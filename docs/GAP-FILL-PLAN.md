@@ -1,6 +1,6 @@
 # Gap Fill Implementation Plan
 
-> **Objective:** Enhance the bigdegenenergy/claude-code repository to match and exceed industry best practices as documented in Joe Njenga's "17 Best Claude Code Workflows" article.
+> **Objective:** Enhance the bigdegenenergy/ai-dev-toolkit repository to match and exceed industry best practices as documented in Joe Njenga's "17 Best Claude Code Workflows" article.
 
 ---
 
@@ -18,19 +18,21 @@ This plan addresses **5 Major Gaps**, **5 Medium Gaps**, and **4 Minor Gaps** id
 ### Gap Severity: **MAJOR**
 
 ### Current State
+
 - No documentation of thinking triggers
 - No mention of thinking budget levels
 - Verbose mode (`Ctrl+O`) undocumented
 
 ### Target State
+
 Document the full thinking spectrum with use-case guidance.
 
 > **Note:** These triggers are **native to Claude Code CLI** (preprocessed before API calls). No implementation code is needed—only documentation.
 
-| Trigger | Budget | Use Case |
-|---------|--------|----------|
-| `think` | ~4,000 tokens | Refactoring, simple fixes, error handling |
-| `think hard` | ~10,000 tokens | Caching strategy, migration planning, API design |
+| Trigger                       | Budget         | Use Case                                         |
+| ----------------------------- | -------------- | ------------------------------------------------ |
+| `think`                       | ~4,000 tokens  | Refactoring, simple fixes, error handling        |
+| `think hard`                  | ~10,000 tokens | Caching strategy, migration planning, API design |
 | `think harder` / `ultrathink` | ~32,000 tokens | Major architecture, comprehensive security audit |
 
 **Important:** These triggers are case-insensitive and work anywhere in the prompt. They do NOT work in claude.ai web interface or direct API calls—only Claude Code CLI.
@@ -52,6 +54,7 @@ Document the full thinking spectrum with use-case guidance.
    - Add "think hard" trigger for architecture planning
 
 ### Files to Create/Modify
+
 - `CLAUDE.md` (add section)
 - `.claude/rules/thinking.md` (new)
 - `.claude/commands/plan.md` (update)
@@ -63,42 +66,49 @@ Document the full thinking spectrum with use-case guidance.
 ### Gap Severity: **MAJOR**
 
 ### Current State
+
 - No session management documentation
 - No context monitoring guidance
 - No checkpoint/rewind documentation
 - "Document & Clear" pattern unknown
 
 ### Target State
+
 Full session lifecycle management with context hygiene practices.
 
 ### Key Concepts to Document
 
 #### Session Commands
-| Command | Purpose |
-|---------|---------|
-| `/rename <name>` | Name current session for later retrieval |
-| `claude --continue` / `-c` | Continue most recent conversation |
-| `claude --resume` / `-r` | Interactive session picker |
-| `/resume` | Switch to different conversation (inside Claude) |
-| `/context` | Check current token usage |
-| `/clear` | Clear context for fresh start |
+
+| Command                    | Purpose                                          |
+| -------------------------- | ------------------------------------------------ |
+| `/rename <name>`           | Name current session for later retrieval         |
+| `claude --continue` / `-c` | Continue most recent conversation                |
+| `claude --resume` / `-r`   | Interactive session picker                       |
+| `/resume`                  | Switch to different conversation (inside Claude) |
+| `/context`                 | Check current token usage                        |
+| `/clear`                   | Clear context for fresh start                    |
 
 #### Checkpoint System
-| Action | What It Does |
-|--------|--------------|
-| `/rewind` | Access checkpoint system |
-| `Esc` twice | Quick access to checkpoints |
-| Code-only restore | Revert files, keep conversation |
+
+| Action                    | What It Does                     |
+| ------------------------- | -------------------------------- |
+| `/rewind`                 | Access checkpoint system         |
+| `Esc` twice               | Quick access to checkpoints      |
+| Code-only restore         | Revert files, keep conversation  |
 | Conversation-only restore | Reset context, keep code changes |
-| Full restore | Revert both to prior point |
+| Full restore              | Revert both to prior point       |
 
 #### The "Document & Clear" Pattern
+
 For complex multi-phase tasks:
+
 1. Have Claude dump current plan/progress to a `.md` file
 2. Run `/clear` to reset context
 3. Start new session: "Read `plan.md` and continue from step 3"
 
 #### Context Hygiene Rules
+
 > **Note:** The "60% rule" is a myth. Auto-compact triggers at ~95% capacity.
 
 - Run `/compact` manually at **~70% capacity** (before auto-compact kicks in)
@@ -127,6 +137,7 @@ For complex multi-phase tasks:
    - Add context check reminders
 
 ### Files to Create/Modify
+
 - `CLAUDE.md` (add sections)
 - `.claude/rules/context.md` (new)
 - `.claude/commands/checkpoint.md` (optional, new)
@@ -138,24 +149,26 @@ For complex multi-phase tasks:
 ### Gap Severity: **MAJOR**
 
 ### Current State
+
 - No MCP configuration
 - No `.mcp.json` file
 - No documentation on MCP servers
 
 ### Target State
+
 Template MCP configuration with documentation for common integrations.
 
 ### High-Value MCP Integrations
 
-| Server | Use Case | Package |
-|--------|----------|---------|
-| **GitHub** | Issue/PR management, code review | `@modelcontextprotocol/server-github` |
-| **Playwright** | Visual testing, screenshot workflows | `@anthropic-ai/playwright-mcp` |
-| **Filesystem** | Enhanced file operations | `@modelcontextprotocol/server-filesystem` |
-| **PostgreSQL** | Database queries and exploration | `@modelcontextprotocol/server-postgres` |
-| **Sentry** | Error analysis and debugging | `@modelcontextprotocol/server-sentry` |
-| **Figma** | Design-to-code workflows | Community server |
-| **Slack** | Team notifications | `@modelcontextprotocol/server-slack` |
+| Server         | Use Case                             | Package                                   |
+| -------------- | ------------------------------------ | ----------------------------------------- |
+| **GitHub**     | Issue/PR management, code review     | `@modelcontextprotocol/server-github`     |
+| **Playwright** | Visual testing, screenshot workflows | `@anthropic-ai/playwright-mcp`            |
+| **Filesystem** | Enhanced file operations             | `@modelcontextprotocol/server-filesystem` |
+| **PostgreSQL** | Database queries and exploration     | `@modelcontextprotocol/server-postgres`   |
+| **Sentry**     | Error analysis and debugging         | `@modelcontextprotocol/server-sentry`     |
+| **Figma**      | Design-to-code workflows             | Community server                          |
+| **Slack**      | Team notifications                   | `@modelcontextprotocol/server-slack`      |
 
 > **Note:** The official `@modelcontextprotocol/server-puppeteer` is **deprecated**. Use Playwright MCP instead for browser automation.
 
@@ -181,6 +194,7 @@ Template MCP configuration with documentation for common integrations.
    - Document `/mcp` command usage
 
 ### Files to Create/Modify
+
 - `.mcp.json.template` (new)
 - `CLAUDE.md` (add section)
 - `docs/SETUP-MCP.md` (new)
@@ -192,21 +206,23 @@ Template MCP configuration with documentation for common integrations.
 ### Gap Severity: **MAJOR**
 
 ### Current State
+
 - No `.claude/skills/` directory
 - No SKILL.md files
 - Skills feature completely unused
 
 ### Target State
+
 Implement Skills for auto-discovered, context-aware expertise.
 
 ### Understanding Skills vs Commands vs Agents
 
-| Feature | Trigger | Context | Best For |
-|---------|---------|---------|----------|
-| **CLAUDE.md** | Always loaded | Main | Project conventions |
-| **Slash Commands** | Manual `/` | Main | Explicit workflows |
-| **Subagents** | Delegated | Separate | Research-heavy tasks |
-| **Skills** | Auto-discovered | Main | Domain expertise |
+| Feature            | Trigger         | Context  | Best For             |
+| ------------------ | --------------- | -------- | -------------------- |
+| **CLAUDE.md**      | Always loaded   | Main     | Project conventions  |
+| **Slash Commands** | Manual `/`      | Main     | Explicit workflows   |
+| **Subagents**      | Delegated       | Separate | Research-heavy tasks |
+| **Skills**         | Auto-discovered | Main     | Domain expertise     |
 
 ### Skills to Implement
 
@@ -218,6 +234,7 @@ Implement Skills for auto-discovered, context-aware expertise.
 6. **`debugging/SKILL.md`** - Systematic debugging approach
 
 ### Skill Structure
+
 ```
 .claude/skills/<skill-name>/
 ├── SKILL.md           # Main definition (required)
@@ -228,6 +245,7 @@ Implement Skills for auto-discovered, context-aware expertise.
 ```
 
 ### SKILL.md Format
+
 ```markdown
 ---
 name: skill-name
@@ -237,14 +255,17 @@ description: When to auto-trigger this skill
 # Skill Title
 
 ## Critical Steps
+
 1. First step
 2. Second step
 
 ## Patterns
+
 - Pattern A
 - Pattern B
 
 ## Anti-Patterns
+
 - Don't do X
 - Avoid Y
 ```
@@ -269,6 +290,7 @@ description: When to auto-trigger this skill
    - Examples and templates
 
 ### Files to Create/Modify
+
 - `.claude/skills/tdd/SKILL.md` (new)
 - `.claude/skills/security-review/SKILL.md` (new)
 - `.claude/skills/pr-review/SKILL.md` (new)
@@ -282,14 +304,17 @@ description: When to auto-trigger this skill
 ### Gap Severity: **MEDIUM**
 
 ### Current State
+
 - CLAUDE.md is 300+ lines (exceeds 50-line guideline for lean projects)
 - No `.claude/rules/` directory
 - `@path/to/import` syntax not used
 
 ### Target State
+
 Modular, maintainable configuration with lean CLAUDE.md.
 
 ### The Problem with Monolithic CLAUDE.md
+
 - Frontier LLMs follow ~150-200 instructions consistently
 - Claude Code's system prompt already contains ~50 instructions
 - As instruction count increases, ALL instructions are followed less consistently
@@ -308,9 +333,12 @@ Modular, maintainable configuration with lean CLAUDE.md.
 ```
 
 ### `@path/to/import` Syntax
+
 Instead of embedding content:
+
 ```markdown
 ## Database Patterns
+
 For Dexie.js usage, see @docs/database-patterns.md
 ```
 
@@ -332,6 +360,7 @@ Claude loads the file only when needed, preserving context.
    - Create template for new rules
 
 ### Files to Create/Modify
+
 - `.claude/rules/code-style.md` (new)
 - `.claude/rules/testing.md` (new)
 - `.claude/rules/security.md` (new)
@@ -345,11 +374,13 @@ Claude loads the file only when needed, preserving context.
 ### Gap Severity: **MEDIUM**
 
 ### Current State
+
 - Visual iteration workflow undocumented
 - Headless mode (`-p` flag) undocumented
 - CI/CD patterns implicit in GitHub Actions but not explained
 
 ### Target State
+
 Document both visual (design-to-code) and headless (automation) workflows.
 
 ### Visual Iteration Workflow
@@ -363,6 +394,7 @@ Document both visual (design-to-code) and headless (automation) workflows.
 ### Headless Mode Patterns
 
 #### Basic Usage
+
 ```bash
 # Simple one-shot
 claude -p "Update copyright headers to 2025" --json
@@ -402,6 +434,7 @@ claude -p "Fix failing test" \
    - Document `--allow-tools` usage
 
 ### Files to Create/Modify
+
 - `.claude/commands/visual-iterate.md` (new, optional)
 - `CLAUDE.md` (add sections)
 - `docs/HEADLESS-MODE.md` (new)
@@ -413,20 +446,25 @@ claude -p "Fix failing test" \
 ### Gap Severity: **MEDIUM**
 
 ### Current State
+
 - Git worktrees mentioned but not detailed
 - No Writer + Reviewer pattern
 - No Specialized Teams pattern
 - Parallel subagent invocation undocumented
 
 ### Target State
+
 Document advanced multi-agent orchestration patterns.
 
 ### Pattern 1: Writer + Reviewer
+
 Simple but effective:
+
 - **Claude A**: Writes code in worktree-1
 - **Claude B**: Reviews code in worktree-2 (read-only)
 
 ### Pattern 2: Specialized Teams
+
 For large refactors:
 | Agent | Role |
 |-------|------|
@@ -436,6 +474,7 @@ For large refactors:
 | Agent 6 | Run performance benchmarks |
 
 ### Pattern 3: Parallel Subagent Research
+
 ```
 "Explore the codebase using 4 tasks in parallel.
 Each agent should explore different directories:
@@ -446,6 +485,7 @@ Each agent should explore different directories:
 ```
 
 ### Git Worktree Commands
+
 ```bash
 # Create isolated worktrees
 git worktree add ../project-feature-a -b feature-a main
@@ -482,6 +522,7 @@ git worktree remove ../project-feature-a
    - Context efficiency explanation
 
 ### Files to Create/Modify
+
 - `CLAUDE.md` (add section)
 - `docs/MULTI-AGENT.md` (new)
 - `.claude/commands/parallel-research.md` (new)
@@ -491,14 +532,17 @@ git worktree remove ../project-feature-a
 ## Implementation Order
 
 ### Phase 1: Foundation (Highest Impact)
+
 1. **Pillar 1**: Extended Thinking (quick win, high value)
 2. **Pillar 2**: Session & Context Management (critical for efficiency)
 
 ### Phase 2: Advanced Features
+
 3. **Pillar 4**: Skills Architecture (new capability)
 4. **Pillar 3**: MCP Server Integration (extensibility)
 
 ### Phase 3: Optimization
+
 5. **Pillar 5**: Modular CLAUDE.md (maintainability)
 6. **Pillar 6**: Visual & Headless Workflows (completeness)
 7. **Pillar 7**: Multi-Claude Orchestration (power users)
@@ -508,6 +552,7 @@ git worktree remove ../project-feature-a
 ## Success Criteria
 
 Each pillar is complete when:
+
 - [ ] All new files created
 - [ ] CLAUDE.md updated with relevant sections
 - [ ] Documentation is actionable (not just descriptive)
@@ -530,5 +575,5 @@ Before implementation, research agents should investigate:
 
 ---
 
-*Plan created: 2026-01-04*
-*Status: Research Phase*
+_Plan created: 2026-01-04_
+_Status: Research Phase_
