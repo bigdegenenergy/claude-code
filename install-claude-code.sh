@@ -672,7 +672,8 @@ SECRET_PATTERNS=(
 for file in "${STAGED_FILES[@]}"; do
     if [ -f "$file" ]; then
         for pattern in "${SECRET_PATTERNS[@]}"; do
-            if grep -iE "$pattern" "$file" 2>/dev/null | grep -v "example\|sample\|test\|mock\|dummy" > /dev/null; then
+            # IMPORTANT: Scan staged content, not working directory
+            if git show ":$file" 2>/dev/null | grep -iE "$pattern" | grep -v "example\|sample\|test\|mock\|dummy" > /dev/null; then
                 echo -e "${RED}✗ Potential secret found in: $file${NC}"
                 echo "  Pattern: $pattern"
                 SECRETS_FOUND=true
@@ -695,16 +696,20 @@ echo -e "\n${YELLOW}→ Scanning for PII...${NC}"
 PII_FOUND=false
 for file in "${STAGED_FILES[@]}"; do
     if [ -f "$file" ]; then
-        # Skip binary files, common config files, and documentation
+        # Skip common config files and documentation by extension
         case "$file" in
             *.md|*.txt|*.json|*.yaml|*.yml|*.toml|LICENSE*|CHANGELOG*|AUTHORS*)
                 continue
                 ;;
         esac
 
-        if file "$file" 2>/dev/null | grep -q "text"; then
+        # Get staged content (what will actually be committed)
+        STAGED_CONTENT=$(git show ":$file" 2>/dev/null) || continue
+
+        # Skip binary files (check staged content, not working directory)
+        if echo "$STAGED_CONTENT" | file - 2>/dev/null | grep -q "text"; then
             # Email addresses - WARNING only (too many false positives)
-            if grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' "$file" 2>/dev/null | \
+            if echo "$STAGED_CONTENT" | grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | \
                grep -vE '@example|@test|@localhost|@email\.com|@mail\.com|@users\.noreply\.github\.com' > /dev/null; then
                 echo -e "${YELLOW}⚠ Email address found in: $file (warning only)${NC}"
                 PII_FOUND=true
@@ -712,14 +717,14 @@ for file in "${STAGED_FILES[@]}"; do
             fi
 
             # SSN pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
-            if grep -E '(^|[^0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}([^0-9]|$)' "$file" 2>/dev/null > /dev/null; then
+            if echo "$STAGED_CONTENT" | grep -E '(^|[^0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}([^0-9]|$)' > /dev/null; then
                 echo -e "${RED}✗ SSN pattern found in: $file${NC}"
                 PII_FOUND=true
                 EXIT_CODE=1
             fi
 
             # Credit card pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
-            if grep -E '(^|[^0-9])[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}([^0-9]|$)' "$file" 2>/dev/null > /dev/null; then
+            if echo "$STAGED_CONTENT" | grep -E '(^|[^0-9])[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}([^0-9]|$)' > /dev/null; then
                 echo -e "${RED}✗ Credit card pattern found in: $file${NC}"
                 PII_FOUND=true
                 EXIT_CODE=1
