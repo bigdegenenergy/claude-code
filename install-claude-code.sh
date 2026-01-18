@@ -771,12 +771,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Null SHA used by git for new branches (40 zeros)
+NULL_SHA=$(printf '0%.0s' {1..40})
+
 # Read push details
 while read local_ref local_sha remote_ref remote_sha; do
     # Prevent force push to main/master
     if [[ "$remote_ref" =~ refs/heads/(main|master)$ ]]; then
-        # Check if this is a force push
-        if [ "$remote_sha" != "0000000000000000000000000000000000000000" ]; then
+        # Check if this is a force push (not a new branch)
+        if [ "$remote_sha" != "$NULL_SHA" ]; then
             merge_base=$(git merge-base "$local_sha" "$remote_sha" 2>/dev/null)
             if [ "$merge_base" != "$remote_sha" ]; then
                 echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
