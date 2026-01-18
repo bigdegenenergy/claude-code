@@ -24,19 +24,19 @@
 # Usage (Multiple Methods):
 #
 #   Method 1 - Direct git clone (RECOMMENDED - most reliable):
-#     git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/claude-code && \
-#     /tmp/claude-code/install-claude-code.sh && \
-#     rm -rf /tmp/claude-code
+#     git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit && \
+#     /tmp/ai-dev-toolkit/install.sh && \
+#     rm -rf /tmp/ai-dev-toolkit
 #
 #   Method 2 - One-liner via curl:
-#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install-claude-code.sh | bash
+#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh | bash
 #
 #   Method 3 - Download and run:
-#     git archive --remote=https://github.com/bigdegenenergy/ai-dev-toolkit.git HEAD install-claude-code.sh | tar -x
-#     ./install-claude-code.sh
+#     git archive --remote=https://github.com/bigdegenenergy/ai-dev-toolkit.git HEAD install.sh | tar -x
+#     ./install.sh
 #
 # With options:
-#   ./install-claude-code.sh [OPTIONS]
+#   ./install.sh [OPTIONS]
 #
 # Options:
 #   --no-github      Skip GitHub Actions workflows

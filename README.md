@@ -49,14 +49,14 @@ Run this one-liner to clone the toolkit and install it into your current project
 
 ```bash
 git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit && \
-/tmp/ai-dev-toolkit/install-claude-code.sh && \
+/tmp/ai-dev-toolkit/install.sh && \
 rm -rf /tmp/ai-dev-toolkit
 ```
 
 Or via curl:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install-claude-code.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh | bash
 ```
 
 ### Option B: Manual Installation
