@@ -1,7 +1,7 @@
 # Claude Code Configuration Sync
 #
 # This workflow pulls the latest Claude Code configuration from
-# bigdegenenergy/claude-code on a weekly schedule.
+# bigdegenenergy/ai-dev-toolkit on a weekly schedule.
 #
 # SETUP:
 # 1. Copy this file to your repo's .github/workflows/ directory
@@ -53,7 +53,7 @@ on:
       source_repo:
         description: 'Source repository (owner/repo)'
         required: false
-        default: 'bigdegenenergy/claude-code'
+        default: 'bigdegenenergy/ai-dev-toolkit'
         type: string
       source_branch:
         description: 'Source branch to sync from'
@@ -72,7 +72,7 @@ on:
         type: boolean
 
 env:
-  SOURCE_REPO: ${{ inputs.source_repo || 'bigdegenenergy/claude-code' }}
+  SOURCE_REPO: ${{ inputs.source_repo || 'bigdegenenergy/ai-dev-toolkit' }}
   SOURCE_BRANCH: ${{ inputs.source_branch || 'main' }}
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Don't run on the source repo itself
-    if: github.repository != 'bigdegenenergy/claude-code'
+    if: github.repository != 'bigdegenenergy/ai-dev-toolkit'
 
     permissions:
       contents: write

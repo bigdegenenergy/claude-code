@@ -243,7 +243,7 @@ cp web-compatible/CLAUDE.md CLAUDE.md  # Or merge with existing
 Or reference it in your project's CLAUDE.md:
 
 ```markdown
-> See also: [Web-Compatible Configuration](https://github.com/bigdegenenergy/claude-code/tree/main/web-compatible)
+> See also: [Web-Compatible Configuration](https://github.com/bigdegenenergy/ai-dev-toolkit/tree/main/web-compatible)
 ```
 
 ---

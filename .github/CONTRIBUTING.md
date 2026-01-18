@@ -6,9 +6,10 @@ Thank you for your interest in contributing!
 
 **Before contributing, ALL contributors (human or AI) MUST read:**
 
-👉 **https://github.com/bigdegenenergy/claude-code**
+👉 **https://github.com/bigdegenenergy/ai-dev-toolkit**
 
 This is **NON-NEGOTIABLE**. You must understand:
+
 - The virtual team architecture
 - Existing conventions and workflows
 - The feedback loop principle
@@ -20,7 +21,7 @@ This is **NON-NEGOTIABLE**. You must understand:
 
 If you are an AI agent contributing to this repository:
 
-1. **Read First**: Use WebFetch to read https://github.com/bigdegenenergy/claude-code in full
+1. **Read First**: Use WebFetch to read https://github.com/bigdegenenergy/ai-dev-toolkit in full
 2. **Plan**: Use `/plan` before making any changes
 3. **Implement**: Follow existing patterns and conventions
 4. **Simplify**: Use `/simplify` to clean up your code
@@ -31,7 +32,8 @@ If you are an AI agent contributing to this repository:
 ### Required Checklist
 
 Before creating a PR, ensure:
-- [ ] You have read https://github.com/bigdegenenergy/claude-code
+
+- [ ] You have read https://github.com/bigdegenenergy/ai-dev-toolkit
 - [ ] Your changes follow existing patterns
 - [ ] Tests pass (`/qa`)
 - [ ] Code has been simplified (`/simplify`)
@@ -59,6 +61,7 @@ Before creating a PR, ensure:
 ### Commit Messages
 
 Use conventional commits:
+
 - `feat:` New feature
 - `fix:` Bug fix
 - `docs:` Documentation changes
