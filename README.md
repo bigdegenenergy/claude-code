@@ -1,9 +1,16 @@
 # 🤖 AI Dev Toolkit: Universal Team Configuration
 
 **Source Repository:** [https://github.com/bigdegenenergy/ai-dev-toolkit](https://github.com/bigdegenenergy/ai-dev-toolkit)
-**Version:** 2.1 (Universal)
+**Version:** 3.0 (Universal)
 
 This repository contains the "DNA" for a high-performance, automated software engineering team. It combines **AI coding assistants** (like Claude Code) with **GitHub Actions** (CI/CD workflows) to create a robust, self-verifying development environment.
+
+**Capabilities:**
+
+- **18 Specialized Agents** for different development domains
+- **11 Auto-Discovered Skills** for domain expertise
+- **22 Slash Commands** for workflows and orchestration
+- **8 Automated Hooks** for quality gates and friction elimination
 
 ---
 
@@ -221,16 +228,125 @@ The default **GITHUB_TOKEN** is too weak for full automation.
 
 ## 🏗️ The Virtual Team Architecture
 
-Once installed, the single "Claude" entity splits into distinct specialized roles based on the command used.
+Once installed, the single "Claude" entity splits into distinct specialized roles based on the command or agent invoked.
 
-| Role                 | Command               | Function                                                                               |
-| :------------------- | :-------------------- | :------------------------------------------------------------------------------------- |
-| **The Architect**    | **/plan**             | **THINKING MODE.** Creates **PLAN.md**. No code is written until the plan is approved. |
-| **The Builder**      | _(Default)_           | Writes code. **The Janitor** (Hook) automatically formats code after every save.       |
-| **The QA Engineer**  | **/qa**               | **LOOP MODE.** Runs tests, analyzes errors, fixes code, repeats until GREEN.           |
-| **The DevOps**       | **/ship**             | Automates the Git lifecycle: Status check → Add → Commit → Push → PR.                  |
-| **Refactorer**       | **/simplify**         | Cleans code structure without altering behavior.                                       |
-| **Security Auditor** | **@security-auditor** | Read-only scan for vulnerabilities.                                                    |
+### Commands (Slash Commands)
+
+#### Core Workflows
+
+| Role            | Command            | When to Use                          |
+| --------------- | ------------------ | ------------------------------------ |
+| **Architect**   | `/plan`            | Before implementing complex features |
+| **Autonomous**  | `/ralph`           | Iterative development until complete |
+| **QA Engineer** | `/qa`              | When tests fail or need verification |
+| **TDD**         | `/test-driven`     | Red-green-refactor development       |
+| **Gatekeeper**  | `/test-and-commit` | Only commit if tests pass            |
+| **Reviewer**    | `/review`          | Critical code review (read-only)     |
+| **Refactorer**  | `/simplify`        | After implementing features          |
+| **DevOps**      | `/ship`            | When ready to commit and PR          |
+| **Deploy**      | `/deploy-staging`  | Build and deploy to staging          |
+
+#### Orchestration Workflows
+
+| Workflow        | Command               | Description                                      |
+| --------------- | --------------------- | ------------------------------------------------ |
+| **Feature Dev** | `/feature-workflow`   | Full-stack feature with multi-agent coordination |
+| **Security**    | `/security-hardening` | Security audit, remediation, verification        |
+| **Incidents**   | `/incident-response`  | Production incident response guide               |
+| **Audit**       | `/codebase-audit`     | Comprehensive code quality audit                 |
+
+#### Git & Utilities
+
+| Role            | Command               | When to Use                               |
+| --------------- | --------------------- | ----------------------------------------- |
+| **Merger**      | `/merge-resolve`      | Resolve git merge conflicts intelligently |
+| **Releaser**    | `/release-notes`      | Generate release notes from git history   |
+| **Linter**      | `/lint-fix`           | Run linter, auto-fix issues               |
+| **Docs**        | `/doc-update`         | Auto-update docs based on code changes    |
+| **Metrics**     | `/metrics`            | Generate productivity/quality metrics     |
+| **Bug Tracker** | `/bug-tracker`        | Log and prioritize bugs                   |
+| **Optimizer**   | `/perf-optimize`      | Profile code and optimize performance     |
+| **Refactor**    | `/refactor`           | Safe refactoring with test verification   |
+| **Git Flow**    | `/git:commit-push-pr` | Commit, push, and create PR               |
+
+### Agents (Subagents)
+
+Invoke agents with `@agent-name` syntax for specialized expertise.
+
+#### Quality & Review
+
+| Role                 | Agent               | Specialty                            |
+| -------------------- | ------------------- | ------------------------------------ |
+| **Code Reviewer**    | `@code-reviewer`    | Critical code review (read-only)     |
+| **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning |
+| **Test Automator**   | `@test-automator`   | Unit, integration, E2E test creation |
+| **Code Simplifier**  | `@code-simplifier`  | Refactoring, code hygiene            |
+| **QA Verifier**      | `@verify-app`       | End-to-end testing                   |
+
+#### Architecture & Design
+
+| Role                     | Agent                   | Specialty                                |
+| ------------------------ | ----------------------- | ---------------------------------------- |
+| **Backend Architect**    | `@backend-architect`    | API design, microservices, system design |
+| **Database Architect**   | `@database-architect`   | Schema design, query optimization        |
+| **Kubernetes Architect** | `@kubernetes-architect` | K8s, GitOps, service mesh                |
+
+#### Language Specialists
+
+| Role                    | Agent                  | Specialty                            |
+| ----------------------- | ---------------------- | ------------------------------------ |
+| **Python Pro**          | `@python-pro`          | Python 3.12+, FastAPI, Django, async |
+| **TypeScript Pro**      | `@typescript-pro`      | Advanced types, Node.js backend      |
+| **Frontend Specialist** | `@frontend-specialist` | React, accessibility, UI/UX          |
+
+#### Operations
+
+| Role                        | Agent                      | Specialty                       |
+| --------------------------- | -------------------------- | ------------------------------- |
+| **Infrastructure Engineer** | `@infrastructure-engineer` | Docker, Terraform, CI/CD        |
+| **DevOps Troubleshooter**   | `@devops-troubleshooter`   | Production debugging, incidents |
+| **Performance Analyzer**    | `@performance-analyzer`    | Profiling, optimization         |
+
+#### Specialized
+
+| Role             | Agent           | Specialty                    |
+| ---------------- | --------------- | ---------------------------- |
+| **AI Engineer**  | `@ai-engineer`  | LLM apps, RAG, embeddings    |
+| **Bug Tracker**  | `@bug-tracker`  | Issue triage, prioritization |
+| **Docs Updater** | `@docs-updater` | Documentation generation     |
+
+### Skills (Auto-Discovered)
+
+Skills are context-aware expertise modules that auto-trigger based on the task at hand. They live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
+
+| Skill                | Auto-Triggers When                        |
+| -------------------- | ----------------------------------------- |
+| **autonomous-loop**  | Running iteratively until task completion |
+| **tdd**              | Writing tests first, TDD workflow         |
+| **security-review**  | Reviewing for vulnerabilities, auth code  |
+| **api-design**       | Designing REST/GraphQL endpoints          |
+| **async-patterns**   | Implementing concurrent code              |
+| **debugging**        | Investigating bugs, analyzing errors      |
+| **refactoring**      | Cleaning up code, reducing complexity     |
+| **testing-patterns** | Writing test suites, improving coverage   |
+| **k8s-operations**   | Working with Kubernetes, containers       |
+| **cicd-automation**  | Setting up pipelines, GitHub Actions      |
+| **observability**    | Implementing logging, metrics, tracing    |
+
+### Hooks (Automatic)
+
+Hooks run automatically at specific points in the development lifecycle to enforce quality and eliminate friction.
+
+| Hook                  | Type              | Function                                             |
+| --------------------- | ----------------- | ---------------------------------------------------- |
+| **Context Injection** | SessionStart      | Injects git status, TODOs, project info at start     |
+| **Skill Activation**  | UserPromptSubmit  | Auto-activates relevant skills based on your prompt  |
+| **Auto-Approve**      | PermissionRequest | Auto-approves safe commands (tests, lint, build)     |
+| **Safety Net**        | PreToolUse        | Blocks dangerous commands                            |
+| **Commit Context**    | PreToolUse        | Documents changes for PR review context              |
+| **Pre-Commit**        | PreToolUse        | Runs linters & checks formatting before `git commit` |
+| **Formatter**         | PostToolUse       | Auto-formats code after edits                        |
+| **Quality Gate**      | Stop              | Runs tests at end of turn                            |
 
 ---
 
@@ -267,24 +383,70 @@ For large tasks, do not run sequentially. Use **Git Worktrees** to run multiple 
 
 3.  **Dispatch:** Assign "Frontend Agent" to the new directory to execute that specific part of the plan.
 
+### 4. Ralph: Autonomous Development Loop
+
+_Used for iterative development until completion._
+
+Based on [Geoffrey Huntley's technique](https://github.com/frankbria/ralph-claude-code), Ralph enables continuous autonomous development with built-in safeguards.
+
+1.  **User:** "Implement the user dashboard"
+2.  **Agent:** Runs **/ralph**
+3.  **Loop:**
+    - Executes ONE task per iteration
+    - Reports structured status after each loop
+    - Continues until `EXIT_SIGNAL: true` or `BLOCKED`
+4.  **Circuit Breaker:** Prevents infinite loops by halting on:
+    - 3 consecutive no-progress loops
+    - 5 identical repeated errors
+    - 3 consecutive test-only loops (likely stuck)
+
+**Dual-Condition Exit Gate:** Claude only exits when BOTH conditions are met:
+
+1. Completion indicators (tests pass, tasks complete, no errors)
+2. Explicit `EXIT_SIGNAL: true` confirmation
+
 ---
 
 ## 📂 Repository DNA Structure
 
     .
     ├── .claude/
-    │   ├── commands/              # The "Brain" (Slash commands)
+    │   ├── commands/              # Slash commands (22 total)
     │   │   ├── plan.md            # The Architect
     │   │   ├── qa.md              # The QA Engineer
-    │   │   └── ship.md            # The DevOps
-    │   ├── hooks/                 # The "Nervous System" (Automation)
-    │   │   ├── format.py          # Auto-formatter (The Janitor)
-    │   │   └── stop.sh            # Quality Gate
-    │   └── docs.md                # Shared Memory
+    │   │   ├── ship.md            # The DevOps
+    │   │   ├── ralph.md           # Autonomous development loop
+    │   │   ├── feature-workflow.md # Multi-agent orchestration
+    │   │   └── ...                # +17 more commands
+    │   ├── agents/                # Specialized agents (18 total)
+    │   │   ├── code-reviewer.md
+    │   │   ├── security-auditor.md
+    │   │   ├── python-pro.md
+    │   │   └── ...                # +15 more agents
+    │   ├── skills/                # Auto-discovered skills (11 total)
+    │   │   ├── autonomous-loop/
+    │   │   ├── tdd/
+    │   │   ├── security-review/
+    │   │   └── ...                # +8 more skills
+    │   ├── hooks/                 # Automated hooks (8 total)
+    │   │   ├── session-start.sh   # Context injection
+    │   │   ├── skill-activation-prompt.mjs  # Auto skill activation
+    │   │   ├── auto-approve.sh    # Safe command auto-approval
+    │   │   ├── safety-net.sh      # Dangerous command blocker
+    │   │   ├── pre-commit.py      # Linting & formatting gate
+    │   │   ├── format.py          # Auto-formatter
+    │   │   ├── commit-context-generator.py # PR review context
+    │   │   └── stop.sh            # Quality gate
+    │   └── templates/             # Project templates
+    │       └── ralph/             # Ralph autonomous dev templates
     ├── .github/
-    │   └── workflows/             # CI/CD & Notifications
-    ├── CLAUDE.md                  # Project Context
-    └── setup-claude-team.sh       # The Installer
+    │   └── workflows/             # CI/CD & Automation
+    │       ├── ci.yml             # Linting, validation
+    │       ├── security.yml       # Secret/PII scanning
+    │       ├── gemini-pr-review.yml # AI code review
+    │       └── ...                # +4 more workflows
+    ├── CLAUDE.md                  # Project context & instructions
+    └── install.sh                 # The installer
 
 ---
 
@@ -302,3 +464,107 @@ Every agent session must end with a clear artifact:
 1.  A merged PR.
 2.  A passing test suite.
 3.  A strictly defined **PLAN.md**.
+
+---
+
+## 🔒 Pre-Commit Hook (Quality Gate)
+
+The pre-commit hook automatically runs before any `git commit` to ensure code quality.
+
+### What It Checks
+
+**Linting:**
+
+- JavaScript/TypeScript: ESLint
+- Python: Ruff or Flake8
+- Go: staticcheck or golint
+- Rust: Clippy
+- Shell scripts: ShellCheck
+
+**Formatting:**
+
+- JavaScript/TypeScript/Web: Prettier
+- Python: Black
+- Go: gofmt
+- Rust: rustfmt
+
+**Security:**
+
+- Detects potential secrets (API keys, passwords)
+- Blocks `.env` files from being committed
+- Warns about debug statements
+
+### Fixing Issues
+
+If the pre-commit hook blocks your commit:
+
+```bash
+# For linting errors
+npx eslint --fix <file>     # JavaScript/TypeScript
+ruff --fix <file>            # Python
+
+# For formatting issues
+npx prettier --write <file>  # JavaScript/TypeScript/Web
+black <file>                 # Python
+```
+
+---
+
+## 🛡️ PII (Personal Information) Protection
+
+Multiple layers prevent accidentally committing or exposing personal information.
+
+### Pre-Commit Scan
+
+Staged files are scanned for:
+
+| Pattern             | Action            |
+| ------------------- | ----------------- |
+| Email addresses     | **Blocks commit** |
+| Phone numbers       | **Blocks commit** |
+| SSN (xxx-xx-xxxx)   | **Blocks commit** |
+| Credit card numbers | **Blocks commit** |
+| Public IP addresses | **Blocks commit** |
+| AWS Account IDs     | **Blocks commit** |
+
+### CI/CD Protection
+
+- **security.yml** workflow scans all code on push/PR
+- **pii-scan-content.yml** scans issue/PR descriptions and comments
+
+### What To Do If PII Is Detected
+
+1. Don't panic - the commit was blocked, data wasn't exposed
+2. Review the flagged files
+3. Remove or redact the personal information
+4. Use environment variables for sensitive data
+5. Re-stage and commit
+
+---
+
+## 🤖 AI-Powered Code Review
+
+The **Gemini PR Review** workflow provides automated code review on pull requests:
+
+- Analyzes code changes for quality, security, and best practices
+- Reads commit messages and PR descriptions for context
+- Uses auto-generated commit context from the `commit-context-generator.py` hook
+- Outputs structured TOML review with actionable feedback
+
+### Setup
+
+1. Add `GEMINI_API_KEY` secret to your repository
+2. Workflow triggers automatically on PR creation/update
+
+---
+
+## 📚 Additional Documentation
+
+- [CLAUDE.md](CLAUDE.md) - Full project context and instructions
+- [web-compatible/CLAUDE.md](web-compatible/CLAUDE.md) - Browser/headless configuration
+- [docs/SETUP-NOTIFICATIONS.md](docs/SETUP-NOTIFICATIONS.md) - Notification platform setup
+- [interview-starter.md](interview-starter.md) - Spec-driven interview process
+
+---
+
+**Remember:** This configuration amplifies human capabilities. Use it to automate the mundane and focus on creative problem-solving.
