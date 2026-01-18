@@ -1,0 +1,486 @@
+name: Gemini PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: gemini-pr-review-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Gemini Code Review
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.draft == false &&
+      github.actor != 'github-actions[bot]' &&
+      github.actor != 'dependabot[bot]' &&
+      !contains(github.actor, '[bot]')
+
+    steps:
+      - name: 🔑 Check for API key
+        id: check-key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "::notice::GEMINI_API_KEY not configured. Skipping AI review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📥 Checkout code
+        if: steps.check-key.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Set up Python
+        if: steps.check-key.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install deps
+        if: steps.check-key.outputs.skip != 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install "google-genai>=1.51.0"
+
+      - name: 🧾 Collect PR context + per-file diffs
+        if: steps.check-key.outputs.skip != 'true'
+        id: ctx
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          mkdir -p /tmp/pr
+
+          echo "base_sha=$BASE" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD" >> $GITHUB_OUTPUT
+
+          git diff "$BASE...$HEAD" --stat > /tmp/pr/diff_stat.txt
+          git diff --name-only "$BASE...$HEAD" > /tmp/pr/changed_files.txt
+          git log "$BASE...$HEAD" --pretty=format:"### %s%n%n%b%n---" > /tmp/pr/commit_messages.txt
+
+          # PR body safely
+          printf '%s' "${PR_BODY:-}" > /tmp/pr/pr_body.txt
+
+          # Generate per-file diffs (no truncation; we chunk later in Python)
+          # Protect against spaces in filenames
+          while IFS= read -r file; do
+            safe_name="$(echo "$file" | sed 's#[/ ]#_#g')"
+            git diff "$BASE...$HEAD" -- "$file" > "/tmp/pr/diff_${safe_name}.patch" || true
+            echo "$file -> /tmp/pr/diff_${safe_name}.patch"
+          done < /tmp/pr/changed_files.txt
+
+          # Optional local context generator hook
+          if [ -f ".claude/hooks/commit-context-generator.py" ]; then
+            python3 .claude/hooks/commit-context-generator.py --base "$BASE" --head "$HEAD" --stdout > /tmp/pr/commit_context.md 2>/dev/null || echo "Context generation failed" > /tmp/pr/commit_context.md
+          else
+            echo "No commit context generator found" > /tmp/pr/commit_context.md
+          fi
+
+      - name: 🤖 Run Gemini Review (Quality + Malicious Intent)
+        if: steps.check-key.outputs.skip != 'true'
+        id: gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python << 'PY'
+          import os, re, json, glob, textwrap
+          from pathlib import Path
+          from google import genai
+
+          PR_DIR = Path("/tmp/pr")
+          client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+          MODEL = "gemini-3-pro-preview"
+
+          def read(p: Path) -> str:
+            try:
+              return p.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+              return ""
+
+          diff_stat = read(PR_DIR / "diff_stat.txt")
+          changed_files = read(PR_DIR / "changed_files.txt").strip()
+          commit_messages = read(PR_DIR / "commit_messages.txt")
+          pr_body = read(PR_DIR / "pr_body.txt")
+          commit_context = read(PR_DIR / "commit_context.md")
+
+          # Load per-file patch contents
+          patches = []
+          for patch_path in sorted(PR_DIR.glob("diff_*.patch")):
+            content = read(patch_path)
+            if content.strip():
+              patches.append((patch_path.name, content))
+
+          # ---- Chunking strategy ----
+          # We summarize each file diff into "facts" to avoid context blow-ups and truncation blind spots.
+          MAX_CHARS_PER_CHUNK = 16000  # ~safe per request segment; adjust if needed
+
+          def chunk_text(s: str, max_chars: int):
+            s = s.strip()
+            if len(s) <= max_chars:
+              return [s]
+            chunks = []
+            i = 0
+            while i < len(s):
+              chunks.append(s[i:i+max_chars])
+              i += max_chars
+            return chunks
+
+          # First pass: per-file summaries
+          per_file_summaries = []
+
+          file_summary_prompt_template = """\
+          You are a senior engineer and security reviewer.
+          Summarize the following patch chunk with:
+          - What changed (functions/modules)
+          - Risky areas (auth, keys, network calls, dependency changes)
+          - Any red flags (obfuscation, strange logic, hidden egress, env/secrets usage)
+          - Mention suspected intent if relevant
+
+          Output MUST be JSON with keys:
+          {{
+            "file_hint": "...",
+            "chunk_index": 1,
+            "what_changed": ["..."],
+            "risk_flags": ["..."],
+            "security_red_flags": ["..."],
+            "notes": "..."
+          }}
+
+          FILE PATCH CHUNK:
+          {chunk}
+          """
+
+          for patch_name, patch in patches:
+            chunks = chunk_text(patch, MAX_CHARS_PER_CHUNK)
+            for idx, ch in enumerate(chunks, start=1):
+              prompt = file_summary_prompt_template.format(chunk=ch[:MAX_CHARS_PER_CHUNK])
+              resp = client.models.generate_content(model=MODEL, contents=prompt)
+              txt = resp.text or ""
+              # Extract JSON if wrapped
+              m = re.search(r"\{.*\}", txt, re.DOTALL)
+              js = m.group(0) if m else "{}"
+              try:
+                data = json.loads(js)
+              except Exception:
+                data = {
+                  "file_hint": patch_name,
+                  "chunk_index": idx,
+                  "what_changed": [],
+                  "risk_flags": ["Failed to parse model output"],
+                  "security_red_flags": [],
+                  "notes": (txt[:800] if txt else "")
+                }
+              data["file_hint"] = data.get("file_hint") or patch_name
+              data["chunk_index"] = data.get("chunk_index") or idx
+              per_file_summaries.append(data)
+
+          summaries_json = json.dumps(per_file_summaries, indent=2)
+
+          # Build shared context
+          context_section = ""
+          if commit_messages.strip():
+            context_section += f"\n## Commit Messages (Developer Intent)\n{commit_messages}\n"
+          if pr_body.strip() and pr_body.strip() != "null":
+            context_section += f"\n## PR Description\n{pr_body}\n"
+          if commit_context.strip() and not any(x in commit_context for x in ["No commit context", "Context generation failed", "No changes"]):
+            context_section += f"\n## Auto-Generated Change Context\n{commit_context}\n"
+
+          shared_header = f"""\
+          Project Context:
+          - Repo: {os.environ.get("GITHUB_REPOSITORY", "")}
+          - Language/runtime: Node.js/TypeScript (security-sensitive; handles transactions/keys)
+          - Review must be specific and practical
+          - Prefer pointing to files + approximate line regions when possible
+
+          Changed Files:
+          {changed_files}
+
+          Diff Stats:
+          {diff_stat}
+
+          {context_section}
+
+          Per-file patch summaries JSON:
+          {summaries_json}
+          """
+
+          # ---- Pass A: Quality review TOML ----
+          quality_prompt = f"""\
+          You are a senior code reviewer.
+
+          {shared_header}
+
+          TASK:
+          Provide a QUALITY-focused review (bugs, correctness, tests, maintainability, types, error handling).
+          Do NOT focus on malicious intent in this pass unless it directly affects correctness.
+
+          OUTPUT FORMAT (REQUIRED):
+          You MUST respond with a valid TOML document. Do not include any text outside the TOML.
+
+          ```toml
+          [review]
+          summary = "1-2 sentence summary"
+          decision = "APPROVE" # or "REQUEST_CHANGES" or "COMMENT"
+
+          [[issues]]
+          severity = "critical" # or "important" or "suggestion"
+          file = "path/to/file"
+          line = 42 # optional
+          title = "Short title"
+          description = "Details"
+          suggestion = "Fix idea" # optional
+          ```
+          """
+
+          q_resp = client.models.generate_content(model=MODEL, contents=quality_prompt)
+          quality_text = q_resp.text or ""
+          (PR_DIR / "quality_raw.toml").write_text(quality_text, encoding="utf-8")
+
+          # ---- Pass B: Malicious intent scan TOML ----
+          malicious_prompt = f"""\
+          You are a code security reviewer specializing in malicious pull request detection.
+
+          {shared_header}
+
+          TASK:
+          Evaluate whether the changes show signs of malicious intent or supply-chain compromise.
+          Consider:
+          - Credential or key exfil paths
+          - Hidden network egress
+          - Obfuscated code (encoded blobs, weird arithmetic, dead code that runs via side effects)
+          - Dependency/script changes (postinstall, CI steps touching secrets)
+          - Privilege escalations, auth bypasses, signature verification removal
+          - Changes that look unrelated to PR description/commit intent
+
+          OUTPUT FORMAT (REQUIRED):
+          You MUST respond with a valid TOML document. Do not include any text outside the TOML.
+
+          ```toml
+          [malicious]
+          verdict = "BENIGN" # or "SUSPICIOUS" or "MALICIOUS"
+          confidence = 0.0 # 0 to 1
+          rationale = "Short explanation"
+
+          [[signals]]
+          severity = "high" # or "medium" or "low"
+          file = "path/to/file"
+          description = "What triggered suspicion"
+          evidence = "Concrete snippet/behavior if possible"
+          recommendation = "What a human should check next"
+          ```
+          """
+
+          m_resp = client.models.generate_content(model=MODEL, contents=malicious_prompt)
+          malicious_text = m_resp.text or ""
+          (PR_DIR / "malicious_raw.toml").write_text(malicious_text, encoding="utf-8")
+
+          # ---- Parse TOML (best effort) + produce a single markdown comment ----
+          import tomllib
+
+          def extract_toml(text: str) -> str:
+            m = re.search(r"```toml\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
+            return (m.group(1).strip() if m else text.strip())
+
+          q_toml = extract_toml(quality_text)
+          m_toml = extract_toml(malicious_text)
+
+          def safe_load(t: str):
+            try:
+              return tomllib.loads(t)
+            except Exception:
+              return None
+
+          q_data = safe_load(q_toml)
+          m_data = safe_load(m_toml)
+
+          def decision_emoji(dec):
+            return {"APPROVE":"✅","REQUEST_CHANGES":"🔴","COMMENT":"💬"}.get(dec, "💬")
+
+          md = []
+          md.append("## 🤖 Gemini PR Review")
+          md.append("")
+          # Quality section
+          if q_data and "review" in q_data:
+            summ = q_data["review"].get("summary","")
+            dec = q_data["review"].get("decision","COMMENT")
+            md.append(f"### Quality Review")
+            md.append(f"**Decision:** {decision_emoji(dec)} {dec}")
+            md.append(f"**Summary:** {summ}")
+            issues = q_data.get("issues", [])
+            if issues:
+              def render_bucket(name, sev):
+                items = [i for i in issues if i.get("severity")==sev]
+                if not items:
+                  return
+                icon = {"critical":"🔴","important":"🟡","suggestion":"🟢"}[sev]
+                md.append(f"\n#### {icon} {name}")
+                for it in items:
+                  loc = f"`{it.get('file','unknown')}`"
+                  if it.get("line"):
+                    loc = f"`{it.get('file','unknown')}:{it.get('line')}`"
+                  md.append(f"- **{it.get('title','Issue')}** ({loc})")
+                  if it.get("description"):
+                    md.append(f"  {it.get('description')}")
+                  if it.get("suggestion"):
+                    md.append(f"  > 💡 {it.get('suggestion')}")
+              render_bucket("Critical", "critical")
+              render_bucket("Important", "important")
+              render_bucket("Suggestions", "suggestion")
+            else:
+              md.append("\nNo quality issues found. ✨")
+          else:
+            md.append("### Quality Review")
+            md.append("⚠️ Failed to parse quality TOML; see raw blocks below.")
+
+          # Malicious section
+          md.append("\n---\n")
+          if m_data and "malicious" in m_data:
+            verdict = m_data["malicious"].get("verdict","SUSPICIOUS")
+            conf = m_data["malicious"].get("confidence",0.0)
+            rat = m_data["malicious"].get("rationale","")
+            v_icon = {"BENIGN":"✅","SUSPICIOUS":"🟠","MALICIOUS":"🚨"}.get(verdict,"🟠")
+            md.append("### Malicious Intent Scan")
+            md.append(f"**Verdict:** {v_icon} {verdict}  (confidence: {conf})")
+            if rat:
+              md.append(f"**Rationale:** {rat}")
+            signals = m_data.get("signals", [])
+            if signals:
+              md.append("\n#### Signals")
+              for s in signals:
+                md.append(f"- **{s.get('severity','medium').upper()}** `{s.get('file','unknown')}`: {s.get('description','')}")
+                if s.get("evidence"):
+                  md.append(f"  - Evidence: {s.get('evidence')}")
+                if s.get("recommendation"):
+                  md.append(f"  - Next: {s.get('recommendation')}")
+            else:
+              md.append("\nNo suspicious signals reported.")
+          else:
+            md.append("### Malicious Intent Scan")
+            md.append("⚠️ Failed to parse malicious TOML; see raw blocks below.")
+
+          # Copyable TOML block (combined Quality + Malicious)
+          md.append("\n---\n")
+          md.append("### 📋 Review Data (TOML)")
+          md.append("")
+          md.append("```toml")
+          md.append("# Quality Review")
+          md.append(q_toml.strip())
+          md.append("")
+          md.append("# Malicious Intent Scan")
+          md.append(m_toml.strip())
+          md.append("```")
+
+          # Debug collapsible
+          md.append("\n<details>\n<summary>🔍 Debug: Raw Model Outputs</summary>\n")
+          md.append("\n```text")
+          md.append("=== QUALITY RAW ===")
+          md.append(quality_text[:20000])
+          md.append("\n=== MALICIOUS RAW ===")
+          md.append(malicious_text[:20000])
+          md.append("```")
+          md.append("\n</details>\n")
+
+          comment = "\n".join(md)
+          (PR_DIR / "comment.md").write_text(comment, encoding="utf-8")
+
+          # Minimal outputs for gating
+          verdict = None
+          if m_data and "malicious" in m_data:
+            verdict = m_data["malicious"].get("verdict")
+          (PR_DIR / "verdict.txt").write_text((verdict or "UNKNOWN"), encoding="utf-8")
+
+          print(comment)
+          PY
+
+      - name: 💬 Post PR comment
+        if: steps.check-key.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          gh pr comment "$PR_NUMBER" --body-file /tmp/pr/comment.md
+
+      # Optional: fail the workflow if malicious verdict is SUSPICIOUS or MALICIOUS
+      # (Uncomment to enable gating)
+      #
+      # - name: 🚧 Gate on malicious verdict
+      #   if: steps.check-key.outputs.skip != 'true'
+      #   run: |
+      #     verdict="$(cat /tmp/pr/verdict.txt || echo UNKNOWN)"
+      #     echo "Malicious verdict: $verdict"
+      #     if [ "$verdict" = "SUSPICIOUS" ] || [ "$verdict" = "MALICIOUS" ]; then
+      #       echo "::error::Malicious intent scan verdict is $verdict; blocking merge."
+      #       exit 1
+      #     fi
+
+      - name: 📱 Telegram notification
+        if: steps.check-key.outputs.skip != 'true' && always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "Telegram not configured; skipping."
+            exit 0
+          fi
+
+          # Read verdict from file
+          VERDICT="$(cat /tmp/pr/verdict.txt 2>/dev/null || echo UNKNOWN)"
+          export VERDICT
+
+          # Use Python directly to send - avoids shell injection from PR title
+          python3 << 'PY'
+          import os, json, urllib.request, html
+
+          bot = os.environ["TELEGRAM_BOT_TOKEN"]
+          chat = os.environ["TELEGRAM_CHAT_ID"]
+          pr_number = os.environ.get("PR_NUMBER", "?")
+          pr_title = html.escape(os.environ.get("PR_TITLE", "Unknown"))
+          pr_url = os.environ.get("PR_URL", "")
+          verdict = os.environ.get("VERDICT", "UNKNOWN")
+          author = html.escape(os.environ.get("AUTHOR", "unknown"))
+
+          msg = f"""🤖 <b>PR Review Complete</b>
+
+          <b>PR #{pr_number}:</b> {pr_title}
+          <b>Author:</b> {author}
+          <b>Malicious Verdict:</b> {verdict}
+
+          <a href="{pr_url}">View PR</a>"""
+          payload = {
+            "chat_id": chat,
+            "text": msg,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+          }
+          req = urllib.request.Request(
+            f"https://api.telegram.org/bot{bot}/sendMessage",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type":"application/json"}
+          )
+          with urllib.request.urlopen(req) as r:
+            print("Telegram sent:", r.status)
+          PY
