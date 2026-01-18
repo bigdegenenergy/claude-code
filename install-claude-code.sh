@@ -625,8 +625,13 @@ NC='\033[0m'
 
 echo -e "${GREEN}Running AI Dev Toolkit pre-commit checks...${NC}"
 
-# Get staged files (use null-delimiter for filenames with spaces)
-mapfile -t STAGED_FILES < <(git diff --cached --name-only --diff-filter=ACM)
+# Get staged files (Bash 3.2 compatible - works on macOS)
+STAGED_FILES=()
+while IFS= read -r file; do
+    [[ -n "$file" ]] && STAGED_FILES+=("$file")
+done <<EOF
+$(git diff --cached --name-only --diff-filter=ACM)
+EOF
 
 if [ ${#STAGED_FILES[@]} -eq 0 ]; then
     echo "No staged files to check"
@@ -706,15 +711,15 @@ for file in "${STAGED_FILES[@]}"; do
                 # Note: Not setting EXIT_CODE - emails don't block commits
             fi
 
-            # SSN pattern - BLOCKS commit
-            if grep -E '\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b' "$file" 2>/dev/null > /dev/null; then
+            # SSN pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
+            if grep -E '(^|[^0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}([^0-9]|$)' "$file" 2>/dev/null > /dev/null; then
                 echo -e "${RED}✗ SSN pattern found in: $file${NC}"
                 PII_FOUND=true
                 EXIT_CODE=1
             fi
 
-            # Credit card pattern - BLOCKS commit
-            if grep -E '\b[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}\b' "$file" 2>/dev/null > /dev/null; then
+            # Credit card pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
+            if grep -E '(^|[^0-9])[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}([^0-9]|$)' "$file" 2>/dev/null > /dev/null; then
                 echo -e "${RED}✗ Credit card pattern found in: $file${NC}"
                 PII_FOUND=true
                 EXIT_CODE=1
