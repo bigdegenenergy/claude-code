@@ -424,17 +424,71 @@ install_git_hooks() {
 
     log_header "Installing Git Hooks"
 
+    # -------------------------------------------------------------------------
+    # Detect existing hook managers
+    # -------------------------------------------------------------------------
+    local HOOK_MANAGER_DETECTED=""
+
+    # Check for Husky (Node.js)
+    if [ -d ".husky" ] || grep -q '"husky"' package.json 2>/dev/null; then
+        HOOK_MANAGER_DETECTED="husky"
+    # Check for lint-staged
+    elif grep -q '"lint-staged"' package.json 2>/dev/null; then
+        HOOK_MANAGER_DETECTED="lint-staged"
+    # Check for pre-commit (Python)
+    elif [ -f ".pre-commit-config.yaml" ] || [ -f ".pre-commit-config.yml" ]; then
+        HOOK_MANAGER_DETECTED="pre-commit (Python)"
+    # Check for lefthook
+    elif [ -f "lefthook.yml" ] || [ -f ".lefthook.yml" ]; then
+        HOOK_MANAGER_DETECTED="lefthook"
+    fi
+
+    if [ -n "$HOOK_MANAGER_DETECTED" ]; then
+        log_warning "Detected existing hook manager: $HOOK_MANAGER_DETECTED"
+        if [ "$FORCE_MODE" = false ]; then
+            echo -en "${YELLOW}Installing Claude Code hooks may conflict with $HOOK_MANAGER_DETECTED. Continue? [y/N] ${NC}"
+            read -r response
+            case "$response" in
+                [yY][eE][sS]|[yY]) ;;
+                *)
+                    log_info "Skipping git hooks installation"
+                    return 0
+                    ;;
+            esac
+        else
+            log_warning "Force mode enabled - proceeding despite hook manager detection"
+        fi
+    fi
+
     if [ "$DRY_RUN" = true ]; then
         log_info "[DRY RUN] Would install git hooks:"
         log_info "  - pre-commit (linting, formatting, PII scan)"
         log_info "  - commit-msg (conventional commits)"
         log_info "  - prepare-commit-msg (context generation)"
         log_info "  - post-commit (notifications)"
+        log_info "  - pre-push (force-push protection)"
         return 0
     fi
 
     # Create git hooks directory if needed
     mkdir -p .git/hooks
+
+    # -------------------------------------------------------------------------
+    # Backup existing hooks with timestamps
+    # -------------------------------------------------------------------------
+    local TIMESTAMP=$(date +%Y%m%d%H%M%S)
+    local HOOKS_TO_INSTALL=(pre-commit commit-msg prepare-commit-msg post-commit pre-push)
+
+    for hook in "${HOOKS_TO_INSTALL[@]}"; do
+        if [ -f ".git/hooks/$hook" ] && [ ! -L ".git/hooks/$hook" ]; then
+            # Check if it's not already a Claude Code hook
+            if ! grep -q "Claude Code" ".git/hooks/$hook" 2>/dev/null; then
+                local backup_path=".git/hooks/${hook}.backup.${TIMESTAMP}"
+                cp ".git/hooks/$hook" "$backup_path"
+                log_info "Backed up existing $hook to ${hook}.backup.${TIMESTAMP}"
+            fi
+        fi
+    done
 
     # -------------------------------------------------------------------------
     # Pre-commit Hook - Linting, Formatting, Security Checks
