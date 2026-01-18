@@ -1,16 +1,17 @@
 #!/bin/bash
 
 # ==============================================================================
-# Claude Code Configuration Installer
-# Source: https://github.com/bigdegenenergy/claude-code
+# AI Dev Toolkit - Development Workflow Configuration Installer
+# Source: https://github.com/bigdegenenergy/ai-dev-toolkit
 #
 # DISCLAIMER: This is a COMMUNITY PROJECT and is NOT affiliated with,
-# endorsed by, or officially connected to Anthropic. "Claude Code" refers
-# to configuration patterns for use with Claude AI, not an official product.
+# endorsed by, or officially connected to Anthropic, OpenAI, Google, or any
+# AI vendor. This toolkit provides workflow configurations that work with
+# any AI coding assistant or can be used standalone.
 #
 # LICENSE: MIT License - See repository for full terms
 # SECURITY: All scripts are open source and auditable. No telemetry or
-#           data collection. Credentials are stored locally only.
+#           data collection. All data remains local to your machine.
 #
 # Installs development workflow configurations:
 #   - 21 Slash Commands (workflows and orchestration)
@@ -23,15 +24,15 @@
 # Usage (Multiple Methods):
 #
 #   Method 1 - Direct git clone (RECOMMENDED - most reliable):
-#     git clone https://github.com/bigdegenenergy/claude-code.git /tmp/claude-code && \
+#     git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/claude-code && \
 #     /tmp/claude-code/install-claude-code.sh && \
 #     rm -rf /tmp/claude-code
 #
 #   Method 2 - One-liner via curl:
-#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/claude-code/main/install-claude-code.sh | bash
+#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install-claude-code.sh | bash
 #
 #   Method 3 - Download and run:
-#     git archive --remote=https://github.com/bigdegenenergy/claude-code.git HEAD install-claude-code.sh | tar -x
+#     git archive --remote=https://github.com/bigdegenenergy/ai-dev-toolkit.git HEAD install-claude-code.sh | tar -x
 #     ./install-claude-code.sh
 #
 # With options:
@@ -43,19 +44,26 @@
 #   --no-profiles    Skip language profiles
 #   --profile=NAME   Install specific profile (python, java)
 #   --web            Install web-compatible configuration
-#   --force          Overwrite existing files without prompting
+#   --force          Overwrite existing files without prompting (non-interactive)
 #   --dry-run        Show what would be installed without making changes
 #   --help           Show this help message
 # ==============================================================================
+
+# Ensure we're running in bash (not sh/dash)
+if [ -z "$BASH_VERSION" ]; then
+    exec bash "$0" "$@"
+fi
 
 set -e
 
 # ------------------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------------------
-VERSION="2.0.0"
-SOURCE_REPO="https://github.com/bigdegenenergy/claude-code.git"
-SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/claude-code/main"
+VERSION="2.1.0"
+# Pin to specific version for reproducibility (update when releasing new versions)
+SOURCE_TAG="v2.1.0"
+SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
+SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main"
 
 # Colors
 RED='\033[0;31m'
@@ -94,20 +102,19 @@ log_header() { echo -e "\n${BOLD}${CYAN}$1${NC}"; }
 print_banner() {
     echo -e "${CYAN}"
     cat << 'EOF'
-   _____ _                 _        _____          _
-  / ____| |               | |      / ____|        | |
- | |    | | __ _ _   _  __| | ___ | |     ___   __| | ___
- | |    | |/ _` | | | |/ _` |/ _ \| |    / _ \ / _` |/ _ \
- | |____| | (_| | |_| | (_| |  __/| |___| (_) | (_| |  __/
-  \_____|_|\__,_|\__,_|\__,_|\___| \_____\___/ \__,_|\___|
+    _    ___   ____                 _____           _ _    _ _
+   / \  |_ _| |  _ \  _____   __   |_   _|__   ___ | | | _(_) |_
+  / _ \  | |  | | | |/ _ \ \ / /     | |/ _ \ / _ \| | |/ / | __|
+ / ___ \ | |  | |_| |  __/\ V /      | | (_) | (_) | |   <| | |_
+/_/   \_\___| |____/ \___| \_/       |_|\___/ \___/|_|_|\_\_|\__|
 
 EOF
     echo -e "${NC}"
-    echo -e "${BOLD}Development Workflow Configuration Installer v${VERSION}${NC}"
-    echo -e "Source: ${BLUE}https://github.com/bigdegenenergy/claude-code${NC}"
+    echo -e "${BOLD}AI Dev Toolkit - Workflow Configuration Installer v${VERSION}${NC}"
+    echo -e "Source: ${BLUE}https://github.com/bigdegenenergy/ai-dev-toolkit${NC}"
     echo ""
-    echo -e "${YELLOW}NOTICE: Community project - NOT affiliated with Anthropic${NC}"
-    echo -e "${YELLOW}All scripts are open source and auditable at the repository above${NC}"
+    echo -e "${YELLOW}NOTICE: Community project - NOT affiliated with any AI vendor${NC}"
+    echo -e "${YELLOW}Works with any AI assistant (Claude, GPT, Gemini, etc.) or standalone${NC}"
     echo ""
 }
 
@@ -116,7 +123,7 @@ print_help() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-Installs Claude Code configuration to amplify solo developer capabilities.
+Installs AI Dev Toolkit configuration to amplify solo developer capabilities.
 
 OPTIONS:
     --no-github      Skip GitHub Actions workflows installation
@@ -155,7 +162,7 @@ WHAT GETS INSTALLED:
 
     CLAUDE.md         (project instructions)
 
-For more information, visit: https://github.com/bigdegenenergy/claude-code
+For more information, visit: https://github.com/bigdegenenergy/ai-dev-toolkit
 EOF
 }
 
@@ -272,19 +279,26 @@ confirm_overwrite() {
 # Installation Functions
 # ------------------------------------------------------------------------------
 download_source() {
-    log_header "Downloading Claude Code Configuration"
+    log_header "Downloading AI Dev Toolkit Configuration"
 
     TEMP_DIR=$(mktemp -d)
     trap 'rm -rf "$TEMP_DIR"' EXIT
 
     if [ "$DRY_RUN" = true ]; then
-        log_info "[DRY RUN] Would clone $SOURCE_REPO to $TEMP_DIR"
+        log_info "[DRY RUN] Would clone $SOURCE_REPO (tag: $SOURCE_TAG) to $TEMP_DIR"
         return 0
     fi
 
-    log_info "Cloning repository..."
-    git clone --quiet --depth 1 "$SOURCE_REPO" "$TEMP_DIR"
-    log_success "Downloaded configuration source"
+    log_info "Cloning repository (version: $SOURCE_TAG)..."
+    # Pin to specific version for reproducibility
+    if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
+        log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
+    else
+        # Fallback to main branch if tag doesn't exist yet
+        log_warning "Tag $SOURCE_TAG not found, using main branch"
+        git clone --quiet --depth 1 "$SOURCE_REPO" "$TEMP_DIR"
+        log_success "Downloaded configuration source (latest)"
+    fi
 }
 
 install_claude_directory() {
@@ -418,10 +432,43 @@ install_github_workflows() {
     mkdir -p .github/workflows
     mkdir -p .github/ISSUE_TEMPLATE
 
-    # Copy workflows
+    # Check for existing workflows and warn before overwriting
+    if [ -d ".github/workflows" ] && [ "$(ls -A .github/workflows 2>/dev/null)" ]; then
+        local EXISTING_WORKFLOWS
+        EXISTING_WORKFLOWS=$(ls .github/workflows/*.yml .github/workflows/*.yaml 2>/dev/null | wc -l)
+        if [ "$EXISTING_WORKFLOWS" -gt 0 ]; then
+            log_warning "Found $EXISTING_WORKFLOWS existing workflow(s) in .github/workflows/"
+            if [ "$FORCE_MODE" = false ]; then
+                echo -en "${YELLOW}Existing workflows may be overwritten. Continue? [y/N] ${NC}"
+                read -r response
+                case "$response" in
+                    [yY][eE][sS]|[yY]) ;;
+                    *)
+                        log_info "Skipping GitHub workflows installation"
+                        return 0
+                        ;;
+                esac
+            else
+                log_warning "Force mode: proceeding with workflow installation"
+            fi
+        fi
+    fi
+
+    # Copy workflows (with backup for existing files)
     if [ -d "$TEMP_DIR/.github/workflows" ]; then
-        cp -R "$TEMP_DIR/.github/workflows/"* .github/workflows/ 2>/dev/null || true
-        WORKFLOWS_INSTALLED=$(find .github/workflows -name "*.yml" -o -name "*.yaml" | wc -l)
+        local TIMESTAMP
+        TIMESTAMP=$(date +%Y%m%d%H%M%S)
+        for workflow in "$TEMP_DIR/.github/workflows/"*.yml "$TEMP_DIR/.github/workflows/"*.yaml; do
+            [ -f "$workflow" ] || continue
+            local basename
+            basename=$(basename "$workflow")
+            if [ -f ".github/workflows/$basename" ]; then
+                cp ".github/workflows/$basename" ".github/workflows/${basename}.backup.${TIMESTAMP}"
+                log_info "Backed up existing $basename"
+            fi
+            cp "$workflow" ".github/workflows/"
+        done
+        WORKFLOWS_INSTALLED=$(find .github/workflows -maxdepth 1 \( -name "*.yml" -o -name "*.yaml" \) ! -name "*.backup.*" 2>/dev/null | wc -l)
         log_success "Installed $WORKFLOWS_INSTALLED GitHub Actions workflows"
     fi
 
@@ -453,6 +500,47 @@ install_git_hooks() {
     log_header "Installing Git Hooks"
 
     # -------------------------------------------------------------------------
+    # Check for custom core.hooksPath (used by Husky, etc.)
+    # -------------------------------------------------------------------------
+    local CUSTOM_HOOKS_PATH
+    CUSTOM_HOOKS_PATH=$(git config core.hooksPath 2>/dev/null || true)
+
+    if [ -n "$CUSTOM_HOOKS_PATH" ]; then
+        log_warning "Custom hooks path detected: $CUSTOM_HOOKS_PATH"
+        log_warning "Git is configured to use '$CUSTOM_HOOKS_PATH' instead of '.git/hooks/'"
+        if [ "$FORCE_MODE" = false ]; then
+            echo -e "${YELLOW}Options:${NC}"
+            echo "  1) Install to custom path ($CUSTOM_HOOKS_PATH)"
+            echo "  2) Install to default (.git/hooks/) - hooks won't run until core.hooksPath is unset"
+            echo "  3) Skip git hooks installation"
+            echo -en "${YELLOW}Choose [1/2/3]: ${NC}"
+            read -r response
+            case "$response" in
+                1)
+                    HOOKS_DIR="$CUSTOM_HOOKS_PATH"
+                    mkdir -p "$HOOKS_DIR"
+                    log_info "Installing to custom hooks path: $HOOKS_DIR"
+                    ;;
+                2)
+                    HOOKS_DIR=".git/hooks"
+                    log_warning "Installing to default path - run 'git config --unset core.hooksPath' to activate"
+                    ;;
+                *)
+                    log_info "Skipping git hooks installation"
+                    return 0
+                    ;;
+            esac
+        else
+            # Force mode: install to custom path
+            HOOKS_DIR="$CUSTOM_HOOKS_PATH"
+            mkdir -p "$HOOKS_DIR"
+            log_warning "Force mode: installing to custom hooks path: $HOOKS_DIR"
+        fi
+    else
+        HOOKS_DIR=".git/hooks"
+    fi
+
+    # -------------------------------------------------------------------------
     # Detect existing hook managers
     # -------------------------------------------------------------------------
     local HOOK_MANAGER_DETECTED=""
@@ -474,7 +562,7 @@ install_git_hooks() {
     if [ -n "$HOOK_MANAGER_DETECTED" ]; then
         log_warning "Detected existing hook manager: $HOOK_MANAGER_DETECTED"
         if [ "$FORCE_MODE" = false ]; then
-            echo -en "${YELLOW}Installing Claude Code hooks may conflict with $HOOK_MANAGER_DETECTED. Continue? [y/N] ${NC}"
+            echo -en "${YELLOW}Installing AI Dev Toolkit hooks may conflict with $HOOK_MANAGER_DETECTED. Continue? [y/N] ${NC}"
             read -r response
             case "$response" in
                 [yY][eE][sS]|[yY]) ;;
@@ -499,7 +587,7 @@ install_git_hooks() {
     fi
 
     # Create git hooks directory if needed
-    mkdir -p .git/hooks
+    mkdir -p "$HOOKS_DIR"
 
     # -------------------------------------------------------------------------
     # Backup existing hooks with timestamps
@@ -508,11 +596,11 @@ install_git_hooks() {
     local HOOKS_TO_INSTALL=(pre-commit commit-msg prepare-commit-msg post-commit pre-push)
 
     for hook in "${HOOKS_TO_INSTALL[@]}"; do
-        if [ -f ".git/hooks/$hook" ] && [ ! -L ".git/hooks/$hook" ]; then
-            # Check if it's not already a Claude Code hook
-            if ! grep -q "Claude Code" ".git/hooks/$hook" 2>/dev/null; then
-                local backup_path=".git/hooks/${hook}.backup.${TIMESTAMP}"
-                cp ".git/hooks/$hook" "$backup_path"
+        if [ -f "$HOOKS_DIR/$hook" ] && [ ! -L "$HOOKS_DIR/$hook" ]; then
+            # Check if it's not already a AI Dev Toolkit hook
+            if ! grep -q "AI Dev Toolkit" "$HOOKS_DIR/$hook" 2>/dev/null; then
+                local backup_path="$HOOKS_DIR/${hook}.backup.${TIMESTAMP}"
+                cp "$HOOKS_DIR/$hook" "$backup_path"
                 log_info "Backed up existing $hook to ${hook}.backup.${TIMESTAMP}"
             fi
         fi
@@ -521,10 +609,10 @@ install_git_hooks() {
     # -------------------------------------------------------------------------
     # Pre-commit Hook - Linting, Formatting, Security Checks
     # -------------------------------------------------------------------------
-    cat > .git/hooks/pre-commit << 'HOOK_EOF'
+    cat > "$HOOKS_DIR/pre-commit" << 'HOOK_EOF'
 #!/bin/bash
 # ==============================================================================
-# Claude Code Pre-Commit Hook
+# AI Dev Toolkit Pre-Commit Hook
 # Runs before each commit to ensure code quality and security
 # ==============================================================================
 
@@ -535,17 +623,18 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}Running Claude Code pre-commit checks...${NC}"
+echo -e "${GREEN}Running AI Dev Toolkit pre-commit checks...${NC}"
 
-# Get staged files
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+# Get staged files (use null-delimiter for filenames with spaces)
+mapfile -t STAGED_FILES < <(git diff --cached --name-only --diff-filter=ACM)
 
-if [ -z "$STAGED_FILES" ]; then
+if [ ${#STAGED_FILES[@]} -eq 0 ]; then
     echo "No staged files to check"
     exit 0
 fi
 
 EXIT_CODE=0
+SECRETS_FOUND=false
 
 # -------------------------------------------------------------------------
 # 1. Run Claude's pre-commit hook if it exists
@@ -575,47 +664,56 @@ SECRET_PATTERNS=(
     'GITHUB_TOKEN'
 )
 
-for file in $STAGED_FILES; do
+for file in "${STAGED_FILES[@]}"; do
     if [ -f "$file" ]; then
         for pattern in "${SECRET_PATTERNS[@]}"; do
             if grep -iE "$pattern" "$file" 2>/dev/null | grep -v "example\|sample\|test\|mock\|dummy" > /dev/null; then
                 echo -e "${RED}✗ Potential secret found in: $file${NC}"
                 echo "  Pattern: $pattern"
+                SECRETS_FOUND=true
                 EXIT_CODE=1
             fi
         done
     fi
 done
 
-if [ $EXIT_CODE -eq 0 ]; then
+if [ "$SECRETS_FOUND" = false ]; then
     echo -e "${GREEN}✓ No secrets detected${NC}"
 fi
 
 # -------------------------------------------------------------------------
 # 3. Check for PII (Personal Identifiable Information)
+# Only SSN and credit cards block commits; emails are warnings only
 # -------------------------------------------------------------------------
 echo -e "\n${YELLOW}→ Scanning for PII...${NC}"
 
 PII_FOUND=false
-for file in $STAGED_FILES; do
+for file in "${STAGED_FILES[@]}"; do
     if [ -f "$file" ]; then
-        # Skip binary files and common non-code files
-        if file "$file" | grep -q "text"; then
-            # Email addresses (excluding test/example domains)
+        # Skip binary files, common config files, and documentation
+        case "$file" in
+            *.md|*.txt|*.json|*.yaml|*.yml|*.toml|LICENSE*|CHANGELOG*|AUTHORS*)
+                continue
+                ;;
+        esac
+
+        if file "$file" 2>/dev/null | grep -q "text"; then
+            # Email addresses - WARNING only (too many false positives)
             if grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' "$file" 2>/dev/null | \
-               grep -v '@example\|@test\|@localhost\|@email.com\|@mail.com' > /dev/null; then
-                echo -e "${RED}✗ Email address found in: $file${NC}"
+               grep -vE '@example|@test|@localhost|@email\.com|@mail\.com|@users\.noreply\.github\.com' > /dev/null; then
+                echo -e "${YELLOW}⚠ Email address found in: $file (warning only)${NC}"
                 PII_FOUND=true
+                # Note: Not setting EXIT_CODE - emails don't block commits
             fi
 
-            # SSN pattern
+            # SSN pattern - BLOCKS commit
             if grep -E '\b[0-9]{3}-[0-9]{2}-[0-9]{4}\b' "$file" 2>/dev/null > /dev/null; then
                 echo -e "${RED}✗ SSN pattern found in: $file${NC}"
                 PII_FOUND=true
                 EXIT_CODE=1
             fi
 
-            # Credit card pattern
+            # Credit card pattern - BLOCKS commit
             if grep -E '\b[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}\b' "$file" 2>/dev/null > /dev/null; then
                 echo -e "${RED}✗ Credit card pattern found in: $file${NC}"
                 PII_FOUND=true
@@ -634,12 +732,23 @@ fi
 # -------------------------------------------------------------------------
 echo -e "\n${YELLOW}→ Running linters...${NC}"
 
+# Filter files by extension (handles spaces in filenames)
+JS_FILES=()
+PY_FILES=()
+SH_FILES=()
+for file in "${STAGED_FILES[@]}"; do
+    case "$file" in
+        *.js|*.jsx|*.ts|*.tsx) JS_FILES+=("$file") ;;
+        *.py) PY_FILES+=("$file") ;;
+        *.sh) SH_FILES+=("$file") ;;
+    esac
+done
+
 # JavaScript/TypeScript
-JS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(js|jsx|ts|tsx)$' || true)
-if [ -n "$JS_FILES" ] && command -v npx &> /dev/null; then
+if [ ${#JS_FILES[@]} -gt 0 ] && command -v npx &> /dev/null; then
     if [ -f "package.json" ] && grep -q "eslint" package.json 2>/dev/null; then
         echo "  Linting JavaScript/TypeScript..."
-        if echo "$JS_FILES" | xargs npx eslint --quiet 2>/dev/null; then
+        if npx eslint --quiet "${JS_FILES[@]}" 2>/dev/null; then
             echo -e "${GREEN}  ✓ ESLint passed${NC}"
         else
             echo -e "${RED}  ✗ ESLint found issues${NC}"
@@ -649,11 +758,10 @@ if [ -n "$JS_FILES" ] && command -v npx &> /dev/null; then
 fi
 
 # Python
-PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
-if [ -n "$PY_FILES" ]; then
+if [ ${#PY_FILES[@]} -gt 0 ]; then
     if command -v ruff &> /dev/null; then
         echo "  Linting Python with ruff..."
-        if echo "$PY_FILES" | xargs ruff check --quiet 2>/dev/null; then
+        if ruff check --quiet "${PY_FILES[@]}" 2>/dev/null; then
             echo -e "${GREEN}  ✓ Ruff passed${NC}"
         else
             echo -e "${RED}  ✗ Ruff found issues${NC}"
@@ -661,7 +769,7 @@ if [ -n "$PY_FILES" ]; then
         fi
     elif command -v flake8 &> /dev/null; then
         echo "  Linting Python with flake8..."
-        if echo "$PY_FILES" | xargs flake8 --quiet 2>/dev/null; then
+        if flake8 --quiet "${PY_FILES[@]}" 2>/dev/null; then
             echo -e "${GREEN}  ✓ Flake8 passed${NC}"
         else
             echo -e "${RED}  ✗ Flake8 found issues${NC}"
@@ -671,10 +779,9 @@ if [ -n "$PY_FILES" ]; then
 fi
 
 # Shell scripts
-SH_FILES=$(echo "$STAGED_FILES" | grep -E '\.sh$' || true)
-if [ -n "$SH_FILES" ] && command -v shellcheck &> /dev/null; then
+if [ ${#SH_FILES[@]} -gt 0 ] && command -v shellcheck &> /dev/null; then
     echo "  Checking shell scripts..."
-    if echo "$SH_FILES" | xargs shellcheck -S warning 2>/dev/null; then
+    if shellcheck -S warning "${SH_FILES[@]}" 2>/dev/null; then
         echo -e "${GREEN}  ✓ ShellCheck passed${NC}"
     else
         echo -e "${YELLOW}  ⚠ ShellCheck warnings (non-blocking)${NC}"
@@ -698,16 +805,16 @@ fi
 
 exit $EXIT_CODE
 HOOK_EOF
-    chmod +x .git/hooks/pre-commit
+    chmod +x "$HOOKS_DIR/pre-commit"
     log_success "Installed pre-commit git hook"
 
     # -------------------------------------------------------------------------
     # Commit-msg Hook - Conventional Commits Validation
     # -------------------------------------------------------------------------
-    cat > .git/hooks/commit-msg << 'HOOK_EOF'
+    cat > "$HOOKS_DIR/commit-msg" << 'HOOK_EOF'
 #!/bin/bash
 # ==============================================================================
-# Claude Code Commit Message Hook
+# AI Dev Toolkit Commit Message Hook
 # Validates commit message format (conventional commits)
 # ==============================================================================
 
@@ -777,16 +884,16 @@ fi
 echo -e "${GREEN}✓ Commit message format valid${NC}"
 exit 0
 HOOK_EOF
-    chmod +x .git/hooks/commit-msg
+    chmod +x "$HOOKS_DIR/commit-msg"
     log_success "Installed commit-msg git hook"
 
     # -------------------------------------------------------------------------
     # Prepare-commit-msg Hook - Auto-generate context
     # -------------------------------------------------------------------------
-    cat > .git/hooks/prepare-commit-msg << 'HOOK_EOF'
+    cat > "$HOOKS_DIR/prepare-commit-msg" << 'HOOK_EOF'
 #!/bin/bash
 # ==============================================================================
-# Claude Code Prepare Commit Message Hook
+# AI Dev Toolkit Prepare Commit Message Hook
 # Auto-generates commit context before message editing
 # ==============================================================================
 
@@ -805,16 +912,16 @@ fi
 
 exit 0
 HOOK_EOF
-    chmod +x .git/hooks/prepare-commit-msg
+    chmod +x "$HOOKS_DIR/prepare-commit-msg"
     log_success "Installed prepare-commit-msg git hook"
 
     # -------------------------------------------------------------------------
     # Post-commit Hook - Notifications and cleanup
     # -------------------------------------------------------------------------
-    cat > .git/hooks/post-commit << 'HOOK_EOF'
+    cat > "$HOOKS_DIR/post-commit" << 'HOOK_EOF'
 #!/bin/bash
 # ==============================================================================
-# Claude Code Post-Commit Hook
+# AI Dev Toolkit Post-Commit Hook
 # Runs after successful commit for notifications and cleanup
 # ==============================================================================
 
@@ -835,16 +942,16 @@ fi
 
 exit 0
 HOOK_EOF
-    chmod +x .git/hooks/post-commit
+    chmod +x "$HOOKS_DIR/post-commit"
     log_success "Installed post-commit git hook"
 
     # -------------------------------------------------------------------------
     # Pre-push Hook - Final checks before push
     # -------------------------------------------------------------------------
-    cat > .git/hooks/pre-push << 'HOOK_EOF'
+    cat > "$HOOKS_DIR/pre-push" << 'HOOK_EOF'
 #!/bin/bash
 # ==============================================================================
-# Claude Code Pre-Push Hook
+# AI Dev Toolkit Pre-Push Hook
 # Final checks before pushing to remote
 # ==============================================================================
 
@@ -880,7 +987,7 @@ done
 echo -e "${GREEN}✓ Pre-push checks passed${NC}"
 exit 0
 HOOK_EOF
-    chmod +x .git/hooks/pre-push
+    chmod +x "$HOOKS_DIR/pre-push"
     log_success "Installed pre-push git hook"
 
     log_success "All git hooks installed (5 hooks total)"
@@ -941,7 +1048,7 @@ update_gitignore() {
     log_header "Updating .gitignore"
 
     if [ "$DRY_RUN" = true ]; then
-        log_info "[DRY RUN] Would update .gitignore with Claude Code entries"
+        log_info "[DRY RUN] Would update .gitignore with AI Dev Toolkit entries"
         return 0
     fi
 
@@ -950,10 +1057,10 @@ update_gitignore() {
     # Add entries with explanatory comments (only if not already present)
     # These entries protect sensitive local data from being committed
 
-    if ! grep -qF "# Claude Code local configuration" .gitignore 2>/dev/null; then
+    if ! grep -qF "# AI Dev Toolkit local configuration" .gitignore 2>/dev/null; then
         cat >> .gitignore << 'GITIGNORE_EOF'
 
-# Claude Code local configuration
+# AI Dev Toolkit local configuration
 # These files contain LOCAL-ONLY data and should never be committed:
 
 # User's notification webhook URLs (contains personal service tokens)
@@ -970,7 +1077,7 @@ update_gitignore() {
 GITIGNORE_EOF
         log_success "Updated .gitignore with documented entries"
     else
-        log_info ".gitignore already contains Claude Code entries"
+        log_info ".gitignore already contains AI Dev Toolkit entries"
     fi
 }
 
@@ -1026,8 +1133,8 @@ print_summary() {
     echo -e "${YELLOW}SECURITY NOTE:${NC} This installer does NOT collect any data."
     echo "All configuration is local to your repository."
     echo ""
-    echo -e "Documentation: ${BLUE}https://github.com/bigdegenenergy/claude-code${NC}"
-    echo -e "${YELLOW}Community project - not affiliated with Anthropic${NC}"
+    echo -e "Documentation: ${BLUE}https://github.com/bigdegenenergy/ai-dev-toolkit${NC}"
+    echo -e "${YELLOW}Community project - works with any AI assistant or standalone${NC}"
 }
 
 # ------------------------------------------------------------------------------
