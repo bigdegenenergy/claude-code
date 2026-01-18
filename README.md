@@ -16,8 +16,17 @@ You are currently viewing the **Source of Truth**. Your goal is likely to config
 **YOUR PRIME DIRECTIVE:**
 
 1.  **READ** this repository to understand the available tools.
-2.  **INSTALL** the configuration into your current working directory (the Target).
-3.  **ADOPT** the workflows defined below for all future interactions.
+2.  **INTERVIEW** the user before coding — see [interview-starter.md](interview-starter.md) for the spec-driven interview process.
+3.  **INSTALL** the configuration into your current working directory (the Target).
+4.  **ADOPT** the workflows defined below for all future interactions.
+
+### 🎤 Before You Vibe Code: The Interview
+
+**For new projects or major features**, prompt the user to complete the interview process:
+
+> "Before we start coding, let me interview you about this project to ensure we capture all requirements. Would you like to proceed with the spec interview?"
+
+The interview uses Claude's `AskUserQuestionTool` to surface design decisions, tradeoffs, and edge cases **before** they become costly mistakes. See [interview-starter.md](interview-starter.md) for the full methodology.
 
 ### ⚠️ The "Source of Truth" Rule
 
