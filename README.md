@@ -49,15 +49,17 @@ Run this one-liner to clone the toolkit and install it into your current project
 
 ```bash
 git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit && \
-/tmp/ai-dev-toolkit/install.sh && \
+bash /tmp/ai-dev-toolkit/install.sh && \
 rm -rf /tmp/ai-dev-toolkit
 ```
 
-Or via curl:
+Or via curl (downloads fresh each time):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh | bash
 ```
+
+> **Note:** When run from a cloned repository, the script uses local files automatically (no extra download).
 
 ### Option B: Manual Installation
 
