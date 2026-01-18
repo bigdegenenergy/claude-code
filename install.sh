@@ -23,20 +23,22 @@
 #
 # Usage (Multiple Methods):
 #
-#   Method 1 - Direct git clone (RECOMMENDED - most reliable):
-#     git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/claude-code && \
-#     /tmp/claude-code/install-claude-code.sh && \
-#     rm -rf /tmp/claude-code
+#   Method 1 - Direct git clone (RECOMMENDED - uses local files, no re-download):
+#     git clone https://github.com/bigdegenenergy/ai-dev-toolkit.git /tmp/ai-dev-toolkit && \
+#     bash /tmp/ai-dev-toolkit/install.sh && \
+#     rm -rf /tmp/ai-dev-toolkit
 #
-#   Method 2 - One-liner via curl:
-#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install-claude-code.sh | bash
+#   Method 2 - One-liner via curl (downloads fresh each time):
+#     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh | bash
 #
-#   Method 3 - Download and run:
-#     git archive --remote=https://github.com/bigdegenenergy/ai-dev-toolkit.git HEAD install-claude-code.sh | tar -x
-#     ./install-claude-code.sh
+#   Method 3 - Download script only (will fetch source on run):
+#     curl -fsSL -o install.sh https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh
+#     bash install.sh
+#
+# Note: When run from a cloned repo, uses local files automatically (no extra download).
 #
 # With options:
-#   ./install-claude-code.sh [OPTIONS]
+#   bash install.sh [OPTIONS]
 #
 # Options:
 #   --no-github      Skip GitHub Actions workflows
@@ -278,10 +280,28 @@ confirm_overwrite() {
 # ------------------------------------------------------------------------------
 # Installation Functions
 # ------------------------------------------------------------------------------
+
+# Detect script directory for local source detection
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 download_source() {
-    log_header "Downloading AI Dev Toolkit Configuration"
+    log_header "Locating AI Dev Toolkit Configuration"
+
+    # Check if we're running from within the source repository
+    # (i.e., .claude directory exists alongside this script)
+    if [ -d "$SCRIPT_DIR/.claude" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+        log_success "Using local source files from: $SCRIPT_DIR"
+        TEMP_DIR="$SCRIPT_DIR"
+        USE_LOCAL_SOURCE=true
+        # Don't set trap to remove TEMP_DIR since it's the source repo
+        return 0
+    fi
+
+    # Otherwise, download from remote
+    log_info "Downloading from remote repository..."
 
     TEMP_DIR=$(mktemp -d)
+    USE_LOCAL_SOURCE=false
     trap 'rm -rf "$TEMP_DIR"' EXIT
 
     if [ "$DRY_RUN" = true ]; then

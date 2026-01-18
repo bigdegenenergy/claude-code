@@ -124,5 +124,5 @@ jobs:
       - name: Verify source repo URL is correct
         run: |
           # Ensure the source repo URL is consistently referenced
-          grep -r "bigdegenenergy/claude-code" . --include="*.md" | head -20
+          grep -r "bigdegenenergy/ai-dev-toolkit" . --include="*.md" | head -20
           echo "Source repository references found above"
