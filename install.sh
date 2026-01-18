@@ -288,13 +288,17 @@ download_source() {
     log_header "Locating AI Dev Toolkit Configuration"
 
     # Check if we're running from within the source repository
-    # (i.e., .claude directory exists alongside this script)
-    if [ -d "$SCRIPT_DIR/.claude" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+    # (i.e., both .claude AND .github directories exist alongside this script)
+    if [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
         log_success "Using local source files from: $SCRIPT_DIR"
         TEMP_DIR="$SCRIPT_DIR"
         USE_LOCAL_SOURCE=true
         # Don't set trap to remove TEMP_DIR since it's the source repo
         return 0
+    elif [ -d "$SCRIPT_DIR/.claude" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+        # Partial local source - .claude exists but .github is missing
+        log_warning "Local source found but .github directory is missing"
+        log_info "Downloading complete source from remote repository..."
     fi
 
     # Otherwise, download from remote
@@ -451,6 +455,18 @@ install_github_workflows() {
 
     mkdir -p .github/workflows
     mkdir -p .github/ISSUE_TEMPLATE
+
+    # Verify source .github directory exists
+    if [ ! -d "$TEMP_DIR/.github" ]; then
+        log_error "Source .github directory not found in: $TEMP_DIR"
+        log_error "GitHub workflows cannot be installed. Please report this issue."
+        return 1
+    fi
+
+    if [ ! -d "$TEMP_DIR/.github/workflows" ]; then
+        log_warning "Source .github/workflows directory not found"
+        log_warning "No GitHub Actions workflows will be installed"
+    fi
 
     # Check for existing workflows and warn before overwriting
     if [ -d ".github/workflows" ] && [ "$(ls -A .github/workflows 2>/dev/null)" ]; then
