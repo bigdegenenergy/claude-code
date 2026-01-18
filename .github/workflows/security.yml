@@ -161,8 +161,8 @@ jobs:
             echo ""
           fi
 
-          echo "📱 Checking for phone numbers..."
-          PHONE_PATTERN='\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
+          echo "📱 Checking for phone numbers (US: 10 digits or 11 with +1)..."
+          PHONE_PATTERN='(\+1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
           PHONE_FOUND=$(echo "$FILES" | xargs grep -lE "$PHONE_PATTERN" 2>/dev/null | head -5)
           if [ -n "$PHONE_FOUND" ]; then
             echo "⛔ Phone number patterns found in:"

@@ -35,9 +35,9 @@ jobs:
                 severity: 'critical',
                 name: 'Email Address'
               },
-              // Phone numbers
+              // Phone numbers (US only: 10 digits, or 11 with +1 prefix)
               phone: {
-                pattern: /\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g,
+                pattern: /(\+1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g,
                 excludes: /555-|123-456|000-000/i,
                 severity: 'critical',
                 name: 'Phone Number'

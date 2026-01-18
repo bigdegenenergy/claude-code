@@ -310,8 +310,9 @@ if [ -n "$CODE_FILES" ]; then
         EXIT_CODE=2
     fi
 
-    # Phone numbers (various formats: +1-xxx-xxx-xxxx, (xxx) xxx-xxxx, xxx.xxx.xxxx)
-    PHONE_PATTERN='\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
+    # Phone numbers (US only: 10 digits, or 11 with +1 prefix)
+    # Formats: (xxx) xxx-xxxx, xxx-xxx-xxxx, xxx.xxx.xxxx, +1-xxx-xxx-xxxx
+    PHONE_PATTERN='(\+1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}'
     PHONE_FOUND=$(echo "$CODE_FILES" | xargs grep -lE "$PHONE_PATTERN" 2>/dev/null | head -3)
     if [ -n "$PHONE_FOUND" ]; then
         PII_ERRORS="${PII_ERRORS}  ⛔ Phone numbers found in:\n"
