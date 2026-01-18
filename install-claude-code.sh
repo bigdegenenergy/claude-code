@@ -4,7 +4,15 @@
 # Claude Code Configuration Installer
 # Source: https://github.com/bigdegenenergy/claude-code
 #
-# Installs the complete Claude Code professional development environment:
+# DISCLAIMER: This is a COMMUNITY PROJECT and is NOT affiliated with,
+# endorsed by, or officially connected to Anthropic. "Claude Code" refers
+# to configuration patterns for use with Claude AI, not an official product.
+#
+# LICENSE: MIT License - See repository for full terms
+# SECURITY: All scripts are open source and auditable. No telemetry or
+#           data collection. Credentials are stored locally only.
+#
+# Installs development workflow configurations:
 #   - 21 Slash Commands (workflows and orchestration)
 #   - 17 Specialized Agents (subagents for different domains)
 #   - 11 Auto-Discovered Skills (context-aware expertise)
@@ -95,8 +103,11 @@ print_banner() {
 
 EOF
     echo -e "${NC}"
-    echo -e "${BOLD}Professional Development Environment Installer v${VERSION}${NC}"
+    echo -e "${BOLD}Development Workflow Configuration Installer v${VERSION}${NC}"
     echo -e "Source: ${BLUE}https://github.com/bigdegenenergy/claude-code${NC}"
+    echo ""
+    echo -e "${YELLOW}NOTICE: Community project - NOT affiliated with Anthropic${NC}"
+    echo -e "${YELLOW}All scripts are open source and auditable at the repository above${NC}"
     echo ""
 }
 
@@ -161,6 +172,15 @@ check_prerequisites() {
     # Check if we're in a git repository
     if ! git rev-parse --is-inside-work-tree &> /dev/null; then
         log_error "Not inside a git repository. Please run from a git repo root."
+        echo ""
+        echo "This script must be run from within an existing git repository."
+        echo "To create a new repository: git init"
+        exit 1
+    fi
+
+    # Verify .git directory exists (explicit check)
+    if [ ! -d ".git" ] && [ ! -d "$(git rev-parse --git-dir 2>/dev/null)" ]; then
+        log_error "Cannot find .git directory. Please run from repository root."
         exit 1
     fi
 
@@ -179,6 +199,14 @@ check_prerequisites() {
     else
         log_error "Neither curl nor wget found. Please install one."
         exit 1
+    fi
+
+    # Check for Python3 (optional - used by some hooks)
+    if command -v python3 &> /dev/null; then
+        log_success "python3 found (optional hooks will be enabled)"
+    else
+        log_warning "python3 not found - some optional hooks will be disabled"
+        log_info "Git hooks will still work, but commit-context and notification features won't run"
     fi
 }
 
@@ -917,24 +945,33 @@ update_gitignore() {
         return 0
     fi
 
-    # Entries to add
-    local entries=(
-        "# Claude Code"
-        ".claude/notifications.json"
-        ".claude/artifacts/"
-        ".claude/metrics/"
-        "*.backup.*"
-    )
-
     touch .gitignore
 
-    for entry in "${entries[@]}"; do
-        if ! grep -qF "$entry" .gitignore 2>/dev/null; then
-            echo "$entry" >> .gitignore
-        fi
-    done
+    # Add entries with explanatory comments (only if not already present)
+    # These entries protect sensitive local data from being committed
 
-    log_success "Updated .gitignore"
+    if ! grep -qF "# Claude Code local configuration" .gitignore 2>/dev/null; then
+        cat >> .gitignore << 'GITIGNORE_EOF'
+
+# Claude Code local configuration
+# These files contain LOCAL-ONLY data and should never be committed:
+
+# User's notification webhook URLs (contains personal service tokens)
+.claude/notifications.json
+
+# Generated analysis artifacts (temporary files)
+.claude/artifacts/
+
+# Local performance metrics (machine-specific)
+.claude/metrics/
+
+# Backup files created during hook installation
+*.backup.*
+GITIGNORE_EOF
+        log_success "Updated .gitignore with documented entries"
+    else
+        log_info ".gitignore already contains Claude Code entries"
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -965,32 +1002,32 @@ print_summary() {
     echo -e "${BOLD}Next Steps:${NC}"
     echo ""
 
-    echo -e "${YELLOW}1. Configure Notifications (Optional):${NC}"
-    echo "   Edit .claude/notifications.json with your webhook URLs"
+    echo -e "${YELLOW}1. Review installed files:${NC}"
+    echo "   All installed scripts are plain text and auditable:"
+    echo "   • .claude/commands/  - Workflow templates (markdown)"
+    echo "   • .claude/hooks/     - Quality gate scripts (bash/python)"
+    echo "   • .github/workflows/ - CI/CD pipelines (yaml)"
     echo ""
 
-    echo -e "${YELLOW}2. Configure GitHub Secrets (Required for CI):${NC}"
-    echo "   Repository Settings → Secrets → Actions:"
-    echo "   • GH_TOKEN - Personal Access Token with 'repo' scope"
-    echo "   • GEMINI_API_KEY - For AI-powered PR reviews"
-    echo "   • SLACK_WEBHOOK_URL / DISCORD_WEBHOOK_URL - Notifications"
-    echo ""
-
-    echo -e "${YELLOW}3. Commit the Configuration:${NC}"
+    echo -e "${YELLOW}2. Commit the Configuration:${NC}"
     echo "   git add .claude .github CLAUDE.md .gitignore"
-    echo "   git commit -m \"chore: install claude-code professional team\""
+    echo "   git commit -m \"chore: add development workflow configuration\""
     echo ""
 
-    echo -e "${YELLOW}4. Start Using Claude Code:${NC}"
-    echo "   /plan          - Plan before implementing"
-    echo "   /ralph         - Autonomous development loop"
-    echo "   /qa            - Run tests until green"
-    echo "   /ship          - Commit, push, create PR"
+    echo -e "${YELLOW}3. (Optional) Configure GitHub Actions:${NC}"
+    echo "   If using the CI workflows, add secrets to YOUR repository:"
+    echo "   Repository Settings → Secrets → Actions"
+    echo "   See: .github/workflows/ for which secrets each workflow needs"
     echo ""
 
     echo -e "${BOLD}${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${GREEN}${BOLD}Installation Complete!${NC}"
+    echo ""
+    echo -e "${YELLOW}SECURITY NOTE:${NC} This installer does NOT collect any data."
+    echo "All configuration is local to your repository."
+    echo ""
     echo -e "Documentation: ${BLUE}https://github.com/bigdegenenergy/claude-code${NC}"
+    echo -e "${YELLOW}Community project - not affiliated with Anthropic${NC}"
 }
 
 # ------------------------------------------------------------------------------
