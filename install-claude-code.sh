@@ -625,13 +625,12 @@ NC='\033[0m'
 
 echo -e "${GREEN}Running AI Dev Toolkit pre-commit checks...${NC}"
 
-# Get staged files (Bash 3.2 compatible - works on macOS)
+# Get staged files with null-delimiter for proper handling of special characters
+# Using process substitution which works in Bash 3.2+ (macOS compatible)
 STAGED_FILES=()
-while IFS= read -r file; do
+while IFS= read -r -d '' file; do
     [[ -n "$file" ]] && STAGED_FILES+=("$file")
-done <<EOF
-$(git diff --cached --name-only --diff-filter=ACM)
-EOF
+done < <(git diff --cached --name-only -z --diff-filter=ACM)
 
 if [ ${#STAGED_FILES[@]} -eq 0 ]; then
     echo "No staged files to check"
@@ -696,39 +695,40 @@ echo -e "\n${YELLOW}→ Scanning for PII...${NC}"
 PII_FOUND=false
 for file in "${STAGED_FILES[@]}"; do
     if [ -f "$file" ]; then
-        # Skip common config files and documentation by extension
+        # Skip common config files and documentation by extension (PII scan only)
+        # Note: These files ARE still scanned for secrets in section 2 above
         case "$file" in
             *.md|*.txt|*.json|*.yaml|*.yml|*.toml|LICENSE*|CHANGELOG*|AUTHORS*)
                 continue
                 ;;
         esac
 
-        # Get staged content (what will actually be committed)
-        STAGED_CONTENT=$(git show ":$file" 2>/dev/null) || continue
+        # Skip binary files - stream content directly (no variable buffering)
+        # This avoids memory issues and binary data corruption from null bytes
+        if ! git show ":$file" 2>/dev/null | file - 2>/dev/null | grep -q "text"; then
+            continue
+        fi
 
-        # Skip binary files (check staged content, not working directory)
-        if echo "$STAGED_CONTENT" | file - 2>/dev/null | grep -q "text"; then
-            # Email addresses - WARNING only (too many false positives)
-            if echo "$STAGED_CONTENT" | grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | \
-               grep -vE '@example|@test|@localhost|@email\.com|@mail\.com|@users\.noreply\.github\.com' > /dev/null; then
-                echo -e "${YELLOW}⚠ Email address found in: $file (warning only)${NC}"
-                PII_FOUND=true
-                # Note: Not setting EXIT_CODE - emails don't block commits
-            fi
+        # Email addresses - WARNING only (too many false positives)
+        if git show ":$file" 2>/dev/null | grep -E '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | \
+           grep -vE '@example|@test|@localhost|@email\.com|@mail\.com|@users\.noreply\.github\.com' > /dev/null; then
+            echo -e "${YELLOW}⚠ Email address found in: $file (warning only)${NC}"
+            PII_FOUND=true
+            # Note: Not setting EXIT_CODE - emails don't block commits
+        fi
 
-            # SSN pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
-            if echo "$STAGED_CONTENT" | grep -E '(^|[^0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}([^0-9]|$)' > /dev/null; then
-                echo -e "${RED}✗ SSN pattern found in: $file${NC}"
-                PII_FOUND=true
-                EXIT_CODE=1
-            fi
+        # SSN pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
+        if git show ":$file" 2>/dev/null | grep -E '(^|[^0-9])[0-9]{3}-[0-9]{2}-[0-9]{4}([^0-9]|$)' > /dev/null; then
+            echo -e "${RED}✗ SSN pattern found in: $file${NC}"
+            PII_FOUND=true
+            EXIT_CODE=1
+        fi
 
-            # Credit card pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
-            if echo "$STAGED_CONTENT" | grep -E '(^|[^0-9])[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}([^0-9]|$)' > /dev/null; then
-                echo -e "${RED}✗ Credit card pattern found in: $file${NC}"
-                PII_FOUND=true
-                EXIT_CODE=1
-            fi
+        # Credit card pattern - BLOCKS commit (use [^0-9] instead of \b for portability)
+        if git show ":$file" 2>/dev/null | grep -E '(^|[^0-9])[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}[- ]?[0-9]{4}([^0-9]|$)' > /dev/null; then
+            echo -e "${RED}✗ Credit card pattern found in: $file${NC}"
+            PII_FOUND=true
+            EXIT_CODE=1
         fi
     fi
 done
