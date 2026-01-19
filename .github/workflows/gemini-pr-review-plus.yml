@@ -93,7 +93,7 @@ jobs:
             echo "No commit context generator found" > /tmp/pr/commit_context.md
           fi
 
-      - name: 🤖 Run Gemini Review (Quality + Malicious Intent)
+      - name: 🤖 Run Gemini Quality Review
         if: steps.check-key.outputs.skip != 'true'
         id: gemini
         env:
@@ -253,45 +253,7 @@ jobs:
           quality_text = q_resp.text or ""
           (PR_DIR / "quality_raw.toml").write_text(quality_text, encoding="utf-8")
 
-          # ---- Pass B: Malicious intent scan TOML ----
-          malicious_prompt = f"""\
-          You are a code security reviewer specializing in malicious pull request detection.
-
-          {shared_header}
-
-          TASK:
-          Evaluate whether the changes show signs of malicious intent or supply-chain compromise.
-          Consider:
-          - Credential or key exfil paths
-          - Hidden network egress
-          - Obfuscated code (encoded blobs, weird arithmetic, dead code that runs via side effects)
-          - Dependency/script changes (postinstall, CI steps touching secrets)
-          - Privilege escalations, auth bypasses, signature verification removal
-          - Changes that look unrelated to PR description/commit intent
-
-          OUTPUT FORMAT (REQUIRED):
-          You MUST respond with a valid TOML document. Do not include any text outside the TOML.
-
-          ```toml
-          [malicious]
-          verdict = "BENIGN" # or "SUSPICIOUS" or "MALICIOUS"
-          confidence = 0.0 # 0 to 1
-          rationale = "Short explanation"
-
-          [[signals]]
-          severity = "high" # or "medium" or "low"
-          file = "path/to/file"
-          description = "What triggered suspicion"
-          evidence = "Concrete snippet/behavior if possible"
-          recommendation = "What a human should check next"
-          ```
-          """
-
-          m_resp = client.models.generate_content(model=MODEL, contents=malicious_prompt)
-          malicious_text = m_resp.text or ""
-          (PR_DIR / "malicious_raw.toml").write_text(malicious_text, encoding="utf-8")
-
-          # ---- Parse TOML (best effort) + produce a single markdown comment ----
+          # ---- Parse TOML (best effort) + produce a markdown comment ----
           import tomllib
 
           def extract_toml(text: str) -> str:
@@ -299,7 +261,6 @@ jobs:
             return (m.group(1).strip() if m else text.strip())
 
           q_toml = extract_toml(quality_text)
-          m_toml = extract_toml(malicious_text)
 
           def safe_load(t: str):
             try:
@@ -308,7 +269,6 @@ jobs:
               return None
 
           q_data = safe_load(q_toml)
-          m_data = safe_load(m_toml)
 
           def decision_emoji(dec):
             return {"APPROVE":"✅","REQUEST_CHANGES":"🔴","COMMENT":"💬"}.get(dec, "💬")
@@ -349,62 +309,23 @@ jobs:
             md.append("### Quality Review")
             md.append("⚠️ Failed to parse quality TOML; see raw blocks below.")
 
-          # Malicious section
-          md.append("\n---\n")
-          if m_data and "malicious" in m_data:
-            verdict = m_data["malicious"].get("verdict","SUSPICIOUS")
-            conf = m_data["malicious"].get("confidence",0.0)
-            rat = m_data["malicious"].get("rationale","")
-            v_icon = {"BENIGN":"✅","SUSPICIOUS":"🟠","MALICIOUS":"🚨"}.get(verdict,"🟠")
-            md.append("### Malicious Intent Scan")
-            md.append(f"**Verdict:** {v_icon} {verdict}  (confidence: {conf})")
-            if rat:
-              md.append(f"**Rationale:** {rat}")
-            signals = m_data.get("signals", [])
-            if signals:
-              md.append("\n#### Signals")
-              for s in signals:
-                md.append(f"- **{s.get('severity','medium').upper()}** `{s.get('file','unknown')}`: {s.get('description','')}")
-                if s.get("evidence"):
-                  md.append(f"  - Evidence: {s.get('evidence')}")
-                if s.get("recommendation"):
-                  md.append(f"  - Next: {s.get('recommendation')}")
-            else:
-              md.append("\nNo suspicious signals reported.")
-          else:
-            md.append("### Malicious Intent Scan")
-            md.append("⚠️ Failed to parse malicious TOML; see raw blocks below.")
-
-          # Copyable TOML block (combined Quality + Malicious)
+          # Copyable TOML block
           md.append("\n---\n")
           md.append("### 📋 Review Data (TOML)")
           md.append("")
           md.append("```toml")
-          md.append("# Quality Review")
           md.append(q_toml.strip())
-          md.append("")
-          md.append("# Malicious Intent Scan")
-          md.append(m_toml.strip())
           md.append("```")
 
           # Debug collapsible
-          md.append("\n<details>\n<summary>🔍 Debug: Raw Model Outputs</summary>\n")
+          md.append("\n<details>\n<summary>🔍 Debug: Raw Model Output</summary>\n")
           md.append("\n```text")
-          md.append("=== QUALITY RAW ===")
           md.append(quality_text[:20000])
-          md.append("\n=== MALICIOUS RAW ===")
-          md.append(malicious_text[:20000])
           md.append("```")
           md.append("\n</details>\n")
 
           comment = "\n".join(md)
           (PR_DIR / "comment.md").write_text(comment, encoding="utf-8")
-
-          # Minimal outputs for gating
-          verdict = None
-          if m_data and "malicious" in m_data:
-            verdict = m_data["malicious"].get("verdict")
-          (PR_DIR / "verdict.txt").write_text((verdict or "UNKNOWN"), encoding="utf-8")
 
           print(comment)
           PY
@@ -417,19 +338,6 @@ jobs:
           set -euo pipefail
           PR_NUMBER="${{ github.event.pull_request.number }}"
           gh pr comment "$PR_NUMBER" --body-file /tmp/pr/comment.md
-
-      # Optional: fail the workflow if malicious verdict is SUSPICIOUS or MALICIOUS
-      # (Uncomment to enable gating)
-      #
-      # - name: 🚧 Gate on malicious verdict
-      #   if: steps.check-key.outputs.skip != 'true'
-      #   run: |
-      #     verdict="$(cat /tmp/pr/verdict.txt || echo UNKNOWN)"
-      #     echo "Malicious verdict: $verdict"
-      #     if [ "$verdict" = "SUSPICIOUS" ] || [ "$verdict" = "MALICIOUS" ]; then
-      #       echo "::error::Malicious intent scan verdict is $verdict; blocking merge."
-      #       exit 1
-      #     fi
 
       - name: 📱 Telegram notification
         if: steps.check-key.outputs.skip != 'true' && always()
@@ -447,10 +355,6 @@ jobs:
             exit 0
           fi
 
-          # Read verdict from file
-          VERDICT="$(cat /tmp/pr/verdict.txt 2>/dev/null || echo UNKNOWN)"
-          export VERDICT
-
           # Use Python directly to send - avoids shell injection from PR title
           python3 << 'PY'
           import os, json, urllib.request, html
@@ -460,14 +364,12 @@ jobs:
           pr_number = os.environ.get("PR_NUMBER", "?")
           pr_title = html.escape(os.environ.get("PR_TITLE", "Unknown"))
           pr_url = os.environ.get("PR_URL", "")
-          verdict = os.environ.get("VERDICT", "UNKNOWN")
           author = html.escape(os.environ.get("AUTHOR", "unknown"))
 
           msg = f"""🤖 <b>PR Review Complete</b>
 
           <b>PR #{pr_number}:</b> {pr_title}
           <b>Author:</b> {author}
-          <b>Malicious Verdict:</b> {verdict}
 
           <a href="{pr_url}">View PR</a>"""
           payload = {
