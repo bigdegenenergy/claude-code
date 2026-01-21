@@ -381,59 +381,68 @@ The Gemini PR review workflow automatically reads:
 
 This gives Gemini rich context about _what_ changed and _why_, resulting in more relevant and actionable code review feedback.
 
-## Agent Cover Letter (Agent-to-Agent Communication)
+## Git-Native Agent Communication
 
-The `AGENT_COVER_LETTER.md` file enables communication between the repository agent (Claude) and the review agent (Gemini PR Review). This allows the repo agent to address previous review feedback in a structured way.
+The PR review workflow uses a git-native approach for agent-to-agent communication, eliminating the need for separate response files.
 
 ### How It Works
 
-1. **Initial Review**: Gemini reviews the PR and posts feedback
-2. **Agent Response**: The repo agent (Claude) fixes issues and fills out `AGENT_COVER_LETTER.md` explaining what was addressed
-3. **Re-Review**: Gemini reads the cover letter along with the new changes and evaluates whether concerns were resolved
+1. **Review Agent (Gemini)** reviews the PR and:
+   - Posts feedback as a PR comment
+   - If issues found, pushes `REVIEW_INSTRUCTIONS.md` to the branch
 
-### Cover Letter Structure
+2. **Coding Agent (Claude)** addresses feedback by:
+   - Reading `REVIEW_INSTRUCTIONS.md` (if present)
+   - Fixing the issues
+   - Deleting the instructions file
+   - Committing with `Agent-Note:` trailer explaining fixes
 
-The cover letter includes:
+3. **Re-Review**: Gemini reads `Agent-Note:` trailers from commits and verifies fixes
 
-- **PR Context**: PR number, title, review iteration
-- **Previous Review Summary**: What the reviewer requested
-- **Addressed Issues**: For each issue (critical, important, suggestions):
-  - Original concern
-  - Resolution approach
-  - Files changed
-  - Verification method
-- **Additional Context**: Any extra info for the reviewer
-- **Questions**: Clarifications needed from reviewer
+### Review Instructions File
 
-### Usage
+When issues are found, Gemini pushes `REVIEW_INSTRUCTIONS.md` containing:
 
-When addressing PR review feedback:
+- Workflow instructions (read, fix, delete, commit)
+- TOML-formatted issues to address
+- Example commit format
 
-```bash
-# 1. Edit the cover letter to document your changes
-vim AGENT_COVER_LETTER.md
+The coding agent **must delete this file** after reading - it should never be merged.
 
-# 2. Commit the cover letter with your fixes
-git add AGENT_COVER_LETTER.md
-git commit -m "Address PR review feedback"
+### Git Trailer Format
 
-# 3. Push - the PR review workflow will read the cover letter on re-review
-git push
+Coding agents communicate via git commit trailers:
+
+```
+fix: address review feedback
+
+Updated regex to exclude special characters.
+
+Agent-Note: Fixed SQL injection in auth.ts by using parameterized queries.
 ```
 
-The Gemini reviewer will:
+The `Agent-Note:` trailer is extracted by the review workflow and considered (as untrusted commentary) during re-review.
 
-- Detect this is a re-submission based on the cover letter
-- Verify claimed fixes are actually implemented
-- Check if any issues remain unresolved
-- Identify any new issues introduced
+### Workflow Cycle
+
+```
+PR Created
+    ↓
+Gemini Reviews → Posts comment + pushes REVIEW_INSTRUCTIONS.md (if issues)
+    ↓
+Claude reads instructions → Fixes code → Deletes file → Commits with Agent-Note:
+    ↓
+Gemini Re-Reviews → Reads Agent-Note trailers → Verifies fixes
+    ↓
+Approved → Merge (no cleanup needed - instructions file already deleted)
+```
 
 ### Best Practices
 
-- **Be specific**: Reference exact file paths and line numbers
-- **Explain your reasoning**: Help the reviewer understand your approach
-- **Acknowledge trade-offs**: If you chose not to implement a suggestion, explain why
-- **Update the checklist**: Mark items as addressed before committing
+- **Delete instructions immediately** after reading to prevent merge conflicts
+- **Use clear Agent-Note trailers** explaining what was fixed and how
+- **Reference specific issues** from the review in your notes
+- **One trailer per major fix** for clarity
 
 ## Pre-Commit Hook (Linting & Formatting)
 
@@ -649,11 +658,11 @@ Track improvements to this configuration:
   - New `autonomous-loop` skill with dual-condition exit gate and structured status reporting
   - Added project templates (`PROMPT.md`, `fix_plan.md`, `AGENT.md`) in `.claude/templates/ralph/`
   - Total: 18 agents, 11 skills, 22 commands, 8 hooks
-- **2026-01-20**: **Agent Cover Letter** - Added agent-to-agent communication for PR reviews:
-  - New `AGENT_COVER_LETTER.md` template for repo agent to address review feedback
-  - Updated Gemini PR review workflow to read and consider cover letters
-  - Re-review mode: Gemini verifies claimed fixes are actually implemented
-  - Enables structured dialog between Claude (repo agent) and Gemini (review agent)
+- **2026-01-21**: **Git-Native Agent Communication** - Replaced cover letter with git-native workflow:
+  - Review agent (Gemini) pushes `REVIEW_INSTRUCTIONS.md` when issues found
+  - Coding agent (Claude) responds via `Agent-Note:` git trailers in commits
+  - Instructions file deleted by coding agent (never merged)
+  - No cleanup workflows needed - ephemeral by design
 
 ---
 
