@@ -24,27 +24,32 @@ Agent-Note: Fixed SQL injection in auth.ts by using parameterized queries.
 
 ```toml
 [review]
-summary = "The proposed workflow changes introduce a critical CI failure mode for forks and reference a non-existent Gemini model version. The shift to committing ephemeral instructions to the branch is also risky."
+summary = "The refactor to a git-native agent workflow is promising, but the current implementation breaks CI for external contributors (forks) and accidentally commits ephemeral instruction files to the codebase."
 decision = "REQUEST_CHANGES"
 
 [[issues]]
 severity = "critical"
 file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Invalid Gemini model version"
-description = "The Agent Note claims the model was updated to `gemini-3-pro-preview`. This model version does not exist (current versions are 1.5 or 2.0-flash-exp). This will result in a 400/404 API error."
-suggestion = "Use a valid model string, such as `gemini-1.5-pro-latest`."
+title = "Workflow will fail on forks due to write permissions"
+description = "You have escalated permissions to `contents: write` to allow the workflow to push `REVIEW_INSTRUCTIONS.md`. GitHub Actions does not grant write tokens to PRs originating from forks. This step will fail for any external contributor."
+suggestion = "Wrap the push step in a condition: `if: github.event.pull_request.head.repo.full_name == github.repository`. Alternatively, use a distinct workflow for the response cycle that does not block the main PR checks."
+
+[[issues]]
+severity = "important"
+file = "REVIEW_INSTRUCTIONS.md"
+title = "Ephemeral agent instructions committed to PR"
+description = "`REVIEW_INSTRUCTIONS.md` is intended to be a temporary communication file (as per CLAUDE.md changes). It is currently included in the PR diff. Merging this will pollute `main` with outdated instructions."
+suggestion = "Remove this file from the PR. Add `REVIEW_INSTRUCTIONS.md` to `.gitignore` to prevent future accidental commits."
 
 [[issues]]
 severity = "important"
 file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Workflow failure on forks due to write permissions"
-description = "Granting `contents: write` and attempting to push changes (the instructions file) back to the branch will fail for PRs originating from forks, as the `GITHUB_TOKEN` is read-only in that context."
-suggestion = "Remove the requirement to push files to the branch. Use PR comments for instructions, or restricted the push step to only run on internal branches."
+title = "Infinite loop risk in git-native workflow"
+description = "The workflow pushes commits back to the PR branch. While the commit message trailer `[skip ci]` is standard, ensure the `Push Instructions` step explicitly uses it in the commit message. If missing, the push will trigger the workflow again, creating an infinite billing/execution loop."
 
 [[issues]]
-severity = "important"
+severity = "suggestion"
 file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Pollution of git history with ephemeral files"
-description = "Committing `REVIEW_INSTRUCTIONS.md` to the PR branch creates a risk that these temporary instructions are accidentally merged into the main branch if the coding agent fails to delete them or if a human merges the PR manually."
-suggestion = "Pass instructions via PR comments or build artifacts/summaries rather than committing files to the source tree."
+title = "Verify Telegram environment variable mapping"
+description = "The agent note mentions adding `DECISION` and `JOB_STATUS` to the Telegram step. Ensure these are explicitly mapped in the `env:` block of that specific step, otherwise the script will reference undefined variables."
 ```
