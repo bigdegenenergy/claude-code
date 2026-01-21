@@ -24,35 +24,34 @@ Agent-Note: Fixed SQL injection in auth.ts by using parameterized queries.
 
 ```toml
 [review]
-summary = "The PR introduces a promising agentic workflow but accidentally commits ephemeral artifacts and includes CI configurations that will break on forked repositories. Security scoping for the agent command needs tightening."
+summary = "The PR incorrectly commits the ephemeral `REVIEW_INSTRUCTIONS.md` artifact instead of applying the fixes contained within it. Furthermore, the proposed CI changes introduce critical security vulnerabilities by exposing a Personal Access Token to untrusted code contexts."
 decision = "REQUEST_CHANGES"
 
 [[issues]]
-severity = "important"
+severity = "critical"
 file = "REVIEW_INSTRUCTIONS.md"
-title = "Ephemeral artifact committed to repository"
-description = "The `REVIEW_INSTRUCTIONS.md` file is intended to be a temporary communication channel between agents and should be deleted by the coding agent before committing. Its presence in the PR indicates the `/wake` cycle did not complete successfully or the file was manually added."
-suggestion = "Remove this file from the PR and ensure `.gitignore` prevents it from being committed in the future."
+title = "Temporary agent artifact committed"
+description = "This file is intended as a transient communication mechanism for the coding agent (to be read and deleted). It contains unaddressed critical security feedback. Committing this file indicates the automated 'wake' cycle failed or was bypassed."
+suggestion = "Remove this file. Address the security issues described within it (specifically regarding `.claude/commands/wake.md` and the CI workflow) before pushing again."
 
 [[issues]]
 severity = "critical"
 file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Workflow fails on forked repositories"
-description = "The workflow uses `contents: write` and attempts to `git push` changes back to the branch. This will fail for Pull Requests originating from forks because the `GITHUB_TOKEN` is read-only for forks. This effectively breaks CI for external contributors."
-suggestion = "Add a condition to skip the push step if `github.event.pull_request.head.repo.fork` is true, or use `continue-on-error: true` for the push step."
+title = "Insecure PAT usage with untrusted checkout"
+description = "Using `secrets.GH_TOKEN` (a Personal Access Token) to checkout `${{ github.head_ref }}` exposes high-privilege credentials to the environment where potentially untrusted PR code is checked out. This is a 'Pwn Request' vulnerability vector."
+suggestion = "Revert to `secrets.GITHUB_TOKEN`. If write access is needed, rely on the default token's permissions or a scoped GitHub App, but do not expose a PAT while checking out unmerged PR code."
+
+[[issues]]
+severity = "critical"
+file = ".claude/commands/wake.md"
+title = "Excessive agent permissions (Remote Code Execution risk)"
+description = "The configuration grants `Bash(*)` permission to the agent. In a security-sensitive repository handling transactions/keys, allowing an AI agent unrestricted shell execution is extremely risky and susceptible to prompt injection attacks."
+suggestion = "Remove `Bash(*)` permissions. If shell commands are necessary, restrict the agent to executing specific, safe scripts from the repository."
 
 [[issues]]
 severity = "important"
-file = ".claude/commands/wake.md"
-title = "Excessive agent permissions"
-description = "The `/wake` command grants `Bash(*)` permissions to the agent. In a security-sensitive repo handling transactions/keys, giving the agent unrestricted shell access is high risk. If the instruction file is spoofed, it could lead to arbitrary code execution."
-suggestion = "Restrict `allowed-tools` to the specific git commands and file operations needed (e.g., `Bash(git, rm, ls)`), or ensure strict sandboxing of the agent environment."
-
-[[issues]]
-severity = "suggestion"
 file = ".github/workflows/gemini-pr-review-plus.yml"
-line = 158
-title = "Potential infinite loop on push"
-description = "While `GITHUB_TOKEN` pushes typically don't trigger workflows, using `[skip ci]` in the commit message is a safer practice to guarantee this workflow doesn't trigger itself recursively if the token type changes in the future."
-suggestion = "Ensure the commit message in the workflow (line 158) retains the `[skip ci]` tag (it currently does, but verify it works with the specific CI provider settings)."
+title = "Workflow permission escalation"
+description = "Escalating workflow permissions to `contents: write` on a PR review workflow is dangerous, particularly if the workflow runs on `pull_request_target` or receives input from forks."
+suggestion = "Maintain `contents: read`. For providing feedback, stick to PR comments or creating status checks rather than pushing commits directly to the contributor's branch."
 ```
