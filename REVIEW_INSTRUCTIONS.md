@@ -24,27 +24,24 @@ Agent-Note: Fixed SQL injection in auth.ts by using parameterized queries.
 
 ```toml
 [review]
-summary = "The transition to a git-native agent workflow is a solid architectural improvement. However, the CI workflow introduces security risks by writing long-lived credentials to disk and requesting unnecessary permissions. Additionally, the reliance on a repository secret in a standard `pull_request` trigger will break the workflow for external contributors (forks)."
+summary = "This PR introduces a Python dependency file to a Node.js/TypeScript repository without context or accompanying Python code. Additionally, mandatory procedural checks in the PR description are incomplete."
 decision = "REQUEST_CHANGES"
 
 [[issues]]
-severity = "critical"
-file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Insecure handling of GH_TOKEN"
-description = "The workflow writes the sensitive `GH_TOKEN` (a Personal Access Token) to a file named `.github_token` on the runner. This persists the credential on the filesystem, increasing the risk of exfiltration. The `gh` CLI supports authentication directly via environment variables, which is more secure."
-suggestion = "Remove the `echo ... > .github_token` step. Instead, map the secret to the `GH_TOKEN` environment variable in the `env` block of the step running `gh` commands."
+severity = "important"
+file = "requirements.txt"
+title = "Ecosystem mismatch (Python file in Node.js repo)"
+description = "This project is configured as a Node.js/TypeScript environment. Adding `requirements.txt` (standard for Python/pip) is unexpected without accompanying Python source code or an explanation in the PR description. If this repository is transitioning to a hybrid structure, please verify that standard Python exclusions (e.g., `__pycache__`, `venv`) are added to `.gitignore`."
+
+[[issues]]
+severity = "suggestion"
+file = "requirements.txt"
+title = "Commit of empty placeholder file"
+description = "The file appears to be empty (or contains only a newline). It is generally best practice to add configuration files in the same PR as the code that requires them, rather than as standalone empty placeholders, to maintain atomic commit history."
 
 [[issues]]
 severity = "important"
-file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Redundant write permissions"
-description = "The workflow requests `contents: write` for the default `GITHUB_TOKEN`. However, the checkout and git operations are explicitly configured to use `secrets.GH_TOKEN`. Granting write access to `GITHUB_TOKEN` is likely unnecessary and violates the principle of least privilege."
-suggestion = "Remove `contents: write` from the permissions block unless there is a specific step (other than checkout/push) that requires the default token to have write access."
-
-[[issues]]
-severity = "important"
-file = ".github/workflows/gemini-pr-review-plus.yml"
-title = "Workflow broken for forks"
-description = "The workflow uses `secrets.GH_TOKEN` in a `pull_request` event. Secrets are not available to PRs originating from forks. This means the review agent will fail to run for any external contributions."
-suggestion = "If external contributions are expected, consider handling the missing secret gracefully (skipping the review) or using `pull_request_target` (with strict security checks on the checkout step)."
+file = "PR Description"
+title = "Mandatory checklist incomplete"
+description = "The 'Source Repository Check' checkbox is unmarked. Please review the linked repository guidelines and acknowledge them before merging, as required by the PR template."
 ```
