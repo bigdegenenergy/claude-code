@@ -42,7 +42,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: 🐍 Set up Python
         if: steps.check-key.outputs.skip != 'true'
@@ -416,7 +416,7 @@ jobs:
       - name: 💬 Post PR comment
         if: steps.check-key.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           set -euo pipefail
           PR_NUMBER="${{ github.event.pull_request.number }}"
