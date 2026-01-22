@@ -1,5 +1,5 @@
 name: Claude Code Implement Changes
-# Version: 2026-01-22-v3 - Use PR branch scripts for workflow_dispatch
+# Version: 2026-01-22-v4 - Debug SDK package structure
 
 on:
   issue_comment:
@@ -287,25 +287,21 @@ jobs:
           # NODE_PATH for main branch script (uses standard require)
           NODE_PATH: /tmp/claude-sdk/node_modules
         run: |
-          # Debug: Detailed package info
-          echo "=== Debug: Checking package structure ==="
-          SCRIPT_DIR="${{ github.workspace }}/_trusted_scripts/.github/scripts"
-          echo "Script directory: $SCRIPT_DIR"
+          # Debug: Show SDK package structure
+          echo "=== Debug: SDK Package Structure ==="
+          SDK_PKG="/tmp/claude-sdk/node_modules/@anthropic-ai/claude-code"
 
-          echo "--- Script file (first 15 lines) ---"
-          head -15 "$SCRIPT_DIR/claude-code-implement.cjs"
+          echo "--- Full package.json ---"
+          cat "$SDK_PKG/package.json"
 
-          echo "--- Package.json in claude-code ---"
-          cat "$SCRIPT_DIR/node_modules/@anthropic-ai/claude-code/package.json" 2>/dev/null | head -20 || echo "NOT FOUND!"
+          echo ""
+          echo "--- Files in SDK directory ---"
+          ls -la "$SDK_PKG/" | head -30
 
-          echo "--- Testing require resolution ---"
-          node -e "console.log(require.resolve('@anthropic-ai/claude-code', {paths: ['$SCRIPT_DIR']}))" 2>&1 || echo "resolve failed"
-
-          echo "--- Direct test load ---"
-          cd "$SCRIPT_DIR" && node -e "console.log('Loaded:', require('@anthropic-ai/claude-code'))" 2>&1 || echo "direct load failed"
           echo "=================="
 
-          # Security: Execute trusted script from default branch, not PR branch
+          # Security: Execute trusted script from PR branch (workflow_dispatch) or default branch (issue_comment)
+          SCRIPT_DIR="${{ github.workspace }}/_trusted_scripts/.github/scripts"
           cd "$SCRIPT_DIR" && node claude-code-implement.cjs
 
       - name: Configure git
