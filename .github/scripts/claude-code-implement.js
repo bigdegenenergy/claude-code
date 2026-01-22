@@ -1,0 +1,166 @@
+#!/usr/bin/env node
+
+/**
+ * Claude Code Implementation Script
+ *
+ * This script uses the Claude Code SDK to implement PR review suggestions.
+ * It reads REVIEW_INSTRUCTIONS.md (pushed by Gemini), applies user modifications
+ * if provided, and implements the changes.
+ */
+
+const { query } = require("@anthropic-ai/claude-code");
+const fs = require("fs");
+const path = require("path");
+
+async function main() {
+  const isAccept = process.env.IS_ACCEPT === "true";
+  const userInstructions = process.env.USER_INSTRUCTIONS || "";
+  const instructionsFound = process.env.INSTRUCTIONS_FOUND === "true";
+  const reviewInstructionsBase64 = process.env.REVIEW_INSTRUCTIONS || "";
+
+  // Decode review instructions
+  let reviewInstructions = "";
+  if (instructionsFound && reviewInstructionsBase64) {
+    reviewInstructions = Buffer.from(
+      reviewInstructionsBase64,
+      "base64",
+    ).toString("utf-8");
+    console.log("Review instructions loaded from REVIEW_INSTRUCTIONS.md");
+  }
+
+  // Build the prompt for Claude Code
+  const prompt = buildPrompt({
+    reviewInstructions,
+    userInstructions,
+    isAccept,
+  });
+
+  console.log("Starting Claude Code implementation...");
+  console.log("---");
+
+  let summaryParts = [];
+
+  try {
+    for await (const message of query({
+      prompt,
+      options: {
+        cwd: process.cwd(),
+        allowedTools: [
+          "Read",
+          "Edit",
+          "Write",
+          "Glob",
+          "Grep",
+          "Bash",
+          "TodoWrite",
+        ],
+        maxTurns: 50,
+        permissionMode: "acceptEdits",
+      },
+    })) {
+      if (message.type === "system" && message.subtype === "init") {
+        console.log(`Session started: ${message.session_id}`);
+      }
+
+      if (message.type === "assistant") {
+        for (const block of message.message.content) {
+          if (block.type === "text") {
+            console.log(block.text);
+            // Capture summary-like content
+            if (
+              block.text.includes("implemented") ||
+              block.text.includes("fixed") ||
+              block.text.includes("updated") ||
+              block.text.includes("changed")
+            ) {
+              summaryParts.push(block.text.substring(0, 200));
+            }
+          }
+        }
+      }
+
+      if (message.type === "result") {
+        console.log("---");
+        console.log("Implementation complete");
+
+        // Write summary for commit message
+        const summary =
+          summaryParts.slice(-3).join(" ").substring(0, 500) ||
+          "Implemented review suggestions";
+        fs.writeFileSync("/tmp/claude-implementation-summary.txt", summary);
+      }
+    }
+  } catch (error) {
+    console.error("Error during implementation:", error.message);
+    process.exit(1);
+  }
+}
+
+function buildPrompt({ reviewInstructions, userInstructions, isAccept }) {
+  let prompt = `You are implementing code review suggestions for a GitHub PR.
+
+## Context
+You are in a GitHub Actions workflow, implementing changes based on a Gemini code review.
+The review instructions are in TOML format with issues to address.
+
+## Review Instructions
+${reviewInstructions || "No specific review instructions found. Check for any REVIEW_INSTRUCTIONS.md file."}
+
+`;
+
+  if (isAccept) {
+    prompt += `## Your Task
+The user has accepted ALL suggestions as-is. Implement every issue listed above.
+
+Instructions:
+1. Read each issue in the TOML carefully
+2. For each issue:
+   - Navigate to the specified file
+   - Understand the problem described
+   - Implement the suggested fix or your best solution
+3. After making all changes, verify they make sense
+4. Run any tests if they exist (npm test, pytest, etc.) to verify your changes don't break anything
+
+Be thorough - implement EVERY issue listed. Do not skip any.
+`;
+  } else {
+    prompt += `## User's Custom Instructions
+${userInstructions}
+
+## Your Task
+The user has provided custom instructions for which suggestions to implement.
+
+Instructions:
+1. Parse the user's instructions to understand:
+   - Which issues to implement (they may reference by number, severity, or description)
+   - Which issues to skip/ignore
+   - Any alternative approaches they want instead of the suggested fix
+2. Implement according to the user's wishes
+3. If the user says to ignore something, DO NOT implement it
+4. If the user suggests an alternative approach, use their approach
+5. After making changes, run tests if they exist to verify your changes
+
+Follow the user's instructions precisely.
+`;
+  }
+
+  prompt += `
+## Important Notes
+- Read files before editing them
+- Make minimal, focused changes
+- Follow the existing code style
+- If you're unsure about something, implement the most reasonable interpretation
+- Stage your changes with \`git add\` after making them (but don't commit)
+- The REVIEW_INSTRUCTIONS.md file will be deleted after you're done - don't worry about it
+
+## Output
+As you work, explain what you're doing briefly. When done, summarize the changes you made.
+`;
+
+  return prompt;
+}
+
+main().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});
