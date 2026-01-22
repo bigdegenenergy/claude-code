@@ -4,38 +4,38 @@
 
 ```toml
 [review]
-summary = "This PR updates the Claude Code implementation logic to support ES Modules and improves git handling. However, the PR includes generated artifacts that should be removed, leftover debug logging in the workflow, and potentially misleading documentation regarding reaction triggers."
+summary = "This PR integrates the Claude Code SDK for automated implementation logic. The reaction-based trigger workaround (piggybacking on comment events) is clever and the security checks (validating actor permissions) are appropriate. However, the PR includes temporary artifacts (`REVIEW_INSTRUCTIONS.md`) that must be removed, and the workflow retains verbose debug logging. The manual package resolution strategy in the script is brittle but acceptable given the described upstream package issues."
 decision = "REQUEST_CHANGES"
 
 [[issues]]
 severity = "important"
 file = "REVIEW_INSTRUCTIONS.md"
 line = 1
-title = "Remove generated artifact"
-description = "The file `REVIEW_INSTRUCTIONS.md` appears to be an automated output from the coding agent and explicitly states it should not be merged. Please remove this file."
-suggestion = "git rm REVIEW_INSTRUCTIONS.md"
-
-[[issues]]
-severity = "important"
-file = ".github/workflows/claude-code-implement.yml"
-line = 60
-title = "Remove forced debug logging"
-description = "The step 'Debug SDK package structure' uses `|| true` in its `if` condition, forcing verbose debug output (directory listings, file contents) in production runs. This clutters logs and exposes internal paths."
-suggestion = "Remove this debug step or strictly condition it on `vars.ACTIONS_STEP_DEBUG == 'true'`."
-
-[[issues]]
-severity = "important"
-file = "CLAUDE.md"
-line = 36
-title = "Clarify reaction trigger limitations"
-description = "The documentation suggests users can 'React to the prompt comment' to trigger implementation. However, the workflow triggers are `workflow_dispatch` and `issue_comment`. A simple reaction (emoji) does not generate an `issue_comment` event, so the workflow will not run until a subsequent comment is made. This creates a confusing user experience."
-suggestion = "Update the documentation to clarify that an explicit comment (e.g., `/accept`) is the primary trigger, or that reactions only take effect when accompanied by a comment."
+title = "Remove temporary artifact"
+description = "The file `REVIEW_INSTRUCTIONS.md` appears to be an auto-generated artifact from the agent's feedback loop and should not be included in the source control."
+suggestion = "Delete this file from the PR."
 
 [[issues]]
 severity = "suggestion"
 file = ".github/workflows/claude-code-implement.yml"
-line = 50
-title = "Consolidate SDK installation"
-description = "The workflow installs the SDK in `/tmp/claude-sdk` and then immediately installs it again in `_trusted_scripts/.github/scripts`. Installing it twice is redundant. It is recommended to install it only once in the location referenced by `SDK_PATH`."
-suggestion = "Remove the redundant installation step and ensure `SDK_PATH` points to the single installation location."
+line = 95
+title = "Remove verbose debug logging"
+description = "The workflow retains verbose debugging commands (`ls -R $SDK_PATH`, `cat ...`) which clutter the CI output."
+suggestion = "Remove the file listing and file content printing commands from the 'Run Implementation' step."
+
+[[issues]]
+severity = "suggestion"
+file = ".github/scripts/claude-code-implement.cjs"
+line = 30
+title = "Brittle manual module resolution"
+description = "The script manually parses `package.json` to resolve entry points (`exports`, `main`, `bin`). This is fragile compared to standard Node.js resolution. While necessary if the upstream package is malformed (missing main/exports), it incurs maintenance risk."
+suggestion = "Ensure this manual resolution is strictly necessary. If the SDK is properly packaged, setting `NODE_PATH` to include the installation directory should allow standard `import()` to work."
+
+[[issues]]
+severity = "suggestion"
+file = ".github/workflows/gemini-pr-review-plus.yml"
+line = 12
+title = "Potential failure on non-PR events"
+description = "The workflow uses `github.head_ref` for git operations. This variable is empty on `workflow_dispatch` or `push` events, which would cause the `git fetch` command to fail."
+suggestion = "If this workflow is triggered by events other than `pull_request`, ensure a fallback (like `github.ref_name`) is used."
 ```
