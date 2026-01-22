@@ -5,54 +5,36 @@
 ```json
 {
   "review": {
-    "summary": "This PR improves the UX for the AI review workflows by introducing natural language triggers and structured JSON feedback. However, the newly added `.claude/scripts/user_utils.py` file contains multiple critical security vulnerabilities, including hardcoded credentials, SQL injection vectors, and weak cryptography. These must be addressed immediately before this code can be merged.",
+    "summary": "The PR introduces significant usability and stability risks. The shift to natural language triggers (e.g., 'yes', 'ok', 'lgtm') in the implementation workflow is too aggressive and will lead to unintended bot executions during standard code review conversations. The new JSON parsing logic in the review workflow relies on a greedy regex that is fragile and likely to fail on complex or chatty LLM outputs. Additionally, `REVIEW_INSTRUCTIONS.md` appears to be an accidentally committed vulnerability report rather than actual instructions.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "critical",
-      "file": ".claude/scripts/user_utils.py",
-      "line": 5,
-      "title": "Hardcoded Database Credentials",
-      "description": "Database connection credentials (`DB_USER`, `DB_PASSWORD`, etc.) are hardcoded in the source file. This is a severe security risk that exposes production secrets.",
-      "suggestion": "Remove all hardcoded secrets. Use environment variables (e.g., `os.environ.get('DB_PASSWORD')`) to inject credentials at runtime."
+      "severity": "important",
+      "file": ".github/workflows/claude-code-implement.yml",
+      "line": 0,
+      "title": "Overly aggressive workflow triggers",
+      "description": "The workflow is configured to trigger on common conversational words like `accept`, `yes`, `okay`, and `lgtm`. This creates a high risk of false positives where the bot attempts to implement changes based on standard approval comments or discussion, rather than explicit commands. 'LGTM' specifically is a standard approval signal, not a request for code modification.",
+      "suggestion": "Revert to explicit slash commands (e.g., `/implement`) or enforce a stricter syntax (e.g., `@bot implement`) to distinguish between human conversation and bot instructions."
     },
     {
       "id": 2,
-      "severity": "critical",
-      "file": ".claude/scripts/user_utils.py",
-      "line": 15,
-      "title": "SQL Injection Vulnerabilities",
-      "description": "The database functions use f-strings (string interpolation) to construct SQL queries with user input (e.g., `username`). This makes the application vulnerable to SQL Injection attacks.",
-      "suggestion": "Use parameterized queries (prepared statements) provided by the DB-API driver. For example: `cursor.execute(\"SELECT * FROM users WHERE username = %s\", (username,))`."
+      "severity": "important",
+      "file": ".github/workflows/gemini-pr-review-plus.yml",
+      "line": 0,
+      "title": "Fragile JSON parsing logic",
+      "description": "The regex `r\"(\\{.*\\})\"` with `re.DOTALL` is greedy and assumes the LLM output contains exactly one JSON block starting with `{` and ending with `}`. If the LLM output contains explanatory text after the JSON, or multiple JSON objects (e.g. nested examples), this regex will capture too much content, causing `json.loads` to fail with a `JSONDecodeError`.",
+      "suggestion": "Improve robustness by extracting content specifically from markdown code blocks (```json ... ```) or by using a non-greedy matcher combined with logic to identify the correct JSON payload."
     },
     {
       "id": 3,
-      "severity": "critical",
-      "file": ".claude/scripts/user_utils.py",
-      "line": 25,
-      "title": "Weak Cryptography (MD5)",
-      "description": "Usage of `hashlib.md5` for password hashing is insecure. MD5 is cryptographically broken and vulnerable to collision and rainbow table attacks.",
-      "suggestion": "Use a secure password hashing algorithm designed for credential storage, such as bcrypt, Argon2, or PBKDF2 (e.g., using the `bcrypt` or `passlib` libraries)."
-    },
-    {
-      "id": 4,
       "severity": "suggestion",
-      "file": ".github/workflows/gemini-pr-review-plus.yml",
-      "line": 40,
-      "title": "Fragile JSON Extraction Regex",
-      "description": "The regex `r\"({.*})\"` combined with `re.DOTALL` is aggressive and relies on the LLM strictly outputting valid JSON within the outer braces. It may fail if the LLM includes explanation text containing braces.",
-      "suggestion": "Ensure the prompt enforces Markdown code fences (```json) and parse the content within those fences for greater reliability."
-    },
-    {
-      "id": 5,
-      "severity": "important",
-      "file": ".github/workflows/claude-code-implement.yml",
-      "line": 20,
-      "title": "Risk of False Positives with Natural Language Triggers",
-      "description": "Switching from explicit slash commands (e.g., `/accept`) to common words (`yes`, `ok`, `approved`) increases the risk of the workflow triggering unintentionally on general conversation comments.",
-      "suggestion": "Ensure strict checks are in place (e.g., regex anchors `^`) or consider requiring a specific handle (e.g., `@bot yes`) to reduce accidental invocations."
+      "file": "REVIEW_INSTRUCTIONS.md",
+      "line": 0,
+      "title": "Vulnerability report committed as instructions",
+      "description": "The file `REVIEW_INSTRUCTIONS.md` appears to contain a specific code review output (listing SQLi and credential vulnerabilities) rather than generic instructions for the agent. Committing a report of existing unpatched vulnerabilities is a security risk and likely unintended.",
+      "suggestion": "Remove this file or replace it with the actual prompts/instructions intended for the agent. If this was meant as a few-shot example, obscure the sensitive data and clearly label it as a template."
     }
   ]
 }
