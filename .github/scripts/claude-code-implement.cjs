@@ -2,17 +2,72 @@
 
 /**
  * Claude Code Implementation Script
+ * @version 2.0.0
  *
- * This script uses the Claude Code SDK to implement PR review suggestions.
+ * This script uses the Claude Agent SDK to implement PR review suggestions.
  * It reads REVIEW_INSTRUCTIONS.md (pushed by Gemini), applies user modifications
  * if provided, and implements the changes.
+ *
+ * Note: The SDK package is @anthropic-ai/claude-agent-sdk (not claude-code).
+ * We use dynamic import() with a file URL for ESM compatibility.
  */
 
-const { query } = require("@anthropic-ai/claude-code");
 const fs = require("fs");
 const path = require("path");
+const { pathToFileURL } = require("url");
 
 async function main() {
+  // Dynamic import for ESM package - construct full file URL
+  const SDK_PATH = process.env.SDK_PATH || "/tmp/claude-sdk";
+  const sdkPkgPath = path.join(
+    SDK_PATH,
+    "node_modules",
+    "@anthropic-ai",
+    "claude-agent-sdk",
+  );
+
+  // Read package.json to find the correct entry point
+  const pkgJsonPath = path.join(sdkPkgPath, "package.json");
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
+
+  // Resolve the entry point from package.json exports or main
+  let entryPoint = pkgJson.main || "index.js";
+  if (pkgJson.exports) {
+    if (typeof pkgJson.exports === "string") {
+      entryPoint = pkgJson.exports;
+    } else if (pkgJson.exports["."]?.import) {
+      entryPoint = pkgJson.exports["."].import;
+    } else if (pkgJson.exports["."]?.default) {
+      entryPoint = pkgJson.exports["."].default;
+    } else if (pkgJson.exports["."]?.require) {
+      entryPoint = pkgJson.exports["."].require;
+    } else if (typeof pkgJson.exports["."] === "string") {
+      // Handle top-level export as string: { ".": "./dist/index.js" }
+      entryPoint = pkgJson.exports["."];
+    } else if (typeof pkgJson.exports === "object" && pkgJson.exports.import) {
+      // Handle top-level conditional exports: { "import": "./dist/index.js" }
+      entryPoint = pkgJson.exports.import;
+    } else if (typeof pkgJson.exports === "object" && pkgJson.exports.default) {
+      // Handle top-level default export: { "default": "./dist/index.js" }
+      entryPoint = pkgJson.exports.default;
+    }
+  }
+
+  const modulePath = path.join(sdkPkgPath, entryPoint);
+  const moduleUrl = pathToFileURL(modulePath).href;
+
+  console.log(`Loading SDK from: ${moduleUrl}`);
+  const sdk = await import(moduleUrl);
+  console.log("SDK exports:", Object.keys(sdk));
+
+  // Get the query function
+  const query = sdk.query || sdk.default?.query;
+
+  if (!query) {
+    throw new Error(
+      `Could not find query function. Available exports: ${Object.keys(sdk).join(", ")}`,
+    );
+  }
   const isAccept = process.env.IS_ACCEPT === "true";
   const userInstructions = process.env.USER_INSTRUCTIONS || "";
   const instructionsFound = process.env.INSTRUCTIONS_FOUND === "true";
@@ -40,11 +95,15 @@ async function main() {
 
   let summaryParts = [];
 
+  // Use CLAUDE_CWD if set (for when script runs from SDK dir), otherwise cwd
+  const workingDir = process.env.CLAUDE_CWD || process.cwd();
+  console.log(`Working directory: ${workingDir}`);
+
   try {
     for await (const message of query({
       prompt,
       options: {
-        cwd: process.cwd(),
+        cwd: workingDir,
         // Security: No Bash tool to prevent arbitrary command execution
         // Agent can only read, search, and edit files - not run shell commands
         allowedTools: ["Read", "Edit", "Write", "Glob", "Grep", "TodoWrite"],

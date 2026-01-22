@@ -1,4 +1,5 @@
 name: Claude Code Implement Changes
+# Version: 2026-01-22-v5 - Use claude-agent-sdk instead of claude-code
 
 on:
   issue_comment:
@@ -121,7 +122,7 @@ jobs:
             }
 
             // Check if this is a reply to a Claude Code prompt
-            const { data: comments } = await github.rest.issues.listComments({
+            const { data: allComments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
@@ -129,7 +130,7 @@ jobs:
             });
 
             // Find the most recent Claude Code prompt
-            const promptComments = comments.filter(c =>
+            const promptComments = allComments.filter(c =>
               c.body && c.body.includes('## 🔄 Claude Code Integration') &&
               c.body.includes('<!-- claude-code-prompt:')
             );
@@ -141,8 +142,8 @@ jobs:
             }
 
             const latestPrompt = promptComments[promptComments.length - 1];
-            const promptIndex = comments.findIndex(c => c.id === latestPrompt.id);
-            const currentCommentIndex = comments.findIndex(c => c.id === comment.id);
+            const promptIndex = allComments.findIndex(c => c.id === latestPrompt.id);
+            const currentCommentIndex = allComments.findIndex(c => c.id === comment.id);
 
             // Check if this comment appears after the prompt (could be a reply)
             if (currentCommentIndex > promptIndex) {
@@ -217,11 +218,13 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
           path: pr-workspace
 
-      # Security: Then checkout trusted scripts from default branch
-      - name: Checkout trusted scripts from default branch
+      # Security: Checkout trusted scripts
+      # - For issue_comment: ALWAYS use default branch (security against malicious PR code)
+      # - For workflow_dispatch: Use PR branch (allows testing changes to the script itself)
+      - name: Checkout trusted scripts
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && env.PR_BRANCH || github.event.repository.default_branch }}
           path: _trusted_scripts
           sparse-checkout: |
             .github/scripts
@@ -232,14 +235,17 @@ jobs:
         with:
           node-version: '20'
 
-      # Security: Install SDK in isolated temp directory with --ignore-scripts
+      # Security: Install Claude Agent SDK (the programmatic API)
+      # Note: @anthropic-ai/claude-code is the CLI, @anthropic-ai/claude-agent-sdk is the SDK
       # Pin version to prevent supply chain attacks from upstream updates
-      - name: Install Claude Code SDK (isolated, pinned)
+      - name: Install Claude Agent SDK
         run: |
           mkdir -p /tmp/claude-sdk
           cd /tmp/claude-sdk
           npm init -y
-          npm install @anthropic-ai/claude-code@0.2.57 --ignore-scripts
+          npm install @anthropic-ai/claude-agent-sdk@0.2.0 --ignore-scripts
+          echo "SDK installed at /tmp/claude-sdk/node_modules"
+          ls -la node_modules/@anthropic-ai/claude-agent-sdk/package.json
         env:
           NODE_ENV: production
 
@@ -259,17 +265,20 @@ jobs:
 
       - name: Implement changes with Claude Code
         id: implement
-        working-directory: pr-workspace
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REVIEW_INSTRUCTIONS: ${{ steps.instructions.outputs.content }}
           INSTRUCTIONS_FOUND: ${{ steps.instructions.outputs.found }}
-          # Point to isolated SDK installation
+          # Set working directory for Claude Code agent to the PR workspace
+          CLAUDE_CWD: ${{ github.workspace }}/pr-workspace
+          # SDK_PATH for PR branch script (uses explicit path)
+          SDK_PATH: /tmp/claude-sdk
+          # NODE_PATH for main branch script (uses standard require)
           NODE_PATH: /tmp/claude-sdk/node_modules
         run: |
-          # Security: Execute trusted script from default branch, not PR branch
-          # Script uses .cjs extension to enforce CommonJS module system
-          node ${{ github.workspace }}/_trusted_scripts/.github/scripts/claude-code-implement.cjs
+          # Execute the implementation script
+          SCRIPT_DIR="${{ github.workspace }}/_trusted_scripts/.github/scripts"
+          cd "$SCRIPT_DIR" && node claude-code-implement.cjs
 
       - name: Configure git
         working-directory: pr-workspace
