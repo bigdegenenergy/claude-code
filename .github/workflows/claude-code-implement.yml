@@ -120,6 +120,51 @@ jobs:
               return;
             }
 
+            // Check for 👍 reaction on Claude Code prompt comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            // Find the Claude Code prompt comment
+            const promptComment = comments.find(c =>
+              c.body && c.body.includes('## 🔄 Claude Code Integration') &&
+              c.body.includes('<!-- claude-code-prompt:')
+            );
+
+            if (promptComment) {
+              // Get reactions on the prompt comment
+              const { data: reactions } = await github.rest.reactions.listForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: promptComment.id
+              });
+
+              // Check for 👍 (+1) reaction from an authorized user
+              const thumbsUp = reactions.find(r =>
+                r.content === '+1' &&
+                ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(r.user?.association || '')
+              );
+
+              // Also check if reactor is the current actor (simpler check)
+              const actorThumbsUp = reactions.find(r =>
+                r.content === '+1' &&
+                r.user?.login === context.actor
+              );
+
+              if (thumbsUp || actorThumbsUp) {
+                core.setOutput('should_run', 'true');
+                core.setOutput('is_accept', 'true');
+                core.setOutput('user_instructions', '');
+                core.setOutput('pr_number', prNumber);
+                core.setOutput('pr_branch', pr.head.ref);
+                console.log(`👍 reaction detected on Claude Code prompt for PR #${prNumber}`);
+                return;
+              }
+            }
+
             // Check if this is a reply to a Claude Code prompt
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,

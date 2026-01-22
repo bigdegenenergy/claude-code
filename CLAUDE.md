@@ -399,10 +399,10 @@ The PR review workflow uses a git-native approach for agent-to-agent communicati
    - User comments `/accept` or replies with modifications
 
 3. **Implementation Triggers**:
+   - 👍 React to the prompt comment to accept all suggestions
    - Comment `/accept` or `/implement` to accept all suggestions as-is
    - Reply with custom instructions for selective implementation (e.g., "Ignore suggestion #2")
    - Use workflow_dispatch for manual trigger with specific instructions
-   - **Note:** Reactions (👍) do NOT trigger implementation - you must comment
 
 4. **Coding Agent (Claude Code SDK)** addresses feedback by:
    - Reading `REVIEW_INSTRUCTIONS.md` (if present)
