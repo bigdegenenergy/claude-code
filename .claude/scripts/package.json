@@ -1,0 +1,22 @@
+{
+  "name": "claude-user-utils",
+  "version": "1.0.0",
+  "description": "User utility functions for authentication and data access",
+  "main": "user_utils.ts",
+  "scripts": {
+    "list": "ts-node user_utils.ts list",
+    "auth": "ts-node user_utils.ts auth",
+    "update-email": "ts-node user_utils.ts update-email",
+    "delete": "ts-node user_utils.ts delete"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6",
+    "bcrypt": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/bcrypt": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
