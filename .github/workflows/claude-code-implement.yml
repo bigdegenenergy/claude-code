@@ -234,18 +234,27 @@ jobs:
           node-version: '20'
 
       # Security: Install SDK where the trusted script can find it
+      # Install in BOTH /tmp/claude-sdk (for main branch compatibility)
+      # AND in the script directory (for future when PR is merged)
       # Pin version to prevent supply chain attacks from upstream updates
       - name: Install Claude Code SDK
         run: |
           set -x  # Enable debug output
-          cd ${{ github.workspace }}/_trusted_scripts/.github/scripts
-          pwd
+
+          # Install in /tmp/claude-sdk for compatibility with main branch workflow/script
+          mkdir -p /tmp/claude-sdk
+          cd /tmp/claude-sdk
           npm init -y
           npm install @anthropic-ai/claude-code@0.2.57 --ignore-scripts
-          # Verify module is accessible
-          echo "Verifying SDK installation..."
+          echo "SDK installed at /tmp/claude-sdk/node_modules"
           ls -la node_modules/@anthropic-ai/claude-code/package.json
-          echo "SDK installed successfully at $(pwd)/node_modules"
+
+          # Also install in trusted scripts directory for future compatibility
+          cd ${{ github.workspace }}/_trusted_scripts/.github/scripts
+          npm init -y
+          npm install @anthropic-ai/claude-code@0.2.57 --ignore-scripts
+          echo "SDK also installed at $(pwd)/node_modules"
+          ls -la node_modules/@anthropic-ai/claude-code/package.json
         env:
           NODE_ENV: production
 
@@ -271,17 +280,24 @@ jobs:
           INSTRUCTIONS_FOUND: ${{ steps.instructions.outputs.found }}
           # Set working directory for Claude Code agent to the PR workspace
           CLAUDE_CWD: ${{ github.workspace }}/pr-workspace
+          # SDK_PATH for PR branch script (uses explicit path)
+          SDK_PATH: /tmp/claude-sdk
+          # NODE_PATH for main branch script (uses standard require)
+          NODE_PATH: /tmp/claude-sdk/node_modules
         run: |
           # Debug: Show script location and node_modules
           echo "=== Debug Info ==="
           echo "Script location: ${{ github.workspace }}/_trusted_scripts/.github/scripts/"
+          echo "SDK_PATH: $SDK_PATH"
+          echo "NODE_PATH: $NODE_PATH"
           ls -la ${{ github.workspace }}/_trusted_scripts/.github/scripts/
-          echo "Node modules check:"
-          ls -la ${{ github.workspace }}/_trusted_scripts/.github/scripts/node_modules/@anthropic-ai/ 2>/dev/null || echo "node_modules not found!"
+          echo "SDK at /tmp/claude-sdk:"
+          ls -la /tmp/claude-sdk/node_modules/@anthropic-ai/ 2>/dev/null || echo "not found!"
+          echo "SDK at script dir:"
+          ls -la ${{ github.workspace }}/_trusted_scripts/.github/scripts/node_modules/@anthropic-ai/ 2>/dev/null || echo "not found!"
           echo "=================="
 
           # Security: Execute trusted script from default branch, not PR branch
-          # SDK is installed in the same directory as the script
           node ${{ github.workspace }}/_trusted_scripts/.github/scripts/claude-code-implement.cjs
 
       - name: Configure git
