@@ -338,48 +338,55 @@ jobs:
 
             if (jobStatus === 'success') {
               if (hasChanges) {
-                body = `## ✅ Claude Code Implementation Complete
-
-Changes have been pushed to this branch.
-
-**What happened:**
-- Read the review instructions from \`REVIEW_INSTRUCTIONS.md\`
-- Implemented the requested changes
-- Removed the instructions file
-- Committed and pushed to this branch
-
----
-
-**Next Steps:**
-1. Review the new commits above
-2. Gemini will automatically review the new changes
-3. If more changes are needed, the cycle continues
-4. When satisfied, merge to main
-
-*The review cycle continues until you merge.*`;
+                body = [
+                  '## ✅ Claude Code Implementation Complete',
+                  '',
+                  'Changes have been pushed to this branch.',
+                  '',
+                  '**What happened:**',
+                  '- Read the review instructions from `REVIEW_INSTRUCTIONS.md`',
+                  '- Implemented the requested changes',
+                  '- Removed the instructions file',
+                  '- Committed and pushed to this branch',
+                  '',
+                  '---',
+                  '',
+                  '**Next Steps:**',
+                  '1. Review the new commits above',
+                  '2. Gemini will automatically review the new changes',
+                  '3. If more changes are needed, the cycle continues',
+                  '4. When satisfied, merge to main',
+                  '',
+                  '*The review cycle continues until you merge.*'
+                ].join('\n');
               } else {
-                body = `## ℹ️ Claude Code - No Changes Made
-
-The implementation completed but no file changes were needed.
-
-This might happen if:
-- The suggestions were already implemented
-- The instructions didn't require code changes
-- The changes couldn't be applied
-
-Please review the PR and provide additional instructions if needed.`;
+                body = [
+                  '## ℹ️ Claude Code - No Changes Made',
+                  '',
+                  'The implementation completed but no file changes were needed.',
+                  '',
+                  'This might happen if:',
+                  '- The suggestions were already implemented',
+                  '- The instructions didn\'t require code changes',
+                  '- The changes couldn\'t be applied',
+                  '',
+                  'Please review the PR and provide additional instructions if needed.'
+                ].join('\n');
               }
             } else {
-              body = `## ❌ Claude Code Implementation Failed
-
-The implementation encountered an error. Please check the [workflow run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}) for details.
-
-**Troubleshooting:**
-- Ensure \`ANTHROPIC_API_KEY\` secret is configured
-- Check if the review instructions are clear
-- Try providing more specific instructions
-
-You can retry by commenting \`/implement\` or providing new instructions.`;
+              const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+              body = [
+                '## ❌ Claude Code Implementation Failed',
+                '',
+                `The implementation encountered an error. Please check the [workflow run](${runUrl}) for details.`,
+                '',
+                '**Troubleshooting:**',
+                '- Ensure `ANTHROPIC_API_KEY` secret is configured',
+                '- Check if the review instructions are clear',
+                '- Try providing more specific instructions',
+                '',
+                'You can retry by commenting `/implement` or providing new instructions.'
+              ].join('\n');
             }
 
             await github.rest.issues.createComment({

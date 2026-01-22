@@ -170,25 +170,27 @@ jobs:
             const prNumber = parseInt(process.env.PR_NUMBER);
             const reviewId = parseInt(process.env.REVIEW_ID);
 
-            const promptBody = `## 🔄 Claude Code Integration
-
-Gemini has reviewed this PR and found issues to address. How would you like to proceed?
-
-**Options:**
-- 👍 React with 👍 to this comment to **accept all suggestions as-is** and have Claude Code implement them
-- ✏️ Reply to this comment with your modifications in plain language
-
-**Examples of modification commands:**
-- \`Ignore suggestion #2, implement the rest\`
-- \`For the SQL injection issue, use parameterized queries instead\`
-- \`Implement the security fixes only, skip the style suggestions\`
-- \`Accept all but use a different error handling approach: [describe]\`
-
----
-
-> **Note:** Claude Code will read the \`REVIEW_INSTRUCTIONS.md\` file in this branch, implement the changes according to your instructions, and push to this branch. The review cycle continues until you merge to main.
-
-<!-- claude-code-prompt:${reviewId} -->`;
+            const promptBody = [
+              '## 🔄 Claude Code Integration',
+              '',
+              'Gemini has reviewed this PR and found issues to address. How would you like to proceed?',
+              '',
+              '**Options:**',
+              '- 👍 React with 👍 to this comment to **accept all suggestions as-is** and have Claude Code implement them',
+              '- ✏️ Reply to this comment with your modifications in plain language',
+              '',
+              '**Examples of modification commands:**',
+              '- `Ignore suggestion #2, implement the rest`',
+              '- `For the SQL injection issue, use parameterized queries instead`',
+              '- `Implement the security fixes only, skip the style suggestions`',
+              '- `Accept all but use a different error handling approach: [describe]`',
+              '',
+              '---',
+              '',
+              '> **Note:** Claude Code will read the `REVIEW_INSTRUCTIONS.md` file in this branch, implement the changes according to your instructions, and push to this branch. The review cycle continues until you merge to main.',
+              '',
+              `<!-- claude-code-prompt:${reviewId} -->`
+            ].join('\n');
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
