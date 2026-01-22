@@ -2,6 +2,7 @@
 
 /**
  * Claude Code Implementation Script
+ * @version 1.0.0
  *
  * This script uses the Claude Code SDK to implement PR review suggestions.
  * It reads REVIEW_INSTRUCTIONS.md (pushed by Gemini), applies user modifications
