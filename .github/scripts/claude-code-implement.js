@@ -45,15 +45,9 @@ async function main() {
       prompt,
       options: {
         cwd: process.cwd(),
-        allowedTools: [
-          "Read",
-          "Edit",
-          "Write",
-          "Glob",
-          "Grep",
-          "Bash",
-          "TodoWrite",
-        ],
+        // Security: No Bash tool to prevent arbitrary command execution
+        // Agent can only read, search, and edit files - not run shell commands
+        allowedTools: ["Read", "Edit", "Write", "Glob", "Grep", "TodoWrite"],
         maxTurns: 50,
         permissionMode: "acceptEdits",
       },
@@ -119,7 +113,6 @@ Instructions:
    - Understand the problem described
    - Implement the suggested fix or your best solution
 3. After making all changes, verify they make sense
-4. Run any tests if they exist (npm test, pytest, etc.) to verify your changes don't break anything
 
 Be thorough - implement EVERY issue listed. Do not skip any.
 `;
@@ -138,7 +131,6 @@ Instructions:
 2. Implement according to the user's wishes
 3. If the user says to ignore something, DO NOT implement it
 4. If the user suggests an alternative approach, use their approach
-5. After making changes, run tests if they exist to verify your changes
 
 Follow the user's instructions precisely.
 `;
@@ -150,7 +142,7 @@ Follow the user's instructions precisely.
 - Make minimal, focused changes
 - Follow the existing code style
 - If you're unsure about something, implement the most reasonable interpretation
-- Stage your changes with \`git add\` after making them (but don't commit)
+- You do NOT have shell/command execution access - only file operations
 - The REVIEW_INSTRUCTIONS.md file will be deleted after you're done - don't worry about it
 
 ## Output

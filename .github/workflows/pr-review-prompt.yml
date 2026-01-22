@@ -52,10 +52,13 @@ jobs:
         if: steps.pr.outputs.found == 'true'
         id: check_instructions
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          PR_BRANCH: ${{ steps.pr.outputs.pr_branch }}
         with:
           script: |
-            const prNumber = ${{ steps.pr.outputs.pr_number }};
-            const branch = '${{ steps.pr.outputs.pr_branch }}';
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const branch = process.env.PR_BRANCH;
 
             try {
               // Check if REVIEW_INSTRUCTIONS.md exists in the PR branch
@@ -81,9 +84,11 @@ jobs:
         if: steps.pr.outputs.found == 'true' && steps.check_instructions.outputs.has_issues == 'true'
         id: review
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
         with:
           script: |
-            const prNumber = ${{ steps.pr.outputs.pr_number }};
+            const prNumber = parseInt(process.env.PR_NUMBER);
 
             // Get comments on the PR
             const { data: comments } = await github.rest.issues.listComments({
@@ -118,9 +123,12 @@ jobs:
         if: steps.pr.outputs.found == 'true' && steps.check_instructions.outputs.has_issues == 'true' && steps.review.outputs.found_review == 'true'
         id: check_prompt
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          REVIEW_ID: ${{ steps.review.outputs.review_id }}
         with:
           script: |
-            const prNumber = ${{ steps.pr.outputs.pr_number }};
+            const prNumber = parseInt(process.env.PR_NUMBER);
 
             // Get comments on the PR
             const { data: comments } = await github.rest.issues.listComments({
@@ -131,7 +139,7 @@ jobs:
             });
 
             // Check if we already posted a Claude Code prompt after the latest Gemini review
-            const geminiReviewId = ${{ steps.review.outputs.review_id }};
+            const geminiReviewId = parseInt(process.env.REVIEW_ID);
             const geminiReviewIndex = comments.findIndex(c => c.id === geminiReviewId);
 
             // Look for Claude Code prompt after the Gemini review
@@ -154,10 +162,13 @@ jobs:
           steps.review.outputs.found_review == 'true' &&
           steps.check_prompt.outputs.exists == 'false'
         uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          REVIEW_ID: ${{ steps.review.outputs.review_id }}
         with:
           script: |
-            const prNumber = ${{ steps.pr.outputs.pr_number }};
-            const reviewId = ${{ steps.review.outputs.review_id }};
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const reviewId = parseInt(process.env.REVIEW_ID);
 
             const promptBody = `## 🔄 Claude Code Integration
 

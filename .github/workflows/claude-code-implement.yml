@@ -52,6 +52,20 @@ jobs:
           script: |
             const isWorkflowDispatch = context.eventName === 'workflow_dispatch';
 
+            // Security: Check if commenter has write access to the repository
+            // Only OWNER, MEMBER, or COLLABORATOR can trigger the AI agent
+            if (!isWorkflowDispatch) {
+              const authorAssociation = context.payload.comment.author_association;
+              const allowedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+              if (!allowedAssociations.includes(authorAssociation)) {
+                console.log(`Access denied: ${context.actor} has association '${authorAssociation}', requires one of: ${allowedAssociations.join(', ')}`);
+                core.setOutput('should_run', 'false');
+                return;
+              }
+              console.log(`Access granted: ${context.actor} has association '${authorAssociation}'`);
+            }
+
             if (isWorkflowDispatch) {
               // Manual trigger via workflow_dispatch
               const prNumber = parseInt('${{ github.event.inputs.pr_number }}');
@@ -194,23 +208,43 @@ jobs:
               body
             });
 
+      # Security: Checkout default branch first to get trusted scripts
+      - name: Checkout trusted scripts from default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: _trusted_scripts
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      # Then checkout the PR branch for the working directory
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.PR_BRANCH }}
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN }}
+          path: pr-workspace
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Claude Code SDK
-        run: npm install @anthropic-ai/claude-code
+      # Security: Install SDK in isolated temp directory with --ignore-scripts
+      - name: Install Claude Code SDK (isolated)
+        run: |
+          mkdir -p /tmp/claude-sdk
+          cd /tmp/claude-sdk
+          npm init -y
+          npm install @anthropic-ai/claude-code --ignore-scripts
+        env:
+          NODE_ENV: production
 
       - name: Read review instructions
         id: instructions
+        working-directory: pr-workspace
         run: |
           if [ -f "REVIEW_INSTRUCTIONS.md" ]; then
             echo "found=true" >> $GITHUB_OUTPUT
@@ -224,19 +258,25 @@ jobs:
 
       - name: Implement changes with Claude Code
         id: implement
+        working-directory: pr-workspace
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REVIEW_INSTRUCTIONS: ${{ steps.instructions.outputs.content }}
           INSTRUCTIONS_FOUND: ${{ steps.instructions.outputs.found }}
+          # Point to isolated SDK installation
+          NODE_PATH: /tmp/claude-sdk/node_modules
         run: |
-          node .github/scripts/claude-code-implement.js
+          # Security: Execute trusted script from default branch, not PR branch
+          node ${{ github.workspace }}/_trusted_scripts/.github/scripts/claude-code-implement.js
 
       - name: Configure git
+        working-directory: pr-workspace
         run: |
           git config user.name "Claude Code Bot"
           git config user.email "claude-code-bot@users.noreply.github.com"
 
       - name: Delete REVIEW_INSTRUCTIONS.md if present
+        working-directory: pr-workspace
         run: |
           if [ -f "REVIEW_INSTRUCTIONS.md" ]; then
             git rm REVIEW_INSTRUCTIONS.md
@@ -245,6 +285,7 @@ jobs:
 
       - name: Commit and push changes
         id: commit
+        working-directory: pr-workspace
         run: |
           git add -A
 
