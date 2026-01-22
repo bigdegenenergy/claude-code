@@ -253,10 +253,18 @@ jobs:
           (PR_DIR / "quality_raw.json").write_text(quality_text, encoding="utf-8")
 
           def extract_json(t):
-             # Try to find JSON in code fence first
-             m = re.search(r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```", t, re.DOTALL | re.IGNORECASE)
+             # Try to find JSON in markdown code fence first (most robust)
+             m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", t, re.DOTALL | re.IGNORECASE)
+             if m:
+                content = m.group(1).strip()
+                # Verify it starts with { or [
+                if content.startswith(('{', '[')):
+                   return content
+             # Try to find first complete JSON object with non-greedy match
+             # Look for { followed by content, ending at first } that balances
+             m = re.search(r"(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})", t, re.DOTALL)
              if m: return m.group(1).strip()
-             # Otherwise find raw JSON object
+             # Fallback: greedy match as last resort
              m = re.search(r"(\{.*\})", t, re.DOTALL)
              return m.group(1).strip() if m else t.strip()
 

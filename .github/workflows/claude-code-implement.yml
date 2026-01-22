@@ -101,18 +101,14 @@ jobs:
               pull_number: prNumber
             });
 
-            // Check if this is a natural language accept trigger
+            // Check if this is an explicit implementation command
+            // Using slash commands to avoid false positives with natural conversation
             const normalizedBody = commentBody.toLowerCase().trim();
             const acceptPatterns = [
-              /^accept(\s|$)/i,
-              /^yes(\s|$)/i,
-              /^okay(\s|$)/i,
-              /^ok(\s|$)/i,
-              /^approved?(\s|$)/i,
-              /^lgtm(\s|$)/i,
-              /^implement(\s|$)/i,
-              /^accept\s+all/i,
-              /^implement\s+all/i
+              /^\/implement(\s|$)/i,
+              /^\/accept(\s|$)/i,
+              /^\/accept\s+all/i,
+              /^\/implement\s+all/i
             ];
             const isAcceptTrigger = acceptPatterns.some(pattern =>
               pattern.test(normalizedBody)
@@ -123,8 +119,8 @@ jobs:
               const firstWord = normalizedBody.split(/\s+/)[0];
               const restOfComment = commentBody.substring(firstWord.length).trim();
 
-              // "accept all" or just "accept" means accept everything
-              const isPlainAccept = /^(accept|yes|okay|ok|approved?|lgtm|implement)(\s+all)?$/i.test(normalizedBody);
+              // "/accept all" or just "/accept" or "/implement" means accept everything
+              const isPlainAccept = /^\/(accept|implement)(\s+all)?$/i.test(normalizedBody);
 
               core.setOutput('should_run', 'true');
               core.setOutput('is_accept', isPlainAccept ? 'true' : 'false');
@@ -162,21 +158,18 @@ jobs:
             // Check if this comment appears after the prompt (could be a reply)
             if (currentCommentIndex > promptIndex) {
               // Check if it looks like instructions (not just a random comment)
+              // Only trigger if it's explicit about implementation or has issue IDs
               const bodyLower = commentBody.toLowerCase();
               const looksLikeInstructions =
                 bodyLower.includes('implement') ||
-                bodyLower.includes('accept') ||
-                bodyLower.includes('ignore') ||
-                bodyLower.includes('skip') ||
+                bodyLower.includes('ignore issue') ||
+                bodyLower.includes('skip issue') ||
                 bodyLower.includes('suggestion') ||
-                bodyLower.includes('fix') ||
-                bodyLower.includes('change') ||
-                bodyLower.includes('instead') ||
-                bodyLower.includes('only') ||
-                bodyLower.includes('approved') ||
-                bodyLower.includes('lgtm') ||
-                /^(yes|okay|ok)\b/i.test(commentBody) ||
-                commentBody.length > 20;
+                bodyLower.includes('fix issue') ||
+                bodyLower.includes('only issue') ||
+                /issue\s*#?\d+/i.test(commentBody) ||
+                /^\/(implement|accept)/i.test(commentBody) ||
+                (bodyLower.includes('accept') && bodyLower.includes('issue'));
 
               if (looksLikeInstructions) {
                 core.setOutput('should_run', 'true');
