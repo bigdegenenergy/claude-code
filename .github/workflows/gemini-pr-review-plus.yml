@@ -400,7 +400,9 @@ jobs:
       - name: 💬 Post PR comment
         if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Use GITHUB_TOKEN so comment appears from github-actions[bot], not the user
+          # This prevents the Claude Code implementer from treating it as user input
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           PR_NUMBER="${{ github.event.pull_request.number }}"
