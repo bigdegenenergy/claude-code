@@ -252,7 +252,9 @@ jobs:
           TASK: Provide a QUALITY-focused review (bugs, correctness, types, security).
           IMPORTANT: Review any changes to lockfiles (package-lock.json/yarn.lock) for malicious supply chain injections.
 
-          OUTPUT: Valid JSON in a markdown code fence.
+          OUTPUT FORMAT: You MUST output valid JSON wrapped in a markdown code fence exactly as shown below.
+          If you need to add any commentary, put it BEFORE the code fence, not inside or after it.
+
           ```json
           {{
             "review": {{
@@ -273,7 +275,8 @@ jobs:
           }}
           ```
 
-          IMPORTANT: Number each issue with sequential id starting from 1.
+          CRITICAL: The JSON must be valid and parseable. Number each issue with sequential id starting from 1.
+          Do not add any text after the closing ``` fence.
           """
           
           print("Generating final review...")
@@ -291,17 +294,18 @@ jobs:
                    return content
 
              # Fallback: Try to extract raw JSON object from response
-             # This handles cases where the LLM didn't use markdown fences
-             m = re.search(r'(\{.*\})', t, re.DOTALL)
-             if m:
-                content = m.group(1).strip()
+             # Find first { and last } to handle cases where LLM adds conversational text
+             first_brace = t.find('{')
+             last_brace = t.rfind('}')
+             if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+                content = t[first_brace:last_brace + 1]
                 # Try to validate it's parseable JSON
                 try:
                    json.loads(content)
                    print("Warning: Found raw JSON without markdown fence", file=sys.stderr)
                    return content
-                except json.JSONDecodeError:
-                   pass
+                except json.JSONDecodeError as e:
+                   print(f"Warning: JSON parsing failed: {e}", file=sys.stderr)
 
              # If no valid JSON found, log error and return empty object
              print("Error: No valid JSON found in LLM response", file=sys.stderr)

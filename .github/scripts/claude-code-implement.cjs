@@ -156,6 +156,8 @@ function buildPrompt({ reviewInstructions, userInstructions, isAccept }) {
 You are in a GitHub Actions workflow, implementing changes based on a Gemini code review.
 The review instructions are in JSON format with issues to address.
 
+IMPORTANT: The review instructions below are in JSON format (not TOML). Parse them as JSON.
+
 ## Review Instructions
 ${reviewInstructions || "No specific review instructions found. Check for any REVIEW_INSTRUCTIONS.md file."}
 

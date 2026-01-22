@@ -136,14 +136,22 @@ jobs:
             core.setOutput('is_after_prompt', 'true');
 
             // Extract recent context for the LLM
+            // Security: Only include comments from authorized users to prevent prompt injection
+            const allowedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
             const recentComments = allComments
               .slice(Math.max(0, promptIndex), currentIndex + 1)
+              .filter(c => {
+                // Get author association for each comment
+                const assoc = c.author_association;
+                return allowedAssociations.includes(assoc);
+              })
               .map(c => `[${c.user.login}]: ${c.body.substring(0, 500)}`)
               .join('\n\n---\n\n');
             core.setOutput('recent_context', recentComments);
 
       - name: Analyze comment intent with Claude Haiku
         id: analyze
+        # Security: Only run if user has write/admin access (checked in previous step)
         if: steps.context.outputs.has_access == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -193,7 +201,10 @@ jobs:
           - Explicit requests like "accept", "yes", "implement", "go ahead", "do it", "fix these" -> should_trigger=true
           - Specific instructions like "ignore #2" or "only fix security issues" -> include in instructions field
 
-          OUTPUT: Return ONLY valid JSON (no markdown fences, no explanation):
+          OUTPUT FORMAT: You MUST output ONLY raw JSON with no markdown code fences, no explanation text before or after.
+          Start your response directly with { and end with }. Do not wrap in ```json or ``` markers.
+
+          Required JSON structure:
           {"should_trigger": true/false, "accept_all": true/false, "instructions": "specific instructions or empty string", "reasoning": "brief explanation"}
           PROMPT_END
 
