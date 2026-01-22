@@ -1,0 +1,398 @@
+name: Claude Code Implement Changes
+
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process'
+        required: true
+        type: number
+      accept_all:
+        description: 'Accept all suggestions as-is'
+        required: false
+        default: false
+        type: boolean
+      user_instructions:
+        description: 'Custom instructions for implementation'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: claude-implement-${{ github.event.issue.number || github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  detect_trigger:
+    name: Detect Implementation Trigger
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       !contains(github.actor, '[bot]'))
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      is_accept: ${{ steps.check.outputs.is_accept }}
+      user_instructions: ${{ steps.check.outputs.user_instructions }}
+      pr_number: ${{ steps.check.outputs.pr_number }}
+      pr_branch: ${{ steps.check.outputs.pr_branch }}
+
+    steps:
+      - name: Check trigger validity
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isWorkflowDispatch = context.eventName === 'workflow_dispatch';
+
+            // Security: Check if commenter has write access to the repository
+            // Only OWNER, MEMBER, or COLLABORATOR can trigger the AI agent
+            if (!isWorkflowDispatch) {
+              const authorAssociation = context.payload.comment.author_association;
+              const allowedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+              if (!allowedAssociations.includes(authorAssociation)) {
+                console.log(`Access denied: ${context.actor} has association '${authorAssociation}', requires one of: ${allowedAssociations.join(', ')}`);
+                core.setOutput('should_run', 'false');
+                return;
+              }
+              console.log(`Access granted: ${context.actor} has association '${authorAssociation}'`);
+            }
+
+            if (isWorkflowDispatch) {
+              // Manual trigger via workflow_dispatch
+              const prNumber = parseInt('${{ github.event.inputs.pr_number }}');
+              const acceptAll = '${{ github.event.inputs.accept_all }}' === 'true';
+              const instructions = `${{ github.event.inputs.user_instructions }}` || '';
+
+              // Get PR details
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+
+              core.setOutput('should_run', 'true');
+              core.setOutput('is_accept', acceptAll.toString());
+              core.setOutput('user_instructions', instructions);
+              core.setOutput('pr_number', prNumber);
+              core.setOutput('pr_branch', pr.head.ref);
+              console.log(`Manual trigger for PR #${prNumber}`);
+              return;
+            }
+
+            // Issue comment trigger
+            const comment = context.payload.comment;
+            const prNumber = context.payload.issue.number;
+            const commentBody = comment.body.trim();
+
+            // Get PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            // Check if this is a command to trigger implementation
+            const acceptCommands = ['/accept', '/implement', '/claude-accept', '/claude-implement'];
+            const isAcceptCommand = acceptCommands.some(cmd =>
+              commentBody.toLowerCase().startsWith(cmd)
+            );
+
+            if (isAcceptCommand) {
+              // Extract any additional instructions after the command
+              const commandMatch = commentBody.match(/^\/\S+\s*(.*)/s);
+              const additionalInstructions = commandMatch ? commandMatch[1].trim() : '';
+
+              core.setOutput('should_run', 'true');
+              core.setOutput('is_accept', additionalInstructions ? 'false' : 'true');
+              core.setOutput('user_instructions', additionalInstructions);
+              core.setOutput('pr_number', prNumber);
+              core.setOutput('pr_branch', pr.head.ref);
+              console.log(`Accept command detected on PR #${prNumber}`);
+              return;
+            }
+
+            // Check if this is a reply to a Claude Code prompt
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
+
+            // Find the most recent Claude Code prompt
+            const promptComments = comments.filter(c =>
+              c.body && c.body.includes('## 🔄 Claude Code Integration') &&
+              c.body.includes('<!-- claude-code-prompt:')
+            );
+
+            if (promptComments.length === 0) {
+              console.log('No Claude Code prompt found in this PR');
+              core.setOutput('should_run', 'false');
+              return;
+            }
+
+            const latestPrompt = promptComments[promptComments.length - 1];
+            const promptIndex = comments.findIndex(c => c.id === latestPrompt.id);
+            const currentCommentIndex = comments.findIndex(c => c.id === comment.id);
+
+            // Check if this comment appears after the prompt (could be a reply)
+            if (currentCommentIndex > promptIndex) {
+              // Check if it looks like instructions (not just a random comment)
+              const looksLikeInstructions =
+                commentBody.toLowerCase().includes('implement') ||
+                commentBody.toLowerCase().includes('accept') ||
+                commentBody.toLowerCase().includes('ignore') ||
+                commentBody.toLowerCase().includes('skip') ||
+                commentBody.toLowerCase().includes('suggestion') ||
+                commentBody.toLowerCase().includes('fix') ||
+                commentBody.toLowerCase().includes('change') ||
+                commentBody.toLowerCase().includes('instead') ||
+                commentBody.toLowerCase().includes('only') ||
+                commentBody.length > 20;
+
+              if (looksLikeInstructions) {
+                core.setOutput('should_run', 'true');
+                core.setOutput('is_accept', 'false');
+                core.setOutput('user_instructions', commentBody);
+                core.setOutput('pr_number', prNumber);
+                core.setOutput('pr_branch', pr.head.ref);
+                console.log(`Reply with instructions detected on PR #${prNumber}`);
+                return;
+              }
+            }
+
+            console.log('Comment does not trigger implementation');
+            core.setOutput('should_run', 'false');
+
+  implement_changes:
+    name: Implement Changes with Claude Code
+    needs: detect_trigger
+    if: needs.detect_trigger.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    env:
+      PR_NUMBER: ${{ needs.detect_trigger.outputs.pr_number }}
+      PR_BRANCH: ${{ needs.detect_trigger.outputs.pr_branch }}
+      IS_ACCEPT: ${{ needs.detect_trigger.outputs.is_accept }}
+      USER_INSTRUCTIONS: ${{ needs.detect_trigger.outputs.user_instructions }}
+
+    steps:
+      - name: Post starting comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const isAccept = process.env.IS_ACCEPT === 'true';
+            const instructions = process.env.USER_INSTRUCTIONS || '';
+
+            let body = `## 🤖 Claude Code Implementation Started\n\n`;
+            if (isAccept) {
+              body += `Implementing **all suggestions as-is** from the Gemini review.\n`;
+            } else {
+              body += `Implementing suggestions with custom instructions:\n\n> ${instructions.substring(0, 500)}${instructions.length > 500 ? '...' : ''}\n`;
+            }
+            body += `\n---\n*This may take a few minutes. I'll update this PR when complete.*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
+
+      # Checkout PR branch first (to avoid workspace cleaning issues)
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PR_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
+          path: pr-workspace
+
+      # Security: Then checkout trusted scripts from default branch
+      - name: Checkout trusted scripts from default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: _trusted_scripts
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Security: Install SDK in isolated temp directory with --ignore-scripts
+      # Pin version to prevent supply chain attacks from upstream updates
+      - name: Install Claude Code SDK (isolated, pinned)
+        run: |
+          mkdir -p /tmp/claude-sdk
+          cd /tmp/claude-sdk
+          npm init -y
+          npm install @anthropic-ai/claude-code@0.2.57 --ignore-scripts
+        env:
+          NODE_ENV: production
+
+      - name: Read review instructions
+        id: instructions
+        working-directory: pr-workspace
+        run: |
+          if [ -f "REVIEW_INSTRUCTIONS.md" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            # Base64 encode to preserve formatting
+            CONTENT=$(cat REVIEW_INSTRUCTIONS.md | base64 -w0)
+            echo "content=$CONTENT" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No REVIEW_INSTRUCTIONS.md found"
+          fi
+
+      - name: Implement changes with Claude Code
+        id: implement
+        working-directory: pr-workspace
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_INSTRUCTIONS: ${{ steps.instructions.outputs.content }}
+          INSTRUCTIONS_FOUND: ${{ steps.instructions.outputs.found }}
+          # Point to isolated SDK installation
+          NODE_PATH: /tmp/claude-sdk/node_modules
+        run: |
+          # Security: Execute trusted script from default branch, not PR branch
+          # Script uses .cjs extension to enforce CommonJS module system
+          node ${{ github.workspace }}/_trusted_scripts/.github/scripts/claude-code-implement.cjs
+
+      - name: Configure git
+        working-directory: pr-workspace
+        run: |
+          git config user.name "Claude Code Bot"
+          git config user.email "claude-code-bot@users.noreply.github.com"
+
+      - name: Delete REVIEW_INSTRUCTIONS.md if present
+        working-directory: pr-workspace
+        run: |
+          if [ -f "REVIEW_INSTRUCTIONS.md" ]; then
+            git rm REVIEW_INSTRUCTIONS.md
+            echo "Removed REVIEW_INSTRUCTIONS.md"
+          fi
+
+      - name: Commit and push changes
+        id: commit
+        working-directory: pr-workspace
+        run: |
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            # Read the implementation summary if available
+            SUMMARY=""
+            if [ -f "/tmp/claude-implementation-summary.txt" ]; then
+              SUMMARY=$(cat /tmp/claude-implementation-summary.txt | head -c 500)
+            fi
+
+            git commit -m "Implement review suggestions via Claude Code" \
+              -m "Agent-Note: $SUMMARY"
+
+            # Push with retry logic
+            for i in 1 2 3 4; do
+              if git push origin HEAD:${{ env.PR_BRANCH }}; then
+                echo "Push successful"
+                echo "has_changes=true" >> $GITHUB_OUTPUT
+                break
+              else
+                if [ $i -lt 4 ]; then
+                  DELAY=$((2 ** i))
+                  echo "Push failed, retrying in ${DELAY}s..."
+                  sleep $DELAY
+                else
+                  echo "Push failed after 4 attempts"
+                  exit 1
+                fi
+              fi
+            done
+          fi
+
+      - name: Post completion comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          HAS_CHANGES: ${{ steps.commit.outputs.has_changes }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const prNumber = parseInt(process.env.PR_NUMBER);
+            const hasChanges = process.env.HAS_CHANGES === 'true';
+            const jobStatus = process.env.JOB_STATUS;
+
+            let body = '';
+
+            if (jobStatus === 'success') {
+              if (hasChanges) {
+                body = [
+                  '## ✅ Claude Code Implementation Complete',
+                  '',
+                  'Changes have been pushed to this branch.',
+                  '',
+                  '**What happened:**',
+                  '- Read the review instructions from `REVIEW_INSTRUCTIONS.md`',
+                  '- Implemented the requested changes',
+                  '- Removed the instructions file',
+                  '- Committed and pushed to this branch',
+                  '',
+                  '---',
+                  '',
+                  '**Next Steps:**',
+                  '1. Review the new commits above',
+                  '2. Gemini will automatically review the new changes',
+                  '3. If more changes are needed, the cycle continues',
+                  '4. When satisfied, merge to main',
+                  '',
+                  '*The review cycle continues until you merge.*'
+                ].join('\n');
+              } else {
+                body = [
+                  '## ℹ️ Claude Code - No Changes Made',
+                  '',
+                  'The implementation completed but no file changes were needed.',
+                  '',
+                  'This might happen if:',
+                  '- The suggestions were already implemented',
+                  '- The instructions didn\'t require code changes',
+                  '- The changes couldn\'t be applied',
+                  '',
+                  'Please review the PR and provide additional instructions if needed.'
+                ].join('\n');
+              }
+            } else {
+              const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+              body = [
+                '## ❌ Claude Code Implementation Failed',
+                '',
+                `The implementation encountered an error. Please check the [workflow run](${runUrl}) for details.`,
+                '',
+                '**Troubleshooting:**',
+                '- Ensure `ANTHROPIC_API_KEY` secret is configured',
+                '- Check if the review instructions are clear',
+                '- Try providing more specific instructions',
+                '',
+                'You can retry by commenting `/implement` or providing new instructions.'
+              ].join('\n');
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });

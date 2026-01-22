@@ -270,15 +270,17 @@ Use "be critical" and "be honest" in prompts:
 
 The `.github/workflows/` directory contains automated CI/CD workflows:
 
-| Workflow                | Purpose                                            |
-| ----------------------- | -------------------------------------------------- |
-| `ci.yml`                | Linting, config validation, docs checks            |
-| `security.yml`          | Secret scanning, security analysis, PII detection  |
-| `pii-scan-content.yml`  | Scans issues/PRs for personal information          |
-| `gemini-pr-review.yml`  | AI-powered code review with structured TOML output |
-| `agent-reminder.yml`    | Reminds agents to read source repo                 |
-| `label-agent-prs.yml`   | Auto-labels AI-generated PRs                       |
-| `notify-on-failure.yml` | Sends failure notifications                        |
+| Workflow                    | Purpose                                            |
+| --------------------------- | -------------------------------------------------- |
+| `ci.yml`                    | Linting, config validation, docs checks            |
+| `security.yml`              | Secret scanning, security analysis, PII detection  |
+| `pii-scan-content.yml`      | Scans issues/PRs for personal information          |
+| `gemini-pr-review-plus.yml` | AI-powered code review with structured TOML output |
+| `pr-review-prompt.yml`      | Posts Claude Code prompt after Gemini review       |
+| `claude-code-implement.yml` | Implements review suggestions via Claude Code SDK  |
+| `agent-reminder.yml`        | Reminds agents to read source repo                 |
+| `label-agent-prs.yml`       | Auto-labels AI-generated PRs                       |
+| `notify-on-failure.yml`     | Sends failure notifications                        |
 
 ### Setting Up GitHub Actions
 
@@ -320,6 +322,7 @@ Add these secrets to your repository (Settings → Secrets → Actions):
 
 - **GitHub Token (private repos):** `GH_TOKEN` - Personal Access Token with `repo` scope
 - **Gemini AI Review:** `GEMINI_API_KEY` - Google AI API key for PR reviews
+- **Claude Code SDK:** `ANTHROPIC_API_KEY` - Anthropic API key for Claude Code implementation
 - **Slack:** `SLACK_WEBHOOK_URL`
 - **Telegram:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 - **Discord:** `DISCORD_WEBHOOK_URL`
@@ -383,7 +386,7 @@ This gives Gemini rich context about _what_ changed and _why_, resulting in more
 
 ## Git-Native Agent Communication
 
-The PR review workflow uses a git-native approach for agent-to-agent communication, eliminating the need for separate response files.
+The PR review workflow uses a git-native approach for agent-to-agent communication with an interactive feedback loop for user control.
 
 ### How It Works
 
@@ -391,13 +394,38 @@ The PR review workflow uses a git-native approach for agent-to-agent communicati
    - Posts feedback as a PR comment
    - If issues found, pushes `REVIEW_INSTRUCTIONS.md` to the branch
 
-2. **Coding Agent (Claude)** addresses feedback by:
+2. **User Prompt** automatically appears after Gemini review:
+   - Offers options to accept all suggestions or provide custom instructions
+   - User can reply with modifications like "Ignore suggestion #2" or "Use a different approach"
+
+3. **Implementation Triggers**:
+   - Comment `/accept` or `/implement` to accept all suggestions as-is
+   - Reply to the prompt with custom instructions for selective implementation
+   - Use workflow_dispatch for manual trigger with specific instructions
+
+4. **Coding Agent (Claude Code SDK)** addresses feedback by:
    - Reading `REVIEW_INSTRUCTIONS.md` (if present)
+   - Applying user's custom instructions if provided
    - Fixing the issues
    - Deleting the instructions file
    - Committing with `Agent-Note:` trailer explaining fixes
 
-3. **Re-Review**: Gemini reads `Agent-Note:` trailers from commits and verifies fixes
+5. **Re-Review**: Gemini automatically reviews the new commits and the cycle continues
+
+### Claude Code Integration Commands
+
+| Command       | Effect                                                   |
+| ------------- | -------------------------------------------------------- |
+| `/accept`     | Accept and implement all suggestions as-is               |
+| `/implement`  | Same as `/accept`                                        |
+| Reply comment | Provide custom instructions for selective implementation |
+
+**Example reply commands:**
+
+- `Ignore suggestion #2, implement the rest`
+- `For the SQL injection issue, use parameterized queries instead`
+- `Implement security fixes only, skip style suggestions`
+- `Accept all but use try-catch for error handling`
 
 ### Review Instructions File
 
@@ -430,12 +458,24 @@ PR Created
     ↓
 Gemini Reviews → Posts comment + pushes REVIEW_INSTRUCTIONS.md (if issues)
     ↓
-Claude reads instructions → Fixes code → Deletes file → Commits with Agent-Note:
+Claude Code Prompt → User prompted with accept/modify options
+    ↓
+User responds → /accept OR reply with custom instructions
+    ↓
+Claude Code SDK → Implements changes → Deletes instructions → Commits with Agent-Note:
     ↓
 Gemini Re-Reviews → Reads Agent-Note trailers → Verifies fixes
     ↓
-Approved → Merge (no cleanup needed - instructions file already deleted)
+Loop continues until APPROVED → User merges to main
 ```
+
+### Required Secrets
+
+| Secret              | Purpose                             |
+| ------------------- | ----------------------------------- |
+| `ANTHROPIC_API_KEY` | Claude Code SDK authentication      |
+| `GH_TOKEN`          | GitHub API access for PR operations |
+| `GEMINI_API_KEY`    | Gemini AI review (existing)         |
 
 ### Best Practices
 
@@ -443,6 +483,7 @@ Approved → Merge (no cleanup needed - instructions file already deleted)
 - **Use clear Agent-Note trailers** explaining what was fixed and how
 - **Reference specific issues** from the review in your notes
 - **One trailer per major fix** for clarity
+- **Be specific in custom instructions** to avoid ambiguity
 
 ## Pre-Commit Hook (Linting & Formatting)
 
@@ -663,6 +704,12 @@ Track improvements to this configuration:
   - Coding agent (Claude) responds via `Agent-Note:` git trailers in commits
   - Instructions file deleted by coding agent (never merged)
   - No cleanup workflows needed - ephemeral by design
+- **2026-01-22**: **Claude Code SDK Integration** - Interactive PR review implementation workflow:
+  - New `pr-review-prompt.yml` posts user prompt after Gemini review
+  - New `claude-code-implement.yml` implements changes via Claude Code SDK
+  - New `.github/scripts/claude-code-implement.js` SDK integration script
+  - User can `/accept` all suggestions or reply with custom instructions
+  - Automatic feedback loop: Gemini review → User prompt → Claude implements → Gemini re-reviews → Loop until merge
 
 ---
 
