@@ -477,6 +477,19 @@ Loop continues until APPROVED → User merges to main
 | `GH_TOKEN`          | GitHub API access for PR operations |
 | `GEMINI_API_KEY`    | Gemini AI review (existing)         |
 
+### Fork PR Limitations
+
+**Important:** The Claude Code implementation workflow is designed for **internal team PRs only**.
+
+Due to GitHub security constraints, the workflow cannot push changes to repositories owned by external contributors (forks). Even with a PAT (`GH_TOKEN`), GitHub does not allow pushing to another user's fork without explicit access.
+
+**For external contributor PRs:**
+
+- Gemini will still review and post feedback
+- The `/implement` command will fail with a permission error
+- Contributors must implement changes themselves based on the review feedback
+- Maintainers can checkout the fork locally, make changes, and push (if the contributor enabled "Allow edits from maintainers")
+
 ### Best Practices
 
 - **Delete instructions immediately** after reading to prevent merge conflicts
