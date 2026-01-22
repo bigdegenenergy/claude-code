@@ -4,30 +4,30 @@
 
 ```toml
 [review]
-summary = "The PR provides useful fixes for the Claude SDK integration (module resolution, variable shadowing) and improves the trigger UX by moving to explicit `/accept` commands. However, the PR inadvertently includes a generated `REVIEW_INSTRUCTIONS.md` file which appears to be a transient artifact that should not be committed. Additionally, the change to use `git reset --hard` in the review workflow reduces robustness against concurrent updates."
+summary = "The PR introduces significant improvements to the AI agent workflows, including better SDK isolation and a clearer interaction model (/accept command). However, there is a blocking bug in the module resolution logic that will cause the implementation script to fail, and a generated review artifact has been accidentally committed."
 decision = "REQUEST_CHANGES"
+
+[[issues]]
+severity = "critical"
+file = ".github/scripts/claude-code-implement.cjs"
+line = 1
+title = "Broken module resolution path"
+description = "The script attempts to load the SDK using `path.join(sdkPath, '@anthropic-ai/claude-code')`. In the workflow, `SDK_PATH` is set to `_trusted_scripts/.github/scripts`. `npm install` creates a `node_modules` directory inside that path. Therefore, the constructed path `_trusted_scripts/.github/scripts/@anthropic-ai/claude-code` will not exist; it needs to include `node_modules`. This will cause the script to crash with `MODULE_NOT_FOUND`."
+suggestion = "Update the require call to include `node_modules`: `require(path.join(sdkPath, 'node_modules', '@anthropic-ai/claude-code'))`."
 
 [[issues]]
 severity = "important"
 file = "REVIEW_INSTRUCTIONS.md"
 line = 1
-title = "Transient review artifact included in PR"
-description = "The `REVIEW_INSTRUCTIONS.md` file appears to be a generated report containing specific review feedback for a previous run. Committing this file pollutes the repository history and is the root cause of the merge conflicts mentioned in the PR description."
-suggestion = "Remove `REVIEW_INSTRUCTIONS.md` from the PR. Consider passing review instructions via PR comments or valid ephemeral storage rather than committing them to the source tree."
-
-[[issues]]
-severity = "important"
-file = ".github/workflows/gemini-pr-review-plus.yml"
-line = 0
-title = "Race condition introduced by git reset --hard"
-description = "Replacing `git pull --rebase` with `git fetch` + `git reset --hard` solves the local conflict issue but introduces a race condition. If a user pushes a commit to the PR branch while this workflow is running (between the fetch and the push), the workflow's push will fail because the local history will have diverged from the new remote head."
-suggestion = "Prefer `git pull --rebase`. To solve the specific conflict with the instructions file, consider configuring a custom merge driver for this file or simply force-overwriting it before the commit step, rather than resetting the entire workspace state."
+title = "Transient artifact included in PR"
+description = "The `REVIEW_INSTRUCTIONS.md` file appears to be a generated artifact containing the output of a review run. This file should be ephemeral and not committed to the repository source."
+suggestion = "Remove `REVIEW_INSTRUCTIONS.md` from the PR."
 
 [[issues]]
 severity = "suggestion"
-file = ".github/scripts/claude-code-implement.cjs"
-line = 0
-title = "Hardcoded temporary path dependence"
-description = "The script relies on `SDK_PATH` defaulting to `/tmp/claude-sdk`. While this matches the current workflow setup, it tightly couples the script to the runner's filesystem layout."
-suggestion = "Ensure the dependency on the external SDK path is documented in `CLAUDE.md` or `CONTRIBUTING.md` for developers trying to run these scripts locally."
+file = ".github/workflows/gemini-pr-review-plus.yml"
+line = 1
+title = "Destructive git reset strategy"
+description = "Replacing `git pull --rebase` with `git reset --hard origin/${{ github.head_ref }}` effectively discards any local changes in the runner workspace. While this prevents merge conflicts, ensure that the generation of `REVIEW_INSTRUCTIONS.md` (or any other artifacts intended to be committed) happens *after* this git reset step within the job execution order."
+suggestion = "Verify the workflow step order to ensure the file generation step occurs after the git reset."
 ```
