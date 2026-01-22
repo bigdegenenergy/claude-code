@@ -396,12 +396,13 @@ The PR review workflow uses a git-native approach for agent-to-agent communicati
 
 2. **User Prompt** automatically appears after Gemini review:
    - Offers options to accept all suggestions or provide custom instructions
-   - User can reply with modifications like "Ignore suggestion #2" or "Use a different approach"
+   - User comments `/accept` or replies with modifications
 
 3. **Implementation Triggers**:
    - Comment `/accept` or `/implement` to accept all suggestions as-is
-   - Reply to the prompt with custom instructions for selective implementation
+   - Reply with custom instructions for selective implementation (e.g., "Ignore suggestion #2")
    - Use workflow_dispatch for manual trigger with specific instructions
+   - **Note:** Reactions (👍) do NOT trigger implementation - you must comment
 
 4. **Coding Agent (Claude Code SDK)** addresses feedback by:
    - Reading `REVIEW_INSTRUCTIONS.md` (if present)

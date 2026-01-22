@@ -19,9 +19,6 @@ async function main() {
   const instructionsFound = process.env.INSTRUCTIONS_FOUND === "true";
   const reviewInstructionsBase64 = process.env.REVIEW_INSTRUCTIONS || "";
 
-  // DEBUG: Log environment for troubleshooting (TODO: remove before production)
-  console.log("DEBUG: Environment variables:", JSON.stringify(process.env));
-
   // Decode review instructions
   let reviewInstructions = "";
   if (instructionsFound && reviewInstructionsBase64) {
