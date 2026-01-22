@@ -16,14 +16,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  review:
-    name: Gemini Code Review
+  check-perms:
+    name: Check Permissions
     runs-on: ubuntu-latest
     if: |
       github.event.pull_request.draft == false &&
       github.actor != 'github-actions[bot]' &&
       github.actor != 'dependabot[bot]' &&
       !contains(github.actor, '[bot]')
+    outputs:
+      can-review: ${{ steps.check-perms.outputs.can-review }}
 
     steps:
       - name: 🔐 Check user permissions
@@ -42,14 +44,20 @@ jobs:
 
           if [[ "$PERMISSION" == "admin" || "$PERMISSION" == "write" ]]; then
             echo "::notice::User $AUTHOR has $PERMISSION access - proceeding with review"
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "can-review=true" >> $GITHUB_OUTPUT
           else
             echo "::warning::User $AUTHOR has insufficient permissions ($PERMISSION) - skipping AI review for security"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "can-review=false" >> $GITHUB_OUTPUT
           fi
 
+  review:
+    name: Gemini Code Review
+    runs-on: ubuntu-latest
+    needs: [check-perms]
+    if: needs.check-perms.outputs.can-review == 'true'
+
+    steps:
       - name: 🔑 Check for API key
-        if: steps.check-perms.outputs.skip != 'true'
         id: check-key
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -63,7 +71,7 @@ jobs:
           fi
 
       - name: 📥 Checkout code
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -71,21 +79,21 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
 
       - name: 🐍 Set up Python
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: 'pip'
 
       - name: 📦 Install deps
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           pip install "google-genai>=1.51.0"
 
       - name: 🧾 Collect PR context
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         id: ctx
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -126,7 +134,7 @@ jobs:
           git log "$BASE...$HEAD" --format="%(trailers:key=Agent-Note,valueonly)" | grep -v '^$' > /tmp/pr/agent_notes.txt || true
 
       - name: 🤖 Run Gemini Quality Review
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         id: gemini
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -367,7 +375,7 @@ jobs:
           PY
 
       - name: 🚀 Push Instructions to Branch
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true' && steps.gemini.outputs.has_feedback == 'true'
+        if: steps.check-key.outputs.skip != 'true' && steps.gemini.outputs.has_feedback == 'true'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -385,7 +393,7 @@ jobs:
           git push
 
       - name: 🧹 Cleanup stale instructions
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true' && steps.gemini.outputs.decision == 'APPROVE'
+        if: steps.check-key.outputs.skip != 'true' && steps.gemini.outputs.decision == 'APPROVE'
         run: |
           set -euo pipefail
           # Fetch latest remote state first
@@ -402,7 +410,7 @@ jobs:
           fi
 
       - name: 💬 Post PR comment
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true'
+        if: steps.check-key.outputs.skip != 'true'
         env:
           # Use GITHUB_TOKEN so comment appears from github-actions[bot], not the user
           # This prevents the Claude Code implementer from treating it as user input
@@ -413,7 +421,7 @@ jobs:
           gh pr comment "$PR_NUMBER" --body-file /tmp/pr/comment.md || echo "Comment failed"
 
       - name: 📱 Telegram notification
-        if: steps.check-perms.outputs.skip != 'true' && steps.check-key.outputs.skip != 'true' && always()
+        if: steps.check-key.outputs.skip != 'true' && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
