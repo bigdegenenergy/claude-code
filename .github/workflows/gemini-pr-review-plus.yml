@@ -306,6 +306,14 @@ jobs:
                 md.append("```json")
                 md.append(json.dumps({"issues": issues}, indent=2))
                 md.append("```\n</details>")
+                # Add Claude Code integration prompt
+                md.append("\n---\n")
+                md.append("### 🔄 Implement with Claude Code\n")
+                md.append("Reply to this comment with instructions:\n")
+                md.append("- `Accept all` - implement everything as suggested")
+                md.append("- `Ignore #2, fix the rest` - selective implementation")
+                md.append("- Or any natural language instructions\n")
+                md.append(f"<!-- claude-code-prompt:{os.environ.get('PR_NUMBER', '0')} -->")
           else:
              md.append("⚠️ Failed to parse quality review.")
 

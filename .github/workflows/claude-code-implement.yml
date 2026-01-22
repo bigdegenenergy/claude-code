@@ -105,10 +105,9 @@ jobs:
               per_page: 50
             });
 
-            // Find Claude Code prompts
+            // Find comments with Claude Code prompt (either in Gemini review or standalone)
             const promptComments = allComments.filter(c =>
-              c.body && c.body.includes('## 🔄 Claude Code Integration') &&
-              c.body.includes('<!-- claude-code-prompt:')
+              c.body && c.body.includes('<!-- claude-code-prompt:')
             );
 
             if (promptComments.length === 0) {
@@ -264,29 +263,6 @@ jobs:
       USER_INSTRUCTIONS: ${{ needs.detect_trigger.outputs.user_instructions }}
 
     steps:
-      - name: Post starting comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = parseInt(process.env.PR_NUMBER);
-            const isAccept = process.env.IS_ACCEPT === 'true';
-            const instructions = process.env.USER_INSTRUCTIONS || '';
-
-            let body = `## 🤖 Claude Code Implementation Started\n\n`;
-            if (isAccept) {
-              body += `Implementing **all suggestions as-is** from the Gemini review.\n`;
-            } else {
-              body += `Implementing suggestions with custom instructions:\n\n> ${instructions.substring(0, 500)}${instructions.length > 500 ? '...' : ''}\n`;
-            }
-            body += `\n---\n*This may take a few minutes. I'll update this PR when complete.*`;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body
-            });
-
       # Checkout PR branch first (to avoid workspace cleaning issues)
       - name: Checkout PR branch
         uses: actions/checkout@v4
