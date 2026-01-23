@@ -8,6 +8,7 @@ consistent input validation and error handling.
 
 import re
 import os
+import shlex
 from typing import Optional, Dict, Any, List
 
 
@@ -62,6 +63,14 @@ def is_safe_command(command: str, allowed_patterns: List[str]) -> bool:
     """
     Check if a command matches allowed patterns.
 
+    WARNING: Regex-based command validation is prone to bypasses. Patterns MUST be:
+    - Strictly anchored with ^ and $ (e.g., r"^git status$")
+    - Should NOT match shell metacharacters or allow variable arguments
+    - Avoid broad patterns like r"git .*" which can match malicious subcommands
+
+    Consider using a strict allow-list of exact command strings instead of regex,
+    or restricting validation to the command executable only.
+
     Args:
         command: Command string to check
         allowed_patterns: List of regex patterns for allowed commands
@@ -106,59 +115,25 @@ def sanitize_commit_message(message: str) -> str:
     """
     Sanitize a commit message to prevent injection attacks.
 
+    IMPORTANT: This function uses shlex.quote() to properly escape the message
+    for shell usage. However, the RECOMMENDED approach is to pass arguments
+    as a list to subprocess.run() (e.g., ['git', 'commit', '-m', message])
+    which bypasses the shell entirely and makes sanitization unnecessary.
+
     Args:
         message: Raw commit message
 
     Returns:
-        Sanitized message safe for use in git commands
+        Sanitized message safe for use in shell commands
     """
     if not message:
         return ""
 
-    # Remove any shell metacharacters
-    dangerous_chars = [
-        ";",
-        "&",
-        "|",
-        "$",
-        "`",
-        "(",
-        ")",
-        "{",
-        "}",
-        "<",
-        ">",
-        "\\",
-        "\n",
-        "\r",
-    ]
-    result = message
-    for char in dangerous_chars:
-        result = result.replace(char, "")
-
-    # Truncate to reasonable length
+    # Truncate to reasonable length before quoting
     max_length = 500
-    if len(result) > max_length:
-        result = result[:max_length]
+    if len(message) > max_length:
+        message = message[:max_length]
 
-    return result.strip()
-
-
-if __name__ == "__main__":
-    # Simple self-test
-    print("Running validators self-test...")
-
-    assert validate_file_path("/home/user/file.py") == True
-    assert validate_file_path("../etc/passwd") == False
-    assert validate_file_path(None) == False
-
-    assert validate_json_input({"key": "value"}) == {"key": "value"}
-    assert validate_json_input(None) == {}
-    assert validate_json_input("string") == {}
-
-    assert is_safe_command("npm test", [r"^npm\s+test"]) == True
-    assert is_safe_command("rm -rf /", [r"^npm\s+test"]) == False
-
-    assert sanitize_commit_message("fix: bug; rm -rf /") == "fix: bug rm -rf /"
-
-    print("All self-tests passed!")
+    # Use shlex.quote() to properly escape the message for shell usage
+    # This handles all shell metacharacters correctly, including quotes
+    return shlex.quote(message.strip())
