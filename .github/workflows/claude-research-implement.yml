@@ -323,7 +323,7 @@ jobs:
           # The heavy cognitive work (research/planning) was done by Opus
           claude_args: |
             --max-turns 75
-            --model claude-haiku-4-5-20250106
+            --model claude-haiku-4-5-20251001
 
       - name: Configure git and push
         if: steps.check-perms.outputs.has_access == 'true' && steps.check-perms.outputs.has_plan == 'true'

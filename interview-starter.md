@@ -29,7 +29,7 @@ Accounting software for YouTube creators
 Open your terminal in the same directory as your spec file and run:
 
 ```bash
-claude --model opus
+claude --model claude-opus-4-5-20251101
 ```
 
 ### Step 3: Request the Interview

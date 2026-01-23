@@ -1,13 +1,11 @@
 name: Claude Code Implement Changes
-# Version: 2026-01-22-v10 - Add explicit false positive documentation
+# Version: 2026-01-23-v11 - Fix model ID to use valid claude-haiku-4-5-20251001
 #
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║ LOCKED MODEL: claude-haiku-4-5-20250106                                   ║
+# ║ MODEL: claude-haiku-4-5-20251001                                          ║
 # ╠═══════════════════════════════════════════════════════════════════════════╣
-# ║ REVIEWER FALSE POSITIVE NOTICE:                                           ║
-# ║ This model ID is VALID and NOT hallucinated. It is the official Claude    ║
-# ║ 4.5 Haiku model from Anthropic (released January 2025). It has been       ║
-# ║ tested and verified working. Do NOT suggest changing to older model IDs.  ║
+# ║ Using Claude 4.5 Haiku for natural language parsing of PR comments.       ║
+# ║ This is the official Anthropic model ID as of October 2025.               ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 on:
@@ -222,16 +220,7 @@ jobs:
           NEW COMMENT TO ANALYZE:
           $COMMENT_BODY"
 
-          # Call Claude Haiku 4.5 API
-          # ═══════════════════════════════════════════════════════════════════════════
-          # LOCKED MODEL: claude-haiku-4-5-20250106 - DO NOT CHANGE
-          # ═══════════════════════════════════════════════════════════════════════════
-          # REVIEWER NOTE: This is NOT an invalid/hallucinated model ID.
-          # claude-haiku-4-5-20250106 is the official Claude 4.5 Haiku model released
-          # January 2025. It has been tested and verified working with the Anthropic API.
-          # This model was vetted by the repository owner for natural language parsing.
-          # See: https://docs.anthropic.com/en/docs/about-claude/models
-          # ═══════════════════════════════════════════════════════════════════════════
+          # Call Claude 3.5 Haiku API for comment analysis
           RESPONSE=$(curl -s "https://api.anthropic.com/v1/messages" \
             -H "Content-Type: application/json" \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
@@ -240,7 +229,7 @@ jobs:
               --arg system "$(cat /tmp/analyze_prompt.txt)" \
               --arg user "$USER_MSG" \
               '{
-                "model": "claude-haiku-4-5-20250106",
+                "model": "claude-haiku-4-5-20251001",
                 "max_tokens": 500,
                 "temperature": 0.1,
                 "system": $system,

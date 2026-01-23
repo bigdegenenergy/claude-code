@@ -5,36 +5,45 @@
 ```json
 {
   "review": {
-    "summary": "This PR switches the underlying model for a majority of agents and commands to `haiku`. While this is appropriate for text-processing tasks like `release-notes` or `commit-push-pr`, it presents significant risks for agents tasked with architecture, infrastructure, and complex code manipulation. Haiku generally lacks the reasoning depth required for reliable refactoring, merge conflict resolution, and secure infrastructure generation compared to Sonnet or Opus.",
+    "summary": "The PR adds valuable validation infrastructure. However, the `sanitize_commit_message` function in the new `validators.py` module uses an insecure deny-list approach that leaves the system vulnerable to command injection. This is a critical security issue that must be addressed before merging. Additionally, the regex-based command validation requires strict pattern usage to be effective.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "important",
-      "file": ".claude/agents/infrastructure-engineer.md",
-      "line": 4,
-      "title": "Insufficient model capability for infrastructure security",
-      "description": "The `infrastructure-engineer` and `kubernetes-architect` agents are being downgraded to `haiku`. Generating Infrastructure as Code (Terraform, K8s manifests) is a high-stakes task where subtle hallucinations can lead to security vulnerabilities (e.g., overly permissive IAM roles, exposed ports) or production outages. Haiku is optimized for speed and cost, not the high-precision reasoning required for infrastructure architecture.",
-      "suggestion": "Use `claude-3-5-sonnet` (or `sonnet`) for infrastructure and architecture agents to ensure a baseline of reasoning capability and safety, rather than `haiku`."
+      "severity": "critical",
+      "file": ".claude/hooks/validators.py",
+      "line": 1,
+      "title": "Insecure sanitization in sanitize_commit_message",
+      "description": "The `sanitize_commit_message` function uses a deny-list (stripping specific characters) to prevent shell injection. This is insecure because it likely misses context-dependent control characters (such as `'` or `\"` depending on how the string is quoted in the shell). If the sanitized message is used in a command like `git commit -m '{msg}'`, an attacker can use quotes to break out of the argument and inject arbitrary commands. Additionally, stripping characters like `&` or `(` corrupts legitimate commit messages.",
+      "suggestion": "Replace this logic with `shlex.quote(msg)` to correctly escape the string for shell usage. Even better, refactor the calling code to use `subprocess.run(['git', 'commit', '-m', msg])` (passing arguments as a list), which bypasses the shell entirely and renders sanitization unnecessary."
     },
     {
       "id": 2,
       "severity": "important",
-      "file": ".claude/commands/refactor.md",
-      "line": 4,
-      "title": "High risk of logic regression in code modification commands",
-      "description": "Commands such as `refactor`, `merge-resolve`, and `devops-troubleshooter` involve modifying existing logic or debugging complex systems. Haiku has lower reasoning capabilities and context adherence than Opus/Sonnet, increasing the risk of introducing subtle logic bugs or failing to resolve conflicts correctly.",
-      "suggestion": "Revert these specific commands to `claude-3-5-sonnet` or `opus` to maintain reliability in complex code manipulation tasks."
+      "file": ".claude/hooks/validators.py",
+      "line": 1,
+      "title": "Risky regex command validation",
+      "description": "The `is_safe_command` function relies on regex matching (`re.match`) to validate commands. This is prone to bypasses if the allowed patterns are not extremely strict. For example, a pattern like `git .*` would match (and allow) `git commit -m \"$(rm -rf /)\"`, which executes a malicious sub-command. Regex is generally insufficient for parsing and validating shell command safety.",
+      "suggestion": "Add a warning to the docstring stating that patterns must be strictly anchored (`^...$`) and should not match shell metacharacters. Consider restricting validation to the command executable only, or using a strict allow-list of exact command strings."
     },
     {
       "id": 3,
+      "severity": "important",
+      "file": ".github/workflows/claude-code-implement.yml",
+      "line": 1,
+      "title": "Model ID Availability Verification",
+      "description": "The workflow updates reference specific future-dated model IDs (e.g., `claude-haiku-4-5-20251001`, `claude-opus-4-5-20251101`). While this appears consistent with the repository's future timeline context, these IDs will fail if run against the current public Anthropic API.",
+      "suggestion": "Verify that the CI environment has access to these specific model snapshots. If this code is intended for use with the current public API, please revert to the latest available model IDs (e.g., `claude-3-5-sonnet-latest`)."
+    },
+    {
+      "id": 4,
       "severity": "suggestion",
-      "file": ".claude/agents/python-pro.md",
-      "line": 4,
-      "title": "Model mismatch for 'Pro' agents",
-      "description": "The `python-pro` and `typescript-pro` agents are explicitly defined as experts. Switching them to `haiku` (the most lightweight model) contradicts the persona and reduces the quality of generated code, particularly for advanced type handling or idiomatic patterns.",
-      "suggestion": "Consider using `sonnet` for language-specific expert agents to balance performance with coding proficiency."
+      "file": ".claude/hooks/validators.py",
+      "line": 160,
+      "title": "Self-test execution in CI",
+      "description": "The PR description mentions 'self-tests'. If these are implemented within an `if __name__ == \"__main__\":` block in the utility file, they will not be executed automatically by standard test runners or the CI pipeline.",
+      "suggestion": "Move the tests to a dedicated `tests/` directory (e.g., `tests/test_validators.py`) using a framework like `pytest` to ensure they are consistently executed during the build process."
     }
   ]
 }

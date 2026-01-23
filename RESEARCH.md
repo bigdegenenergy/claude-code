@@ -1,6 +1,8 @@
 # Claude Code Professional Engineering Team Setup
+
 ## Comprehensive Research Report
-*Based on Boris Cherny's Workflow and Professional Engineering Best Practices*
+
+_Based on Boris Cherny's Workflow and Professional Engineering Best Practices_
 
 ---
 
@@ -10,12 +12,12 @@
 2. [Claude Code Subagents and Professional Engineering Workflow](#claude-code-subagents-and-professional-engineering-workflow)
 3. [Claude Code Hooks and Professional Agent Setup](#claude-code-hooks-and-professional-agent-setup)
 4. [Claude Code Permission Management](#claude-code-permission-management)
-5. [Claude Code MCP Server Integrations (Slack, BigQuery, Sentry)](#claude-code-mcp-server-integrations-(slack-bigquery-sentry))
+5. [Claude Code MCP Server Integrations (Slack, BigQuery, Sentry)](<#claude-code-mcp-server-integrations-(slack-bigquery-sentry)>)
 6. [Claude Code GitHub Actions and Automated Code Review](#claude-code-github-actions-and-automated-code-review)
 7. [Claude Code verification strategies](#claude-code-verification-strategies)
 8. [Claude Code Multi-Session Management and Professional Workflow](#claude-code-multi-session-management-and-professional-workflow)
 9. [Claude Code Plan Mode and Professional Workflows](#claude-code-plan-mode-and-professional-workflows)
-10. [Professional Software Engineering Practices for Agentic Coding (Claude Code Setup)](#professional-software-engineering-practices-for-agentic-coding-(claude-code-setup))
+10. [Professional Software Engineering Practices for Agentic Coding (Claude Code Setup)](<#professional-software-engineering-practices-for-agentic-coding-(claude-code-setup)>)
 
 ---
 
@@ -23,10 +25,10 @@
 
 ### Key Findings
 
-*   **Slash Commands as Reusable Prompts:** Claude Code slash commands are Markdown files stored in a dedicated directory that act as reusable, parameterized prompts for Claude. They automate repetitive "inner loop" development workflows, such as committing code or running tests [1] [2].
-*   **Directory Structure and Scope:** Custom commands are created by placing `.md` files in either the project-specific `.claude/commands/` directory (for team-shared workflows) or the personal `~/.claude/commands/` directory (for user-specific workflows). Project commands take precedence over personal ones [1].
-*   **Pre-computed Context with Inline Bash:** The key to professional-grade commands is the use of **inline bash execution** (`!``command``) within the Markdown file. This executes shell commands (e.g., `git status`, `git diff`) and injects their real-time output into the prompt, giving Claude accurate, up-to-date context before it executes its task [1] [2].
-*   **Frontmatter for Control and Security:** Commands use a YAML frontmatter block to define metadata, most critically the `allowed-tools` list. This explicitly grants Claude permission to use specific tools (like `Bash(git commit:*)`) and prevents the AI from executing arbitrary or dangerous commands, which is essential for team security and stability [1].
+- **Slash Commands as Reusable Prompts:** Claude Code slash commands are Markdown files stored in a dedicated directory that act as reusable, parameterized prompts for Claude. They automate repetitive "inner loop" development workflows, such as committing code or running tests [1] [2].
+- **Directory Structure and Scope:** Custom commands are created by placing `.md` files in either the project-specific `.claude/commands/` directory (for team-shared workflows) or the personal `~/.claude/commands/` directory (for user-specific workflows). Project commands take precedence over personal ones [1].
+- **Pre-computed Context with Inline Bash:** The key to professional-grade commands is the use of **inline bash execution** (`!``command``) within the Markdown file. This executes shell commands (e.g., `git status`, `git diff`) and injects their real-time output into the prompt, giving Claude accurate, up-to-date context before it executes its task [1] [2].
+- **Frontmatter for Control and Security:** Commands use a YAML frontmatter block to define metadata, most critically the `allowed-tools` list. This explicitly grants Claude permission to use specific tools (like `Bash(git commit:*)`) and prevents the AI from executing arbitrary or dangerous commands, which is essential for team security and stability [1].
 
 ### Implementation Details
 
@@ -34,18 +36,18 @@
 
 Custom slash commands are defined in Markdown files (`.md`) and are organized into two scopes: Project and Personal [1]. For a professional engineering team, **Project Commands** are the standard, as they are version-controlled and shared [1].
 
-| Scope | Location | Visibility | Precedence |
-| :--- | :--- | :--- | :--- |
-| **Project** | `.claude/commands/` (relative to project root) | Shared with the team, committed to Git | Takes precedence over Personal Commands with the same name [1]. |
-| **Personal** | `~/.claude/commands/` (user's home directory) | Only visible to the user | Ignored if a Project Command with the same name exists [1]. |
+| Scope        | Location                                       | Visibility                             | Precedence                                                      |
+| :----------- | :--------------------------------------------- | :------------------------------------- | :-------------------------------------------------------------- |
+| **Project**  | `.claude/commands/` (relative to project root) | Shared with the team, committed to Git | Takes precedence over Personal Commands with the same name [1]. |
+| **Personal** | `~/.claude/commands/` (user's home directory)  | Only visible to the user               | Ignored if a Project Command with the same name exists [1].     |
 
 **2. Custom Command Syntax and Features**
 
 A custom slash command is a Markdown file with an optional YAML frontmatter block for metadata and a body containing the prompt instructions for Claude [1].
 
-*   **File Naming:** The filename (without the `.md` extension) becomes the command name. E.g., `.claude/commands/git/commit-push-pr.md` creates the command `/commit-push-pr` [1].
-*   **Arguments:** Arguments are passed to the command using positional placeholders (`$1`, `$2`, etc.) or the collective placeholder (`$ARGUMENTS`) [1].
-*   **Inline Bash Execution:** Use the `!` prefix followed by a command in backticks (`!``command``) to execute a shell command and inject its output into the prompt context before Claude processes it [1].
+- **File Naming:** The filename (without the `.md` extension) becomes the command name. E.g., `.claude/commands/git/commit-push-pr.md` creates the command `/commit-push-pr` [1].
+- **Arguments:** Arguments are passed to the command using positional placeholders (`$1`, `$2`, etc.) or the collective placeholder (`$ARGUMENTS`) [1].
+- **Inline Bash Execution:** Use the `!` prefix followed by a command in backticks (`!`command`) to execute a shell command and inject its output into the prompt context before Claude processes it [1].
 
 **3. Example: Professional Inner Loop Workflow Command**
 
@@ -54,12 +56,13 @@ The `/commit-push-pr` command, a core inner loop workflow for the Claude Code te
 **File Path:** `.claude/commands/git/commit-push-pr.md`
 
 **Content:**
+
 ```markdown
 ---
 allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push:*), Bash(gh pr create:*)
 argument-hint: [commit-message]
 description: Commit staged changes, push to the current branch, and create a pull request.
-model: claude-3-5-sonnet
+model: claude-sonnet-4-5-20250929
 ---
 
 ## Context for Claude
@@ -81,20 +84,20 @@ model: claude-3-5-sonnet
 
 **4. Frontmatter Configuration Details**
 
-| Frontmatter Key | Purpose | Example Value |
-| :--- | :--- | :--- |
-| `allowed-tools` | Restricts the tools Claude can use, enhancing security and focus [1]. | `Bash(git add:*), Bash(git commit:*)` |
-| `description` | Brief description shown in the `/help` menu [1]. | `Commit staged changes and create a PR` |
-| `argument-hint` | Hint for expected arguments, shown during command auto-completion [1]. | `[message] [reviewers]` |
-| `model` | Overrides the default model for this specific command [1]. | `claude-3-5-sonnet` |
+| Frontmatter Key | Purpose                                                                | Example Value                           |
+| :-------------- | :--------------------------------------------------------------------- | :-------------------------------------- |
+| `allowed-tools` | Restricts the tools Claude can use, enhancing security and focus [1].  | `Bash(git add:*), Bash(git commit:*)`   |
+| `description`   | Brief description shown in the `/help` menu [1].                       | `Commit staged changes and create a PR` |
+| `argument-hint` | Hint for expected arguments, shown during command auto-completion [1]. | `[message] [reviewers]`                 |
+| `model`         | Overrides the default model for this specific command [1].             | `claude-sonnet-4-5-20250929`            |
 
 ### Best Practices
 
-* **Standardize Project Commands:** For professional teams, all custom slash commands should be created as **Project Commands** under the `.claude/commands/` directory and committed to the repository. This ensures all team members use the same, version-controlled workflows, promoting consistency and reducing "works on my machine" issues [1].
-* **Implement Namespacing for Clarity:** Utilize subdirectories within `.claude/commands/` (e.g., `git/`, `deploy/`, `refactor/`) to group related commands. This provides clear context in the `/help` output (e.g., `(project:git)`) and prevents naming conflicts, which is crucial for large, complex codebases [1].
-* **Pre-compute Context with Inline Bash:** Design commands to use inline bash (`!``command``) to pre-compute and inject relevant, up-to-date context (e.g., `git status`, `git diff`, environment variables) before the prompt is sent to Claude. This minimizes the model's cognitive load, increases the accuracy of its output, and ensures the AI operates on the latest state of the project [1] [2].
-* **Use Frontmatter for Tool and Model Control:** Explicitly define the `allowed-tools` and `model` in the command's frontmatter. For example, restrict a `git` command to only use `Bash(git add:*)` and `Bash(git commit:*)` to enforce security and prevent unintended side effects. For complex tasks, specify a more capable model like `claude-3-5-sonnet` [1].
-* **Track and Audit Command Usage:** Integrate command usage tracking (e.g., via a custom hook or a simple log file within the command's bash execution) to monitor which workflows are most used, identify bottlenecks, and continuously improve the team's inner loop efficiency [2].
+- **Standardize Project Commands:** For professional teams, all custom slash commands should be created as **Project Commands** under the `.claude/commands/` directory and committed to the repository. This ensures all team members use the same, version-controlled workflows, promoting consistency and reducing "works on my machine" issues [1].
+- **Implement Namespacing for Clarity:** Utilize subdirectories within `.claude/commands/` (e.g., `git/`, `deploy/`, `refactor/`) to group related commands. This provides clear context in the `/help` output (e.g., `(project:git)`) and prevents naming conflicts, which is crucial for large, complex codebases [1].
+- **Pre-compute Context with Inline Bash:** Design commands to use inline bash (`!``command``) to pre-compute and inject relevant, up-to-date context (e.g., `git status`, `git diff`, environment variables) before the prompt is sent to Claude. This minimizes the model's cognitive load, increases the accuracy of its output, and ensures the AI operates on the latest state of the project [1] [2].
+- **Use Frontmatter for Tool and Model Control:** Explicitly define the `allowed-tools` and `model` in the command's frontmatter. For example, restrict a `git` command to only use `Bash(git add:*)` and `Bash(git commit:*)` to enforce security and prevent unintended side effects. For complex tasks, specify a more capable model like `claude-sonnet-4-5-20250929` [1].
+- **Track and Audit Command Usage:** Integrate command usage tracking (e.g., via a custom hook or a simple log file within the command's bash execution) to monitor which workflows are most used, identify bottlenecks, and continuously improve the team's inner loop efficiency [2].
 
 ### Sources
 
@@ -109,11 +112,11 @@ model: claude-3-5-sonnet
 
 ### Key Findings
 
-*   **Subagents as Specialized AI Assistants:** Claude Code subagents are specialized AI assistants with their own system prompts, tools, and separate context windows, enabling task delegation and preventing context pollution in the main conversation [1].
-*   **Boris Cherny's Core Subagents:** The workflow creator, Boris Cherny, uses specialized subagents like **`code-simplifier`** (for post-generation code hygiene and readability) and **`verify-app`** (for comprehensive end-to-end testing and quality assurance) to replicate a professional engineering team's roles [2].
-*   **Configuration via Markdown/YAML:** Custom subagents are configured using Markdown files with YAML frontmatter, defining their `name`, `description`, `tools` access, and the specific Claude `model` to use, with the system prompt in the body [1].
-*   **Professional Team Setup:** A 5+ person team can be simulated by creating subagents for distinct roles such as **System Architect**, **Code Reviewer**, **Debugger**, and **DevOps Engineer**, each with a focused persona and toolset [3].
-*   **Implementation for Proactive Use:** To encourage automatic delegation, the subagent's `description` field should include explicit instructions like "Use proactively" or "MUST BE USED" for Claude Code to delegate tasks appropriately [1].
+- **Subagents as Specialized AI Assistants:** Claude Code subagents are specialized AI assistants with their own system prompts, tools, and separate context windows, enabling task delegation and preventing context pollution in the main conversation [1].
+- **Boris Cherny's Core Subagents:** The workflow creator, Boris Cherny, uses specialized subagents like **`code-simplifier`** (for post-generation code hygiene and readability) and **`verify-app`** (for comprehensive end-to-end testing and quality assurance) to replicate a professional engineering team's roles [2].
+- **Configuration via Markdown/YAML:** Custom subagents are configured using Markdown files with YAML frontmatter, defining their `name`, `description`, `tools` access, and the specific Claude `model` to use, with the system prompt in the body [1].
+- **Professional Team Setup:** A 5+ person team can be simulated by creating subagents for distinct roles such as **System Architect**, **Code Reviewer**, **Debugger**, and **DevOps Engineer**, each with a focused persona and toolset [3].
+- **Implementation for Proactive Use:** To encourage automatic delegation, the subagent's `description` field should include explicit instructions like "Use proactively" or "MUST BE USED" for Claude Code to delegate tasks appropriately [1].
 
 ### Implementation Details
 
@@ -121,10 +124,10 @@ model: claude-3-5-sonnet
 
 Custom subagents are defined in Markdown files with YAML frontmatter, which are stored in specific directories. Project-level subagents take precedence over user-level subagents.
 
-| Configuration Level | File Path | Priority |
-| :--- | :--- | :--- |
-| **Project-Level** | `.claude/agents/` | Highest |
-| **User-Level** | `~/.claude/agents/` | Lower |
+| Configuration Level | File Path           | Priority |
+| :------------------ | :------------------ | :------- |
+| **Project-Level**   | `.claude/agents/`   | Highest  |
+| **User-Level**      | `~/.claude/agents/` | Lower    |
 
 ### Example: The `code-simplifier` Subagent
 
@@ -141,6 +144,7 @@ model: inherit
 You are a code simplification expert. Your goal is to make code more readable and maintainable without changing functionality.
 
 Simplification principles:
+
 - Reduce complexity and nesting
 - Extract repeated logic into functions
 - Use meaningful variable names
@@ -149,6 +153,7 @@ Simplification principles:
 - Apply modern language features
 
 Process:
+
 1. Read the modified files
 2. Identify simplification opportunities
 3. Apply simplifications
@@ -167,12 +172,13 @@ The `verify-app` subagent is the quality assurance (QA) engineer, ensuring corre
 name: verify-app
 description: Tests Claude Code end-to-end with detailed instructions. Use proactively before final commit.
 tools: Read, Bash, Grep, Glob
-model: sonnet
+model: claude-sonnet-4-5-20250929
 ---
 
 You are an app verification assistant. Your task is to run comprehensive end-to-end tests on the Claude-generated application to ensure correctness and quality.
 
 Instructions:
+
 - Follow the detailed test plan provided.
 - Check all functionalities, edge cases, and error handling.
 - Verify performance and responsiveness.
@@ -184,8 +190,8 @@ Do not make code changes; only verify and report results.
 
 ### Management and Invocation
 
-*   **Recommended Management:** Use the interactive slash command `/agents` within a Claude Code session to view, create, edit, and manage tool permissions for subagents [1].
-*   **Explicit Invocation:** To ensure a specific subagent is used, mention it in the command, e.g., `> Use the code-reviewer subagent to look at my recent changes` [1].
+- **Recommended Management:** Use the interactive slash command `/agents` within a Claude Code session to view, create, edit, and manage tool permissions for subagents [1].
+- **Explicit Invocation:** To ensure a specific subagent is used, mention it in the command, e.g., `> Use the code-reviewer subagent to look at my recent changes` [1].
 
 ### Best Practices
 
@@ -209,11 +215,11 @@ https://shipyard.build/blog/claude-code-subagents-guide/
 
 ### Key Findings
 
-*   **Claude Code Hooks** are callbacks that allow developers to inject custom logic at various points in the agent's execution loop, including `PreToolUse`, `PostToolUse`, `Stop`, and `UserPromptSubmit` [1] [2].
-*   **`PostToolUse` Hooks** are critical for code hygiene, primarily used to enforce deterministic actions immediately after the agent modifies code, such as running auto-formatters (e.g., Black, Prettier) or linters [4] [5].
-*   **`Stop` Hooks** serve as "end-of-turn quality gates," running automated verification checks (e.g., unit tests, type checks, security scans) before the agent's turn concludes, ensuring the generated code is functional and correct [5].
-*   **Agent Hooks** (or Subagent Hooks) enable the creation of specialized, self-contained agents with custom instructions and toolsets for specific, complex workflows, which is a key component of Boris Cherny's setup for managing a large, professional codebase [6] [7].
-*   **Boris Cherny's Workflow** emphasizes a "universal setup" for professional teams, utilizing hooks for automated quality checks, extensive logging (`PostToolUse` for tracking changes), and powerful slash commands (e.g., `/commit-push-pr`) that combine agentic steps with inline shell commands for end-to-end development tasks [6] [8].
+- **Claude Code Hooks** are callbacks that allow developers to inject custom logic at various points in the agent's execution loop, including `PreToolUse`, `PostToolUse`, `Stop`, and `UserPromptSubmit` [1] [2].
+- **`PostToolUse` Hooks** are critical for code hygiene, primarily used to enforce deterministic actions immediately after the agent modifies code, such as running auto-formatters (e.g., Black, Prettier) or linters [4] [5].
+- **`Stop` Hooks** serve as "end-of-turn quality gates," running automated verification checks (e.g., unit tests, type checks, security scans) before the agent's turn concludes, ensuring the generated code is functional and correct [5].
+- **Agent Hooks** (or Subagent Hooks) enable the creation of specialized, self-contained agents with custom instructions and toolsets for specific, complex workflows, which is a key component of Boris Cherny's setup for managing a large, professional codebase [6] [7].
+- **Boris Cherny's Workflow** emphasizes a "universal setup" for professional teams, utilizing hooks for automated quality checks, extensive logging (`PostToolUse` for tracking changes), and powerful slash commands (e.g., `/commit-push-pr`) that combine agentic steps with inline shell commands for end-to-end development tasks [6] [8].
 
 ### Implementation Details
 
@@ -231,7 +237,7 @@ def post_tool_use_formatter_hook(input: PostToolUseInput) -> PostToolUseOutput:
     if input.tool_name == "file_writer":
         # Assuming the tool output contains the path to the modified file
         modified_file_path = input.tool_output.get("path")
-        
+
         if modified_file_path and modified_file_path.endswith(".py"):
             try:
                 # Execute the Black formatter
@@ -240,7 +246,7 @@ def post_tool_use_formatter_hook(input: PostToolUseInput) -> PostToolUseOutput:
             except subprocess.CalledProcessError as e:
                 # Log the error but allow the agent to continue
                 print(f"Formatting failed for {modified_file_path}: {e.stderr.decode()}")
-    
+
     return PostToolUseOutput(status="success")
 ```
 
@@ -255,14 +261,14 @@ def stop_verification_hook(input: StopInput) -> StopOutput:
     # Run unit tests
     try:
         result = subprocess.run(["pytest", "--quiet"], check=True, capture_output=True)
-        
+
         # If tests pass, allow the agent to stop
         return StopOutput(status="success", message="All tests passed. Work complete.")
-        
+
     except subprocess.CalledProcessError as e:
         # If tests fail, return an error status to force the agent to re-evaluate
         error_message = f"Verification failed: Unit tests failed. Output:\n{e.stdout.decode()}\n{e.stderr.decode()}"
-        
+
         # This message will be fed back to the agent as a new observation
         return StopOutput(status="error", message=error_message)
 ```
@@ -315,28 +321,31 @@ https://x.com/bcherny/status/2007179847949500714
 
 ### Key Findings
 
-*   **Permission Configuration is Centralized and Hierarchical:** Claude Code's permissions are managed via the `permissions` object in `settings.json`, which supports `deny`, `ask`, and `allow` rules. These rules are applied in a strict precedence order: `deny` > `ask` > `allow` [1] [2].
-*   **Pre-Allowed Bash Commands Use Prefix Matching:** Safe, common Bash commands (e.g., test, build, lint) can be pre-allowed using the `Bash(command-prefix:*)` format in the `allow` array of the shared `.claude/settings.json`. This avoids repetitive user prompts and is a key component of the creator's recommended team workflow [1] [3].
-*   **Professional Workflow Emphasizes Planning and Verification:** The creator's workflow for a professional team involves starting in **Plan mode** (`--permission-mode=plan`), switching to **auto-accept edits mode** for execution, and most importantly, building a robust feedback loop where Claude can **verify its own work** (e.g., running tests or browser checks) [3].
-*   **Team Policy Enforcement Relies on Settings Precedence:** For large teams, organizational policies should be enforced using **Managed settings** or **File-based managed settings** (`managed-settings.json`), which take precedence over all other settings, including local project and user configurations [1].
+- **Permission Configuration is Centralized and Hierarchical:** Claude Code's permissions are managed via the `permissions` object in `settings.json`, which supports `deny`, `ask`, and `allow` rules. These rules are applied in a strict precedence order: `deny` > `ask` > `allow` [1] [2].
+- **Pre-Allowed Bash Commands Use Prefix Matching:** Safe, common Bash commands (e.g., test, build, lint) can be pre-allowed using the `Bash(command-prefix:*)` format in the `allow` array of the shared `.claude/settings.json`. This avoids repetitive user prompts and is a key component of the creator's recommended team workflow [1] [3].
+- **Professional Workflow Emphasizes Planning and Verification:** The creator's workflow for a professional team involves starting in **Plan mode** (`--permission-mode=plan`), switching to **auto-accept edits mode** for execution, and most importantly, building a robust feedback loop where Claude can **verify its own work** (e.g., running tests or browser checks) [3].
+- **Team Policy Enforcement Relies on Settings Precedence:** For large teams, organizational policies should be enforced using **Managed settings** or **File-based managed settings** (`managed-settings.json`), which take precedence over all other settings, including local project and user configurations [1].
 
 ### Implementation Details
 
 The core of Claude Code's permission management for a professional team is the `settings.json` file, which can be shared via version control in the project's `.claude/settings.json` directory.
 
 ### 1. The `/permissions` Command
+
 The `/permissions` slash command provides a user interface to inspect and manage all active permission rules. It is the primary tool for a developer to understand which rules are currently applied and from which `settings.json` file they originate.
 
 ### 2. `settings.json` Structure for Permissions
+
 Permission rules are defined within the `permissions` object in `settings.json`. The rules are applied in a strict precedence order: `deny` > `ask` > `allow`.
 
-| Key | Type | Description | Precedence |
-| :--- | :--- | :--- | :--- |
-| `deny` | `string[]` | Rules that permanently prevent tool use. | Highest |
-| `ask` | `string[]` | Rules that always prompt the user for confirmation. | Medium |
-| `allow` | `string[]` | Rules that permit tool use without a prompt. | Lowest |
+| Key     | Type       | Description                                         | Precedence |
+| :------ | :--------- | :-------------------------------------------------- | :--------- |
+| `deny`  | `string[]` | Rules that permanently prevent tool use.            | Highest    |
+| `ask`   | `string[]` | Rules that always prompt the user for confirmation. | Medium     |
+| `allow` | `string[]` | Rules that permit tool use without a prompt.        | Lowest     |
 
 **Example `settings.json` for a Team Project:**
+
 ```json
 {
   "permissions": {
@@ -346,10 +355,7 @@ Permission rules are defined within the `permissions` object in `settings.json`.
       "Edit(//etc/*)",
       "WebFetch(domain:production-api.com)"
     ],
-    "ask": [
-      "Bash(git push:*)",
-      "Edit(/src/critical-config.ts)"
-    ],
+    "ask": ["Bash(git push:*)", "Edit(/src/critical-config.ts)"],
     "allow": [
       "Bash(npm run test:*)",
       "Bash(npm run build)",
@@ -363,17 +369,19 @@ Permission rules are defined within the `permissions` object in `settings.json`.
 ```
 
 ### 3. Pre-Allowing Safe Bash Commands
+
 The `Bash` tool supports fine-grained, prefix-based matching for pre-allowing safe commands. This is the recommended method for sharing common, safe operations across a team.
 
-| Rule Format | Description | Example |
-| :--- | :--- | :--- |
-| `Bash(exact command)` | Matches the command exactly. | `Bash(npm run build)` |
-| `Bash(prefix:*)` | Matches any command starting with the specified prefix. The `:*` wildcard must be at the end. | `Bash(npm run test:*)` |
-| `Bash(tool command)` | Allows a specific tool's command. | `Bash(curl http://site.com/:*)` |
+| Rule Format           | Description                                                                                   | Example                         |
+| :-------------------- | :-------------------------------------------------------------------------------------------- | :------------------------------ |
+| `Bash(exact command)` | Matches the command exactly.                                                                  | `Bash(npm run build)`           |
+| `Bash(prefix:*)`      | Matches any command starting with the specified prefix. The `:*` wildcard must be at the end. | `Bash(npm run test:*)`          |
+| `Bash(tool command)`  | Allows a specific tool's command.                                                             | `Bash(curl http://site.com/:*)` |
 
 **Note on Bash Pattern Matching:** The matching is a **prefix match**, not a regular expression or glob. It is sensitive to shell operators like `&&` and will not match if the command is part of a chain (e.g., `Bash(safe-cmd:*)` will not match `safe-cmd && other-cmd`).
 
 ### 4. Configuration Precedence for Team Policies
+
 For a 5+ person team, understanding the settings precedence is crucial for policy enforcement and consistency:
 
 1. **Managed settings** (via Claude.ai admin console)
@@ -445,32 +453,32 @@ The file is placed at the project root to be shared by the team and contains the
 
 **2. Sentry MCP Server Integration**
 
-| Detail | Implementation |
-| :--- | :--- |
-| **Integration Type** | Remote Hosted (OAuth Recommended) |
-| **Configuration Key** | `sentry` |
-| **Configuration Value** | `url` pointing to the Sentry MCP endpoint: `https://mcp.sentry.dev/mcp` |
-| **Tools Provided** | Access to issues, search, project/organization queries, and the ability to invoke **Seer** for automated fixes. |
-| **Claude Code CLI** | `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` |
+| Detail                  | Implementation                                                                                                  |
+| :---------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Integration Type**    | Remote Hosted (OAuth Recommended)                                                                               |
+| **Configuration Key**   | `sentry`                                                                                                        |
+| **Configuration Value** | `url` pointing to the Sentry MCP endpoint: `https://mcp.sentry.dev/mcp`                                         |
+| **Tools Provided**      | Access to issues, search, project/organization queries, and the ability to invoke **Seer** for automated fixes. |
+| **Claude Code CLI**     | `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp`                                             |
 
 **3. BigQuery MCP Server Integration**
 
-| Detail | Implementation |
-| :--- | :--- |
-| **Integration Type** | Local STDIO via MCP Toolbox |
-| **Prerequisites** | Install MCP Toolbox binary, configure [Application Default Credentials (ADC)], and set the `BIGQUERY_PROJECT_ID` environment variable. |
-| **Command/Args** | Executes the local `toolbox` binary: `./tools/mcp-toolbox` with arguments `["--prebuilt", "bigquery", "--stdio"]`. |
-| **Environment Variable** | `BIGQUERY_PROJECT` is required to specify the default Google Cloud Project ID. |
-| **Tools Provided** | `execute_sql`, `list_table_ids`, `ask_data_insights`, `forecast`, and `analyze_contribution`. |
+| Detail                   | Implementation                                                                                                                         |
+| :----------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| **Integration Type**     | Local STDIO via MCP Toolbox                                                                                                            |
+| **Prerequisites**        | Install MCP Toolbox binary, configure [Application Default Credentials (ADC)], and set the `BIGQUERY_PROJECT_ID` environment variable. |
+| **Command/Args**         | Executes the local `toolbox` binary: `./tools/mcp-toolbox` with arguments `["--prebuilt", "bigquery", "--stdio"]`.                     |
+| **Environment Variable** | `BIGQUERY_PROJECT` is required to specify the default Google Cloud Project ID.                                                         |
+| **Tools Provided**       | `execute_sql`, `list_table_ids`, `ask_data_insights`, `forecast`, and `analyze_contribution`.                                          |
 
 **4. Slack MCP Server Integration**
 
-| Detail | Implementation |
-| :--- | :--- |
-| **Integration Type** | Third-Party STDIO (Example: `korotovsky/slack-mcp-server`) |
-| **Prerequisites** | Install the server package (e.g., via `npm` or `npx`) and obtain a Slack Bot Token with necessary permissions. |
-| **Command/Args** | Executes the installed Slack MCP server package: `npx @korotovsky/slack-mcp-server --stdio`. |
-| **Environment Variable** | `SLACK_BOT_TOKEN` is used for authentication. |
+| Detail                   | Implementation                                                                                                 |
+| :----------------------- | :------------------------------------------------------------------------------------------------------------- |
+| **Integration Type**     | Third-Party STDIO (Example: `korotovsky/slack-mcp-server`)                                                     |
+| **Prerequisites**        | Install the server package (e.g., via `npm` or `npx`) and obtain a Slack Bot Token with necessary permissions. |
+| **Command/Args**         | Executes the installed Slack MCP server package: `npx @korotovsky/slack-mcp-server --stdio`.                   |
+| **Environment Variable** | `SLACK_BOT_TOKEN` is used for authentication.                                                                  |
 
 ### Best Practices
 
@@ -500,11 +508,11 @@ https://blog.skyvia.com/mcp-server-for-google-bigquery/
 
 ### Key Findings
 
-*   **Core Automation Tool**: The foundation of the professional setup is the `anthropics/claude-code-action@v1` GitHub Action, which integrates the Claude Code CLI into GitHub workflows for automated code review and implementation [1].
-*   **`/install-github-app` Functionality**: This command, run in the Claude Code terminal, is the recommended "Quick setup" method. It automatically installs the official Claude GitHub App and configures the necessary `ANTHROPIC_API_KEY` secret, simplifying the initial integration [1].
-*   **`@claude` Tagging Trigger**: The interactive workflow is activated by an explicit `@claude` mention in a Pull Request or Issue comment. The workflow YAML uses a complex `if` condition to check the comment body for this tag, ensuring the AI only runs when explicitly invoked [3].
-*   **Standards Enforcement via `CLAUDE.md`**: To replicate a professional team's standards, a `CLAUDE.md` file must be placed in the repository root. This file serves as the project's style guide and context, which Claude automatically respects during code generation and review [1].
-*   **Configuration Flexibility**: The action supports advanced configuration via the `claude_args` input, allowing professional teams to enforce specific models (e.g., `claude-opus-4-5-20251101`), set system prompts, and limit execution time (`--max-turns`) for cost and performance control [1].
+- **Core Automation Tool**: The foundation of the professional setup is the `anthropics/claude-code-action@v1` GitHub Action, which integrates the Claude Code CLI into GitHub workflows for automated code review and implementation [1].
+- **`/install-github-app` Functionality**: This command, run in the Claude Code terminal, is the recommended "Quick setup" method. It automatically installs the official Claude GitHub App and configures the necessary `ANTHROPIC_API_KEY` secret, simplifying the initial integration [1].
+- **`@claude` Tagging Trigger**: The interactive workflow is activated by an explicit `@claude` mention in a Pull Request or Issue comment. The workflow YAML uses a complex `if` condition to check the comment body for this tag, ensuring the AI only runs when explicitly invoked [3].
+- **Standards Enforcement via `CLAUDE.md`**: To replicate a professional team's standards, a `CLAUDE.md` file must be placed in the repository root. This file serves as the project's style guide and context, which Claude automatically respects during code generation and review [1].
+- **Configuration Flexibility**: The action supports advanced configuration via the `claude_args` input, allowing professional teams to enforce specific models (e.g., `claude-opus-4-5-20251101`), set system prompts, and limit execution time (`--max-turns`) for cost and performance control [1].
 
 ### Implementation Details
 
@@ -513,6 +521,7 @@ The core of the professional Claude Code setup is the `anthropics/claude-code-ac
 ### 1. Quick Setup via `/install-github-app`
 
 The `/install-github-app` command, executed within the Claude Code terminal, automates the following steps [1]:
+
 1. Installs the official Claude GitHub App on the selected repository.
 2. Configures the necessary repository secrets, primarily `ANTHROPIC_API_KEY`.
 
@@ -530,8 +539,9 @@ The Claude GitHub App requires the following permissions to function correctly f
 | **Actions** | Read | Required for Claude to read CI results on PRs. |
 
 **Required Repository Secret:**
-*   **Name**: `ANTHROPIC_API_KEY`
-*   **Value**: Your Anthropic API key (e.g., `sk-ant-...`)
+
+- **Name**: `ANTHROPIC_API_KEY`
+- **Value**: Your Anthropic API key (e.g., `sk-ant-...`)
 
 ### 3. Automated Code Review Workflow (`claude.yml`)
 
@@ -582,6 +592,7 @@ jobs:
 The key to the interactive workflow is the `if` condition in the `jobs.claude` section. It ensures the job only runs when an `@claude` mention is present in the body of a new `issue_comment`, `pull_request_review_comment`, or the body/title of a new `issue` [3].
 
 **The `if` condition for `@claude` tagging:**
+
 ```
 (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
 (github.event_name == 'pull_request_review_comment' && contains(github.event.review.body, '@claude')) ||
@@ -593,16 +604,17 @@ The key to the interactive workflow is the `if` condition in the `jobs.claude` s
 For fine-tuning Claude's behavior, the `claude_args` input allows passing command-line arguments to the underlying Claude Code CLI. This is crucial for setting project-wide system prompts and model selection [1].
 
 **Example of using `claude_args`:**
+
 ```yaml
-      - name: Run Claude Code with Custom Args
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: "/review" # Use a slash command for a specific task
-          claude_args: |
-            --system-prompt "You are a senior Python engineer. Focus only on security and performance."
-            --max-turns 5
-            --model claude-opus-4-5-20251101
+- name: Run Claude Code with Custom Args
+  uses: anthropics/claude-code-action@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    prompt: "/review" # Use a slash command for a specific task
+    claude_args: |
+      --system-prompt "You are a senior Python engineer. Focus only on security and performance."
+      --max-turns 5
+      --model claude-opus-4-5-20251101
 ```
 
 ### Best Practices
@@ -636,40 +648,44 @@ https://github.com/anthropics/claude-code-action/blob/main/examples/claude.yml
 
 **1. Test-Driven Development (TDD) Workflow:**
 The recommended TDD loop for Claude Code is:
+
 1.  **Ask Claude to write tests** based on expected input/output pairs, explicitly instructing it not to write mock implementations.
 2.  **Commit the tests** (e.g., using `Bash(git commit:*)` permission).
 3.  **Ask Claude to write code** that passes the newly committed tests, instructing it not to modify the tests. Claude will then iterate (write code, run tests, adjust code) until all tests pass.
 
 **2. Browser/Visual Testing Setup:**
 To enable visual verification for front-end development, Claude must be given a tool to take screenshots. This is typically achieved by integrating a **Puppeteer MCP server**.
-*   **Tool:** `mcp__puppeteer__puppeteer_navigate`
-*   **Workflow:** "Write code, screenshot result, iterate" where Claude compares its output (via screenshot) against a provided visual mock (image file path or pasted image).
-*   **Configuration:** The tool must be added to the allowed list via `/permissions` or by editing `.claude/settings.json`.
+
+- **Tool:** `mcp__puppeteer__puppeteer_navigate`
+- **Workflow:** "Write code, screenshot result, iterate" where Claude compares its output (via screenshot) against a provided visual mock (image file path or pasted image).
+- **Configuration:** The tool must be added to the allowed list via `/permissions` or by editing `.claude/settings.json`.
 
 **3. Automated Verification via Custom Slash Commands:**
 Complex, multi-step verification and fix routines are automated using custom slash commands stored in Markdown files (e.g., `.claude/commands/fix-github-issue.md`).
 
-| File: `.claude/commands/fix-github-issue.md` |
-| :--- |
+| File: `.claude/commands/fix-github-issue.md`           |
+| :----------------------------------------------------- |
 | `Please analyze and fix the GitHub issue: $ARGUMENTS.` |
-| `Follow these steps:` |
-| `1. Use \`gh issue view\` to get the issue details` |
-| `...` |
-| `4. Implement the necessary changes to fix the issue` |
-| `5. **Write and run tests to verify the fix**` |
-| `6. **Ensure code passes linting and type checking**` |
-| `7. Create a descriptive commit message` |
-| `8. Push and create a PR` |
+| `Follow these steps:`                                  |
+| `1. Use \`gh issue view\` to get the issue details`    |
+| `...`                                                  |
+| `4. Implement the necessary changes to fix the issue`  |
+| `5. **Write and run tests to verify the fix**`         |
+| `6. **Ensure code passes linting and type checking**`  |
+| `7. Create a descriptive commit message`               |
+| `8. Push and create a PR`                              |
 
 **4. Multi-Claude Verification Workflow:**
 To replicate a professional team's separation of duties, a multi-Claude workflow is used:
-*   **Instance 1 (The Coder):** Writes the initial code.
-*   **Instance 2 (The Reviewer/QA):** Started in a separate terminal (or after a `/clear`), this instance is instructed to review the first Claude's work, run tests, or perform a subjective code review.
-*   **Instance 3 (The Integrator):** Reads the code and the review feedback, and edits the code based on the feedback.
+
+- **Instance 1 (The Coder):** Writes the initial code.
+- **Instance 2 (The Reviewer/QA):** Started in a separate terminal (or after a `/clear`), this instance is instructed to review the first Claude's work, run tests, or perform a subjective code review.
+- **Instance 3 (The Integrator):** Reads the code and the review feedback, and edits the code based on the feedback.
 
 **5. Contextual Configuration:**
-*   **`CLAUDE.md`:** Used to provide **Testing instructions** and **Code style guidelines** to the LLM's context.
-*   **`.mcp.json`:** Used to share MCP server configurations (e.g., Puppeteer, Sentry) across the entire engineering team, ensuring a consistent toolset for verification.
+
+- **`CLAUDE.md`:** Used to provide **Testing instructions** and **Code style guidelines** to the LLM's context.
+- **`.mcp.json`:** Used to share MCP server configurations (e.g., Puppeteer, Sentry) across the entire engineering team, ensuring a consistent toolset for verification.
 
 ### Best Practices
 
@@ -706,41 +722,49 @@ https://x.com/bcherny/status/2007179850139000872
 The core of Claude Code's multi-session management revolves around two key mechanisms for cross-platform session continuity: the **ampersand (`&`) operator** and the **`--teleport` command** [1].
 
 ### 1. Multi-Session Setup and Coordination
+
 A professional setup involves running multiple parallel sessions across different platforms, each optimized for a specific task [1]:
 
-| Platform | Recommended Use Case | Parallel Instances |
-| :--- | :--- | :--- |
-| **Terminal (CLI)** | Active coding, file edits, running commands, starting long tasks. | 5+ instances (e.g., numbered tabs 1-5) |
-| **Web (`claude.ai/code`)** | Code review, documentation generation, visual diffs, monitoring long-running tasks. | 5-10 sessions |
-| **Mobile (iOS/Android)** | Quick prompts, initiating long tasks, checking progress remotely. | As needed |
+| Platform                   | Recommended Use Case                                                                | Parallel Instances                     |
+| :------------------------- | :---------------------------------------------------------------------------------- | :------------------------------------- |
+| **Terminal (CLI)**         | Active coding, file edits, running commands, starting long tasks.                   | 5+ instances (e.g., numbered tabs 1-5) |
+| **Web (`claude.ai/code`)** | Code review, documentation generation, visual diffs, monitoring long-running tasks. | 5-10 sessions                          |
+| **Mobile (iOS/Android)**   | Quick prompts, initiating long tasks, checking progress remotely.                   | As needed                              |
 
 ### 2. Session Handoff: `&` Operator
+
 The ampersand (`&`) operator is used in the Claude Code CLI to **background a task and hand it off to the web interface** for asynchronous processing [1].
 
 **Command Example:**
+
 ```bash
 # Hand off long-running task to web
 > analyze this entire codebase and generate documentation &
 ```
+
 This command starts the task in the background and makes the session immediately available on the `claude.ai/code` web interface, freeing up the terminal for interactive work [1].
 
 ### 3. Session Teleportation: `--teleport` Command
+
 The `--teleport` command is used to **move an active session back to the terminal** from the web or another device, ensuring context continuity [1].
 
 **Command Example:**
+
 ```bash
 # Teleport session back to terminal
 claude --teleport <session-id>
 ```
+
 The `<session-id>` is a unique identifier (often a UUID) associated with the session, which can be obtained from the web interface or a list of active sessions [1]. This enables **device continuity**, allowing a developer to start a task on a mobile device, monitor it on the web, and then bring it back to their desktop terminal for final interactive steps [1].
 
 ### 4. Shared Knowledge and Configuration
+
 Team-wide efficiency is achieved by checking configuration files into Git, ensuring all parallel sessions and team members operate with the same context and rules [1]:
 
-*   **`CLAUDE.md`:** A shared Markdown file checked into the repository's root that contains project-specific knowledge, style guides, and anti-patterns for Claude to read [1].
-*   **`.claude/commands/`:** Directory for custom, shared slash commands (e.g., `commit-push-pr.md`) that automate common engineering workflows [1].
-*   **`.claude/hooks.json`:** Configuration for automated actions, such as running `npx prettier` after every file edit to enforce code formatting [1].
-*   **`.claude/settings.json`:** Used to pre-allow safe Bash commands, enabling auto-approval for common operations like `git status` and `npm test` [1].
+- **`CLAUDE.md`:** A shared Markdown file checked into the repository's root that contains project-specific knowledge, style guides, and anti-patterns for Claude to read [1].
+- **`.claude/commands/`:** Directory for custom, shared slash commands (e.g., `commit-push-pr.md`) that automate common engineering workflows [1].
+- **`.claude/hooks.json`:** Configuration for automated actions, such as running `npx prettier` after every file edit to enforce code formatting [1].
+- **`.claude/settings.json`:** Used to pre-allow safe Bash commands, enabling auto-approval for common operations like `git status` and `npm test` [1].
 
 ### Best Practices
 
@@ -764,17 +788,18 @@ Team-wide efficiency is achieved by checking configuration files into Git, ensur
 
 ### Key Findings
 
-*   **Plan Mode and Auto-Accept Mode are the core of the professional workflow.** The `Shift+Tab` shortcut cycles between Normal, Auto-Accept (`⏵⏵ accept edits on`), and Plan Mode (`⏸ plan mode on`). The recommended workflow is to start in Plan Mode for analysis and planning, and then switch to Auto-Accept Mode for uninterrupted execution.
-*   **The Plan-First approach is critical for complex tasks.** Claude Code creator Boris Cherny emphasizes starting most sessions in Plan Mode, refining the plan with follow-up questions, and only then switching to Auto-Accept Mode for a "1-shot" implementation, which significantly increases success rate.
-*   **Compounding Engineering is achieved through a shared `CLAUDE.md` file.** Professional teams maintain a version-controlled `CLAUDE.md` to document instances where Claude made a mistake, effectively training the model to avoid those errors in the future and building a collective knowledge base.
-*   **Verification is the single most important factor for quality.** The best practice is to always give Claude a way to verify its work (e.g., running tests, checking UI), which acts as a crucial feedback loop that can 2-3x the quality of the final result.
-*   **Permission Hygiene and Automation are key to efficiency.** Teams use custom slash commands for repetitive tasks (e.g., `/commit-push-pr`) and pre-allow safe commands via the `/permissions` feature and shared `.claude/settings.json` to minimize interruptions.
+- **Plan Mode and Auto-Accept Mode are the core of the professional workflow.** The `Shift+Tab` shortcut cycles between Normal, Auto-Accept (`⏵⏵ accept edits on`), and Plan Mode (`⏸ plan mode on`). The recommended workflow is to start in Plan Mode for analysis and planning, and then switch to Auto-Accept Mode for uninterrupted execution.
+- **The Plan-First approach is critical for complex tasks.** Claude Code creator Boris Cherny emphasizes starting most sessions in Plan Mode, refining the plan with follow-up questions, and only then switching to Auto-Accept Mode for a "1-shot" implementation, which significantly increases success rate.
+- **Compounding Engineering is achieved through a shared `CLAUDE.md` file.** Professional teams maintain a version-controlled `CLAUDE.md` to document instances where Claude made a mistake, effectively training the model to avoid those errors in the future and building a collective knowledge base.
+- **Verification is the single most important factor for quality.** The best practice is to always give Claude a way to verify its work (e.g., running tests, checking UI), which acts as a crucial feedback loop that can 2-3x the quality of the final result.
+- **Permission Hygiene and Automation are key to efficiency.** Teams use custom slash commands for repetitive tasks (e.g., `/commit-push-pr`) and pre-allow safe commands via the `/permissions` feature and shared `.claude/settings.json` to minimize interruptions.
 
 ### Implementation Details
 
 The core of the professional Claude Code setup revolves around three key permission modes, workflow automation, and shared configuration files.
 
 ### 1. Permission Mode Cycling (`Shift+Tab`)
+
 The `Shift+Tab` shortcut is the primary control for permission hygiene, cycling through three modes:
 | Mode | Indicator | Function | Activation |
 | :--- | :--- | :--- | :--- |
@@ -783,6 +808,7 @@ The `Shift+Tab` shortcut is the primary control for permission hygiene, cycling 
 | **Plan Mode** | `⏸ plan mode on` | Read-only mode for safe code analysis, exploration, and detailed plan generation. No file edits or commands are executed. | 2nd `Shift+Tab` press from Normal Mode. |
 
 ### 2. CLI and Default Configuration
+
 - **Start in Plan Mode:** A new session can be explicitly started in Plan Mode using the CLI flag:
   ```bash
   claude --permission-mode plan
@@ -802,11 +828,14 @@ The `Shift+Tab` shortcut is the primary control for permission hygiene, cycling 
   ```
 
 ### 3. PR Planning Workflow
+
 The recommended workflow for complex changes (like refactoring or new features) is a two-stage process:
+
 1.  **Planning (Plan Mode):** Start the session in Plan Mode and prompt Claude with the goal (e.g., `I need to refactor our authentication system to use OAuth2. Create a detailed migration plan.`). Refine the plan with follow-up questions until satisfactory.
 2.  **Execution (Auto-Accept Mode):** Once the plan is solid, switch to Auto-Accept Mode (`Shift+Tab` once) for a "1-shot" execution of the plan.
 
 ### 4. Team Knowledge and Automation
+
 - **Team Knowledge Base:** A shared `CLAUDE.md` file is checked into git and used to document past Claude errors, acting as a guardrail for future sessions.
 - **Custom Slash Commands:** Workflows like creating a commit, pushing, and opening a PR are automated using custom slash commands (e.g., `/commit-push-pr`) stored in the `.claude/commands/` directory. These commands often use inline bash to pre-compute necessary information.
 
@@ -834,10 +863,10 @@ https://www.reddit.com/r/ClaudeAI/comments/1q2c0ne/claude_code_creator_boris_sha
 
 ### Key Findings
 
-*   **Team-wide Documentation and Context:** The core mechanism for sharing context is the **`CLAUDE.md`** file, which is checked into Git and automatically ingested by the agent. It documents code style, repository etiquette, custom bash commands, and developer environment setup, ensuring a consistent operational environment for all agents and engineers [1].
-*   **Compounding Engineering (CE):** This is the key efficiency and learning mechanism, structured as a four-step loop: **Plan → Work → Assess → Compound** [2]. The "Compound" step codifies lessons learned (bugs, performance issues) into agent-readable rules/prompts (e.g., custom slash commands or updates to `CLAUDE.md`), making every change a permanent, shared lesson for the entire team [2].
-*   **Efficiency Tracking and Planning:** Efficiency is maximized by dedicating resources to the "Plan" phase, using Claude's **thinking budget** commands (`think`, `ultrathink`) to allocate more computation time for complex problem-solving. The "Assess" phase uses **parallel subagents** (up to 12) to review code from multiple perspectives (security, performance, complexity) for advanced quality tracking [2].
-*   **Shared Configurations:** Team-wide standardization is achieved by checking agent configuration files (`.claude/settings.json` for tool allowlists and `.mcp.json` for shared Model Context Protocol servers) into source control. This ensures all agents have the same capabilities and access to team tools [1].
+- **Team-wide Documentation and Context:** The core mechanism for sharing context is the **`CLAUDE.md`** file, which is checked into Git and automatically ingested by the agent. It documents code style, repository etiquette, custom bash commands, and developer environment setup, ensuring a consistent operational environment for all agents and engineers [1].
+- **Compounding Engineering (CE):** This is the key efficiency and learning mechanism, structured as a four-step loop: **Plan → Work → Assess → Compound** [2]. The "Compound" step codifies lessons learned (bugs, performance issues) into agent-readable rules/prompts (e.g., custom slash commands or updates to `CLAUDE.md`), making every change a permanent, shared lesson for the entire team [2].
+- **Efficiency Tracking and Planning:** Efficiency is maximized by dedicating resources to the "Plan" phase, using Claude's **thinking budget** commands (`think`, `ultrathink`) to allocate more computation time for complex problem-solving. The "Assess" phase uses **parallel subagents** (up to 12) to review code from multiple perspectives (security, performance, complexity) for advanced quality tracking [2].
+- **Shared Configurations:** Team-wide standardization is achieved by checking agent configuration files (`.claude/settings.json` for tool allowlists and `.mcp.json` for shared Model Context Protocol servers) into source control. This ensures all agents have the same capabilities and access to team tools [1].
 
 ### Implementation Details
 
@@ -848,14 +877,17 @@ The core of the shared setup is the `CLAUDE.md` file, which is checked into the 
 # CLAUDE.md - Team Standards and Context
 
 ## Code Style Guidelines
+
 - Use ES modules (import/export) syntax, not CommonJS (require).
 - Destructure imports when possible (e.g., import { foo } from 'bar').
 
 ## Repository Etiquette
+
 - Branch naming convention: feature/JIRA-123-short-description
 - Prefer rebase over merge for pull requests.
 
 ## Custom Bash Commands
+
 - npm run build: Build the project for production.
 - npm run typecheck: Run the team's standard typechecker.
 ```
@@ -863,67 +895,69 @@ The core of the shared setup is the `CLAUDE.md` file, which is checked into the 
 **2. Shared Agent and Tool Configuration**
 Agent permissions and tool access are standardized across the team by checking configuration files into Git.
 
-*   **Permissions (`.claude/settings.json`):**
-    ```json
-    {
-      "allowedTools": [
-        "Edit",
-        "Bash(git commit:*)",
-        "mcp__puppeteer__puppeteer_navigate"
-      ]
-    }
-    ```
-*   **MCP Server Configuration (`.mcp.json`):**
-    ```json
-    {
-      "servers": [
-        {
-          "name": "sentry",
-          "config": {
-            "url": "https://sentry.team.com/api"
-          }
+- **Permissions (`.claude/settings.json`):**
+  ```json
+  {
+    "allowedTools": [
+      "Edit",
+      "Bash(git commit:*)",
+      "mcp__puppeteer__puppeteer_navigate"
+    ]
+  }
+  ```
+- **MCP Server Configuration (`.mcp.json`):**
+  ```json
+  {
+    "servers": [
+      {
+        "name": "sentry",
+        "config": {
+          "url": "https://sentry.team.com/api"
         }
-      ]
-    }
-    ```
+      }
+    ]
+  }
+  ```
 
 **3. Compounding Engineering Rules (Custom Slash Commands)**
 Learnings are codified as custom slash commands in the `.claude/commands` folder, making them available team-wide.
 
-*   **File:** `.claude/commands/fix-github-issue.md`
-*   **Command:** `/project:fix-github-issue <issue_number>`
-*   **Content:**
-    ```markdown
-    Please analyze and fix the GitHub issue: $ARGUMENTS.
+- **File:** `.claude/commands/fix-github-issue.md`
+- **Command:** `/project:fix-github-issue <issue_number>`
+- **Content:**
 
-    Follow these steps:
-    1. Use `gh issue view` to get the issue details.
-    2. Understand the problem described in the issue.
-    3. Search the codebase for relevant files.
-    4. Implement the necessary changes to fix the issue.
-    5. Write and run tests to verify the fix.
-    6. Ensure code passes linting and type checking (Compounding Rule: Always run typecheck before commit).
-    7. Create a descriptive commit message.
-    8. Push and create a PR.
-    ```
+  ```markdown
+  Please analyze and fix the GitHub issue: $ARGUMENTS.
+
+  Follow these steps:
+
+  1. Use `gh issue view` to get the issue details.
+  2. Understand the problem described in the issue.
+  3. Search the codebase for relevant files.
+  4. Implement the necessary changes to fix the issue.
+  5. Write and run tests to verify the fix.
+  6. Ensure code passes linting and type checking (Compounding Rule: Always run typecheck before commit).
+  7. Create a descriptive commit message.
+  8. Push and create a PR.
+  ```
 
 **4. Shared Code Hygiene Enforcement (Git Hooks)**
 While not a Claude Code feature, professional teams enforce code hygiene via shared Git hooks. Using the `pre-commit` framework with a shared configuration file is a common approach.
 
-*   **File:** `.pre-commit-config.yaml`
-    ```yaml
-    repos:
-      - repo: https://github.com/pre-commit/pre-commit-hooks
-        rev: v4.4.0
-        hooks:
-          - id: trailing-whitespace
-          - id: end-of-file-fixer
-          - id: check-yaml
-      - repo: https://github.com/psf/black
-        rev: 23.3.0
-        hooks:
-          - id: black
-    ```
+- **File:** `.pre-commit-config.yaml`
+  ```yaml
+  repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v4.4.0
+      hooks:
+        - id: trailing-whitespace
+        - id: end-of-file-fixer
+        - id: check-yaml
+    - repo: https://github.com/psf/black
+      rev: 23.3.0
+      hooks:
+        - id: black
+  ```
 
 ### Best Practices
 
@@ -944,4 +978,3 @@ https://naveira.dev/posts/enhancing-engineering-practices-centralized-eslint-con
 **Confidence Level:** High
 
 ---
-
