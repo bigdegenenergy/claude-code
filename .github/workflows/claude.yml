@@ -48,12 +48,15 @@ jobs:
   claude-assistant:
     name: Claude Assistant
     # Only run if @claude is mentioned OR it's an automation trigger
+    # Exclude bot users (Copilot, dependabot, etc.) to prevent automated loops
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && github.event.action == 'assigned' && github.event.assignee.login == 'claude') ||
-      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'claude')
+      github.event.sender.type != 'Bot' && (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+        (github.event_name == 'issues' && github.event.action == 'assigned' && github.event.assignee.login == 'claude') ||
+        (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'claude')
+      )
 
     runs-on: ubuntu-latest
 
