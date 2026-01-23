@@ -18,6 +18,12 @@
 # - "@claude explain how the auth flow works" → Haiku (simple)
 # - "@claude add tests for the user service" → Opus (complex)
 # - "@claude what does this function do?" → Haiku (simple)
+#
+# SECURITY NOTES:
+# - Script Injection Prevention: ALL user inputs (comment bodies, titles, etc.)
+#   MUST be passed to shell scripts via environment variables, never interpolated
+#   directly with ${{ github.event.* }}. See "Classify task complexity" step for
+#   the correct pattern: env var → shell variable → command argument.
 
 name: Claude Code Assistant
 
@@ -132,6 +138,8 @@ jobs:
         id: classify
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # SECURITY: Pass user input via env var to prevent script injection
+          # NEVER use ${{ github.event.comment.body }} directly in shell scripts
           COMMENT_BODY: ${{ steps.extract-comment.outputs.comment_body }}
         run: |
           # Use Haiku to classify the task complexity
@@ -194,6 +202,8 @@ jobs:
 
           # MCP servers for extended capabilities (web research, etc.)
           # fetch: Read web pages and documentation (no API key needed)
+          #   ⚠️ SECURITY: Enables arbitrary HTTP requests (SSRF risk in CI/CD)
+          #   Only safe if runner is network-isolated from internal resources
           # brave-search: Web search (requires BRAVE_API_KEY secret)
           mcp_config: |
             {

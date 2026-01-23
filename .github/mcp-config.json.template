@@ -1,5 +1,6 @@
 {
   "mcpServers": {
+    "_comment_fetch_security": "⚠️ SSRF RISK: 'fetch' allows arbitrary HTTP requests. See securityWarnings section below. Only enable in network-isolated environments.",
     "fetch": {
       "command": "npx",
       "args": ["-y", "@anthropics/mcp-server-fetch@0.1.0"],
@@ -69,5 +70,9 @@
     "workflow": "Reference in claude-code-action using mcp_config input",
     "versions": "Package versions are pinned to prevent supply chain attacks. Update periodically.",
     "web-research": "For web research, use 'fetch' (no API key) or 'brave-search' (requires BRAVE_API_KEY)"
+  },
+  "securityWarnings": {
+    "fetch-ssrf-risk": "⚠️ SECURITY: The 'fetch' server allows arbitrary HTTP GET requests. In CI/CD environments or on developer machines with access to internal networks, this poses an SSRF (Server-Side Request Forgery) risk. A malicious or compromised prompt could cause the agent to access internal metadata services (e.g., cloud instance metadata at 169.254.169.254) or other internal network resources. MITIGATION: (1) Use network isolation for CI runners, (2) Consider removing this server if not needed, (3) Run in sandboxed environments only, (4) Be cautious with untrusted prompts.",
+    "general": "Always review MCP server capabilities before enabling them. Each server extends the agent's reach and should be evaluated for your security posture."
   }
 }
