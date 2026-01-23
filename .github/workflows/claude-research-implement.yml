@@ -218,10 +218,26 @@ jobs:
               per_page: 30
             });
 
-            // Find the most recent research summary
-            const researchComment = comments.reverse().find(c =>
-              c.body && c.body.includes('## Research Summary')
-            );
+            // Find the most recent research summary from a trusted source
+            // SECURITY: Only accept plans from:
+            // 1. Bot accounts (github-actions[bot], claude-code-action)
+            // 2. Users with maintainer/admin permissions
+            const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const researchComment = comments.reverse().find(c => {
+              if (!c.body || !c.body.includes('## Research Summary')) {
+                return false;
+              }
+              // Trust bot accounts (these are from the research phase)
+              if (c.user.type === 'Bot' || c.user.login.includes('[bot]')) {
+                return true;
+              }
+              // Trust maintainers/admins who might manually post a plan
+              if (trustedAssociations.includes(c.author_association)) {
+                return true;
+              }
+              console.log(`Skipping research summary from untrusted user: ${c.user.login} (${c.author_association})`);
+              return false;
+            });
 
             if (researchComment) {
               core.setOutput('has_plan', 'true');
