@@ -194,6 +194,40 @@ jobs:
           fetch-depth: 0  # Full history for better context
           token: ${{ secrets.GH_TOKEN }}
 
+      - name: Generate MCP config
+        if: steps.check-perms.outputs.has_access == 'true'
+        id: mcp-config
+        env:
+          # SECURITY: Pass secrets via env vars to avoid shell injection and ensure
+          # proper escaping when generating JSON config file
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+        run: |
+          # Generate MCP config file at runtime with proper JSON escaping
+          # This avoids fragile inline JSON with interpolated secrets
+          MCP_CONFIG_FILE="${RUNNER_TEMP}/mcp-config.json"
+
+          # Use jq for safe JSON generation with proper escaping of special characters
+          jq -n \
+            --arg brave_key "$BRAVE_API_KEY" \
+            '{
+              "mcpServers": {
+                "fetch": {
+                  "command": "npx",
+                  "args": ["-y", "@anthropics/mcp-server-fetch@0.1.0"]
+                },
+                "brave-search": {
+                  "command": "npx",
+                  "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
+                  "env": {
+                    "BRAVE_API_KEY": $brave_key
+                  }
+                }
+              }
+            }' > "$MCP_CONFIG_FILE"
+
+          echo "mcp_config_path=$MCP_CONFIG_FILE" >> $GITHUB_OUTPUT
+          echo "Generated MCP config at: $MCP_CONFIG_FILE"
+
       - name: Run Claude Code Action
         if: steps.check-perms.outputs.has_access == 'true'
         uses: anthropics/claude-code-action@v1
@@ -203,14 +237,14 @@ jobs:
           github_token: ${{ secrets.GH_TOKEN }}
 
           # CLI arguments for Claude Code
-          # - MCP servers passed via --mcp-config for web research capabilities
+          # - MCP config generated at runtime (avoids fragile inline JSON with secrets)
           #   ⚠️ SECURITY: fetch server enables arbitrary HTTP requests (SSRF risk in CI/CD)
           #   Only safe if runner is network-isolated from internal resources
           # - Model selected by Haiku classifier
           claude_args: |
             --max-turns 50
             --model ${{ steps.classify.outputs.selected_model }}
-            --mcp-config '{"mcpServers":{"fetch":{"command":"npx","args":["-y","@anthropics/mcp-server-fetch@0.1.0"]},"brave-search":{"command":"npx","args":["-y","@modelcontextprotocol/server-brave-search@0.6.2"],"env":{"BRAVE_API_KEY":"${{ secrets.BRAVE_API_KEY }}"}}}}'
+            --mcp-config ${{ steps.mcp-config.outputs.mcp_config_path }}
 
       - name: Post model selection info (debug)
         if: steps.check-perms.outputs.has_access == 'true' && github.event_name == 'issue_comment'
