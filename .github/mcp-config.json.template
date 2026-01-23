@@ -2,7 +2,7 @@
   "mcpServers": {
     "github": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "args": ["-y", "@modelcontextprotocol/server-github@2025.4.8"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GH_PAT}"
       },
@@ -10,17 +10,17 @@
     },
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.1.14", "/workspace"],
       "description": "Extended filesystem operations"
     },
     "memory": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "args": ["-y", "@modelcontextprotocol/server-memory@2025.11.25"],
       "description": "Persistent memory across sessions"
     },
     "postgres": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.2"],
       "env": {
         "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}"
       },
@@ -28,7 +28,7 @@
     },
     "slack": {
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-slack"],
+      "args": ["-y", "@modelcontextprotocol/server-slack@2025.4.25"],
       "env": {
         "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
       },
@@ -36,22 +36,12 @@
     },
     "puppeteer": {
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-puppeteer"],
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer@2025.5.12"],
       "description": "Browser automation for testing"
-    },
-    "fetch": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"],
-      "description": "HTTP fetch for external APIs"
-    },
-    "sqlite": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./data/local.db"],
-      "description": "SQLite database for local storage"
     },
     "brave-search": {
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-brave-search"],
+      "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
       "env": {
         "BRAVE_API_KEY": "${BRAVE_API_KEY}"
       },
@@ -59,7 +49,7 @@
     },
     "sentry": {
       "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-sentry"],
+      "args": ["-y", "@sentry/mcp-server@0.28.0"],
       "env": {
         "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
         "SENTRY_ORG": "${SENTRY_ORG}"
@@ -71,6 +61,7 @@
     "usage": "Copy this file to .github/mcp-config.json and replace ${...} with actual secrets",
     "secrets": "Add secrets to GitHub repository settings",
     "selective": "Remove servers you don't need to reduce attack surface",
-    "workflow": "Reference in claude-code-action using mcp_config input"
+    "workflow": "Reference in claude-code-action using mcp_config input",
+    "versions": "Package versions are pinned to prevent supply chain attacks. Update periodically."
   }
 }

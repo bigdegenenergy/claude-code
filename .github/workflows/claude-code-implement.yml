@@ -245,7 +245,7 @@ jobs:
                 "temperature": 0.1,
                 "system": $system,
                 "messages": [{"role": "user", "content": $user}]
-              }')"
+              }')")
 
           echo "Claude Haiku response: $RESPONSE"
 
