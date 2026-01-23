@@ -145,7 +145,7 @@ jobs:
                 "model": "claude-haiku-4-5-20251001",
                 "max_tokens": 100,
                 "temperature": 0,
-                "system": "You classify GitHub comments to determine which AI model should handle them. Output ONLY a JSON object with no markdown.\n\nClassify as \"opus\" (complex) if the task involves:\n- Writing, implementing, or creating code\n- Planning, architecting, or designing\n- Reviewing, auditing, or debugging code\n- Refactoring or fixing bugs\n- Adding tests or features\n- Any task requiring code changes\n\nClassify as \"haiku\" (simple) if the task involves:\n- Explaining or describing existing code\n- Answering questions (what, how, where, why)\n- Summarizing or listing information\n- Finding or showing existing content\n- Quick lookups or clarifications\n\nOutput format: {\"model\": \"opus\" or \"haiku\", \"reason\": \"brief explanation\"}",
+                "system": "You are a task classifier. Return ONLY valid JSON. No markdown code fences. No preamble. No explanations outside the JSON.\n\nYour response must be a single JSON object starting with { and ending with }.\n\nClassify as \"opus\" (complex) if the task involves:\n- Writing, implementing, or creating code\n- Planning, architecting, or designing\n- Reviewing, auditing, or debugging code\n- Refactoring or fixing bugs\n- Adding tests or features\n- Any task requiring code changes\n\nClassify as \"haiku\" (simple) if the task involves:\n- Explaining or describing existing code\n- Answering questions (what, how, where, why)\n- Summarizing or listing information\n- Finding or showing existing content\n- Quick lookups or clarifications\n\nOutput format: {\"model\": \"opus\" or \"haiku\", \"reason\": \"brief explanation\"}\n\nIMPORTANT: Do not wrap your response in ```json or ``` markers. Return raw JSON only.",
                 "messages": [{"role": "user", "content": ("Classify this request:\n\n" + $comment)}]
               }')")
 
@@ -161,8 +161,11 @@ jobs:
             exit 0
           fi
 
-          # Parse the JSON (handle potential markdown fences)
-          CLEAN_TEXT=$(echo "$TEXT" | sed 's/```json//g' | sed 's/```//g' | tr -d '\n')
+          # Parse the JSON (extract JSON object if wrapped in markdown or text)
+          # First try to extract a JSON object from the text using grep
+          JSON_MATCH=$(echo "$TEXT" | grep -oP '\{[^{}]*"model"[^{}]*\}' || echo "$TEXT")
+          # Remove any remaining markdown fences
+          CLEAN_TEXT=$(echo "$JSON_MATCH" | sed 's/```json//g' | sed 's/```//g' | tr -d '\n')
           MODEL_CHOICE=$(echo "$CLEAN_TEXT" | jq -r '.model // "opus"')
           REASON=$(echo "$CLEAN_TEXT" | jq -r '.reason // "No reason provided"')
 
