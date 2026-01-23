@@ -1,5 +1,18 @@
 {
   "mcpServers": {
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@anthropics/mcp-server-fetch@0.1.0"],
+      "description": "Fetch and read web pages, APIs, and documentation"
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "description": "Web search via Brave Search API"
+    },
     "github": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-github@2025.4.8"],
@@ -39,14 +52,6 @@
       "args": ["-y", "@modelcontextprotocol/server-puppeteer@2025.5.12"],
       "description": "Browser automation for testing"
     },
-    "brave-search": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
-      "env": {
-        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-      },
-      "description": "Web search via Brave Search API"
-    },
     "sentry": {
       "command": "npx",
       "args": ["-y", "@sentry/mcp-server@0.28.0"],
@@ -62,6 +67,7 @@
     "secrets": "Add secrets to GitHub repository settings",
     "selective": "Remove servers you don't need to reduce attack surface",
     "workflow": "Reference in claude-code-action using mcp_config input",
-    "versions": "Package versions are pinned to prevent supply chain attacks. Update periodically."
+    "versions": "Package versions are pinned to prevent supply chain attacks. Update periodically.",
+    "web-research": "For web research, use 'fetch' (no API key) or 'brave-search' (requires BRAVE_API_KEY)"
   }
 }

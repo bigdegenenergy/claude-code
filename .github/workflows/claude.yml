@@ -189,6 +189,26 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
+          # MCP servers for extended capabilities (web research, etc.)
+          # fetch: Read web pages and documentation (no API key needed)
+          # brave-search: Web search (requires BRAVE_API_KEY secret)
+          mcp_config: |
+            {
+              "mcpServers": {
+                "fetch": {
+                  "command": "npx",
+                  "args": ["-y", "@anthropics/mcp-server-fetch@0.1.0"]
+                },
+                "brave-search": {
+                  "command": "npx",
+                  "args": ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"],
+                  "env": {
+                    "BRAVE_API_KEY": "${{ secrets.BRAVE_API_KEY }}"
+                  }
+                }
+              }
+            }
+
           # CLI arguments for Claude Code - model selected by Haiku classifier
           claude_args: |
             --max-turns 50
