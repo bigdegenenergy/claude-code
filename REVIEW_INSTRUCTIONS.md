@@ -5,27 +5,27 @@
 ```json
 {
   "review": {
-    "summary": "The workflow updates correctly implement bot exclusion. However, the switch to `shlex.quote` in the validators introduces critical cross-platform compatibility issues (specifically on Windows) and likely introduces a regression where commit messages are unnecessarily wrapped in literal quotes.",
-    "decision": "REQUEST_CHANGES"
+    "summary": "The transition to generating the MCP configuration at runtime using `jq` is a strong security improvement, effectively preventing shell injection and accidental secret leakage. The logic appears sound, though the use of unpinned `npx` dependencies warrants attention.",
+    "decision": "APPROVE"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "critical",
-      "file": ".claude/hooks/validators.py",
-      "line": 48,
-      "title": "Windows Incompatibility with shlex.quote",
-      "description": "`shlex.quote` produces POSIX-compliant single-quoted strings (e.g., `'msg'`). Windows `cmd.exe` does not treat single quotes as quoting characters. If this toolkit runs on Windows, this function fails to sanitize inputs correctly against injection and will pass literal quotes to the command, potentially breaking functionality.",
-      "suggestion": "If `shell=True` usage is required, use platform-specific escaping or `subprocess.list2cmdline` for Windows. Highly recommended to refactor the caller to use `subprocess.run` with a list of arguments (`shell=False`), which requires no escaping."
+      "severity": "important",
+      "file": ".github/workflows/claude.yml",
+      "line": 0,
+      "title": "Pin runtime dependencies in npx commands",
+      "description": "The workflow uses `npx` to execute `@anthropics/mcp-server-fetch` and `@modelcontextprotocol/server-brave-search` without version constraints. This pulls the latest version on every run, creating a supply chain risk if a malicious version is published, and potentially breaking CI if a breaking change is released.",
+      "suggestion": "Pin the package versions in the `jq` arguments (e.g., `npx -y @anthropics/mcp-server-fetch@0.1.0`) to ensure reproducible and secure builds."
     },
     {
       "id": 2,
-      "severity": "important",
-      "file": ".claude/hooks/validators.py",
-      "line": 48,
-      "title": "Regression: Literal Quotes in Commit Messages",
-      "description": "The function now returns a string wrapped in quotes. If the consumer of this function passes the result as an argument in a list to `subprocess.run` (the standard secure practice), the commit message will literally include the quotes (e.g., `'Initial commit'`). This differs from the previous behavior which likely just sanitized the content.",
-      "suggestion": "Check call sites. If passing to a list-based subprocess call, remove `shlex.quote` and return the raw string (optionally filtering control characters). If passing to a shell string, address the Windows compatibility issue."
+      "severity": "suggestion",
+      "file": ".github/workflows/claude.yml",
+      "line": 0,
+      "title": "Verify jq filter syntax for hyphenated keys",
+      "description": "Ensure the `jq` filter correctly handles the hyphen in `brave-search`. In standard `jq` object construction, keys with special characters must be quoted (e.g., `\"brave-search\": ...`). Unquoted keys with hyphens are interpreted as subtraction operations.",
+      "suggestion": "Check that the generated `jq` command quotes the `\"brave-search\"` key to prevent syntax errors during workflow execution."
     }
   ]
 }
