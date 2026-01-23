@@ -5,27 +5,36 @@
 ```json
 {
   "review": {
-    "summary": "This PR correctly addresses the Confused Deputy vulnerability by restricting workflow triggers to trusted users and improves supply chain security by pinning MCP server versions. The workflow syntax fix and artifact cleanup are also verified. However, a likely typo in the pinned version for the filesystem server needs to be corrected to prevent installation failures.",
+    "summary": "This PR switches the underlying model for a majority of agents and commands to `haiku`. While this is appropriate for text-processing tasks like `release-notes` or `commit-push-pr`, it presents significant risks for agents tasked with architecture, infrastructure, and complex code manipulation. Haiku generally lacks the reasoning depth required for reliable refactoring, merge conflict resolution, and secure infrastructure generation compared to Sonnet or Opus.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "critical",
-      "file": ".github/mcp-config.json.template",
-      "line": 1,
-      "title": "Invalid future-dated package version",
-      "description": "The version `2026.1.14` pinned for `@modelcontextprotocol/server-filesystem` appears to be a typo (future year). Pinning a non-existent future version will cause the `npx` command to fail during template initialization.",
-      "suggestion": "Change `2026.1.14` to the intended version (likely `2025.1.14` or the latest valid release)."
+      "severity": "important",
+      "file": ".claude/agents/infrastructure-engineer.md",
+      "line": 4,
+      "title": "Insufficient model capability for infrastructure security",
+      "description": "The `infrastructure-engineer` and `kubernetes-architect` agents are being downgraded to `haiku`. Generating Infrastructure as Code (Terraform, K8s manifests) is a high-stakes task where subtle hallucinations can lead to security vulnerabilities (e.g., overly permissive IAM roles, exposed ports) or production outages. Haiku is optimized for speed and cost, not the high-precision reasoning required for infrastructure architecture.",
+      "suggestion": "Use `claude-3-5-sonnet` (or `sonnet`) for infrastructure and architecture agents to ensure a baseline of reasoning capability and safety, rather than `haiku`."
     },
     {
       "id": 2,
+      "severity": "important",
+      "file": ".claude/commands/refactor.md",
+      "line": 4,
+      "title": "High risk of logic regression in code modification commands",
+      "description": "Commands such as `refactor`, `merge-resolve`, and `devops-troubleshooter` involve modifying existing logic or debugging complex systems. Haiku has lower reasoning capabilities and context adherence than Opus/Sonnet, increasing the risk of introducing subtle logic bugs or failing to resolve conflicts correctly.",
+      "suggestion": "Revert these specific commands to `claude-3-5-sonnet` or `opus` to maintain reliability in complex code manipulation tasks."
+    },
+    {
+      "id": 3,
       "severity": "suggestion",
-      "file": ".github/mcp-config.json.template",
-      "line": 1,
-      "title": "Verify Sentry package availability",
-      "description": "The configuration migrates the Sentry package to the `@sentry` scope. Ensure that the specific package name used (e.g., `@sentry/mcp-server-sentry`) is published and public on npm, as scope migrations often involve package renaming.",
-      "suggestion": "Verify the existence of the package with `npm view @sentry/mcp-server-sentry` (or the specific name used) before merging."
+      "file": ".claude/agents/python-pro.md",
+      "line": 4,
+      "title": "Model mismatch for 'Pro' agents",
+      "description": "The `python-pro` and `typescript-pro` agents are explicitly defined as experts. Switching them to `haiku` (the most lightweight model) contradicts the persona and reduces the quality of generated code, particularly for advanced type handling or idiomatic patterns.",
+      "suggestion": "Consider using `sonnet` for language-specific expert agents to balance performance with coding proficiency."
     }
   ]
 }
