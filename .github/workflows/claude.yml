@@ -1,0 +1,133 @@
+# Claude Code Assistant - Main @claude Integration
+#
+# This workflow enables Claude Code Web-like functionality through GitHub comments.
+# It uses the official anthropics/claude-code-action@v1 action.
+#
+# Triggers:
+# - @claude mentions in PR/issue comments
+# - @claude mentions in PR review comments
+# - Issue assignment to 'claude' or 'claude-implement' label
+#
+# Examples:
+# - "@claude review this PR"
+# - "@claude implement this feature"
+# - "@claude explain how the auth flow works"
+# - "@claude add tests for the user service"
+# - "@claude refactor this to use async/await"
+
+name: Claude Code Assistant
+
+on:
+  # Trigger on @claude mentions in comments
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+  # Trigger on PR reviews
+  pull_request_review:
+    types: [submitted]
+
+  # Trigger on issue assignment/label for auto-implementation
+  issues:
+    types: [opened, assigned, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read  # Allows Claude to see workflow/test results
+  id-token: write  # Required for anthropics/claude-code-action OIDC
+
+# Concurrency: Allow only one Claude assistant per issue/PR
+concurrency:
+  group: claude-assistant-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  claude-assistant:
+    name: Claude Assistant
+    # Only run if @claude is mentioned OR it's an automation trigger
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && github.event.action == 'assigned' && github.event.assignee.login == 'claude') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'claude')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check permissions
+        id: check-perms
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the actor (commenter/trigger user)
+            const actor = context.actor;
+
+            // Skip bots
+            if (actor.includes('[bot]') || actor.endsWith('-bot')) {
+              core.setOutput('has_access', 'false');
+              console.log(`Skipping bot: ${actor}`);
+              return;
+            }
+
+            // Check author association for comment triggers
+            let authorAssociation = 'NONE';
+            if (context.eventName === 'issue_comment') {
+              authorAssociation = context.payload.comment.author_association;
+            } else if (context.eventName === 'pull_request_review_comment') {
+              authorAssociation = context.payload.comment.author_association;
+            } else if (context.eventName === 'pull_request_review') {
+              authorAssociation = context.payload.review.author_association;
+            } else if (context.eventName === 'issues') {
+              authorAssociation = context.payload.issue.author_association;
+            }
+
+            const allowedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+
+            if (!allowedAssociations.includes(authorAssociation)) {
+              core.setOutput('has_access', 'false');
+              console.log(`Access denied: ${actor} has association '${authorAssociation}'`);
+              return;
+            }
+
+            core.setOutput('has_access', 'true');
+            console.log(`Access granted: ${actor} has association '${authorAssociation}'`);
+
+      - name: Checkout code
+        if: steps.check-perms.outputs.has_access == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better context
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Run Claude Code Action
+        if: steps.check-perms.outputs.has_access == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Custom trigger phrase (optional - default is @claude)
+          # trigger_phrase: "@ai-dev"
+
+          # CLI arguments for Claude Code
+          claude_args: |
+            --max-turns 50
+            --model claude-opus-4-5-20251101
+
+      - name: Post access denied comment
+        if: steps.check-perms.outputs.has_access == 'false' && github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const actor = context.actor;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `@${actor} Sorry, only repository collaborators can trigger Claude Code assistant.`
+            });

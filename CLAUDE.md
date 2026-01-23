@@ -27,8 +27,9 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 - **18 Specialized Agents** for different development domains
 - **11 Auto-Discovered Skills** for domain expertise
-- **22 Slash Commands** for workflows and orchestration
+- **26 Slash Commands** for workflows and orchestration
 - **8 Automated Hooks** for quality gates and friction elimination
+- **6 GitHub Action Workflows** for AI-powered PR review and implementation
 
 ## Environment Modes
 
@@ -65,6 +66,15 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 | **Refactorer**  | `/simplify`        | After implementing features          |
 | **DevOps**      | `/ship`            | When ready to commit and PR          |
 | **Deploy**      | `/deploy-staging`  | Build and deploy to staging          |
+
+#### Analysis & Investigation
+
+| Role             | Command         | When to Use                            |
+| ---------------- | --------------- | -------------------------------------- |
+| **Researcher**   | `/research`     | Before implementation, explore options |
+| **Debugger**     | `/debug`        | Systematic bug investigation           |
+| **Test Writer**  | `/add-tests`    | Add comprehensive test coverage        |
+| **Deploy Check** | `/deploy-check` | Pre-deployment readiness verification  |
 
 #### Orchestration Workflows
 
@@ -169,6 +179,7 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 ```bash
 # Planning & Architecture
 /plan                    # Think before coding
+/research                # Research before implementing
 /feature-workflow        # Full-stack feature orchestration
 
 # Autonomous Development
@@ -177,8 +188,13 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 # Quality & Security
 /qa                      # Run tests, fix until green
 /simplify                # Clean up code
+/add-tests               # Add comprehensive test coverage
 /security-hardening      # Security audit workflow
 /codebase-audit          # Comprehensive audit
+
+# Analysis & Debugging
+/debug                   # Systematic bug investigation
+/deploy-check            # Pre-deployment readiness check
 
 # Git Operations
 /ship                    # Commit, push, create PR
@@ -270,17 +286,91 @@ Use "be critical" and "be honest" in prompts:
 
 The `.github/workflows/` directory contains automated CI/CD workflows:
 
-| Workflow                    | Purpose                                            |
-| --------------------------- | -------------------------------------------------- |
-| `ci.yml`                    | Linting, config validation, docs checks            |
-| `security.yml`              | Secret scanning, security analysis, PII detection  |
-| `pii-scan-content.yml`      | Scans issues/PRs for personal information          |
-| `gemini-pr-review-plus.yml` | AI-powered code review with structured TOML output |
-| `pr-review-prompt.yml`      | Posts Claude Code prompt after Gemini review       |
-| `claude-code-implement.yml` | Implements review suggestions via Claude Code SDK  |
-| `agent-reminder.yml`        | Reminds agents to read source repo                 |
-| `label-agent-prs.yml`       | Auto-labels AI-generated PRs                       |
-| `notify-on-failure.yml`     | Sends failure notifications                        |
+### Core CI/CD
+
+| Workflow                | Purpose                                           |
+| ----------------------- | ------------------------------------------------- |
+| `ci.yml`                | Linting, config validation, docs checks           |
+| `security.yml`          | Secret scanning, security analysis, PII detection |
+| `pii-scan-content.yml`  | Scans issues/PRs for personal information         |
+| `notify-on-failure.yml` | Sends failure notifications                       |
+
+### AI-Powered Review & Implementation
+
+| Workflow                        | Purpose                                           |
+| ------------------------------- | ------------------------------------------------- |
+| `gemini-pr-review-plus.yml`     | AI code review with structured JSON output        |
+| `claude-code-implement.yml`     | Implements review suggestions via Claude Code SDK |
+| `claude.yml`                    | **@claude mentions** in PR/issue comments         |
+| `claude-security-review.yml`    | Security-focused review on sensitive file changes |
+| `claude-auto-implement.yml`     | Auto-implement from `claude-implement` label      |
+| `claude-research-implement.yml` | Two-phase research + implement pipeline           |
+
+### Automation & Labels
+
+| Workflow              | Purpose                            |
+| --------------------- | ---------------------------------- |
+| `agent-reminder.yml`  | Reminds agents to read source repo |
+| `label-agent-prs.yml` | Auto-labels AI-generated PRs       |
+
+## Claude Code Action Integration
+
+The toolkit includes full integration with `anthropics/claude-code-action@v1` for GitHub-native AI assistance.
+
+### @claude Mention Commands
+
+Mention `@claude` in any PR or issue comment to trigger Claude:
+
+| Command                                       | What Claude Does                                  |
+| --------------------------------------------- | ------------------------------------------------- |
+| `@claude review this PR`                      | Analyzes changes, suggests improvements           |
+| `@claude implement this feature`              | Writes code based on description, creates commits |
+| `@claude fix the bug in auth.py`              | Locates and fixes the issue                       |
+| `@claude explain how the payment flow works`  | Analyzes codebase and explains                    |
+| `@claude add unit tests for the user service` | Generates tests                                   |
+| `@claude refactor this to use async/await`    | Refactors code                                    |
+| `@claude research [topic]`                    | Researches and creates implementation plan        |
+| `@claude implement plan`                      | Executes the research plan (after research)       |
+
+### Auto-Implementation from Issues
+
+1. Create an issue with a clear description
+2. Add the `claude-implement` label
+3. Claude automatically:
+   - Creates a feature branch
+   - Implements the feature (TDD approach)
+   - Opens a PR linking to the issue
+
+### Security Review Triggers
+
+Automatic security review when PRs modify:
+
+- Authentication/authorization code (`**/auth/**`, `**/login/**`)
+- API endpoints (`**/api/**`, `**/routes/**`)
+- Secret handling (`**/.env*`, `**/secrets/**`)
+- Database code (`**/db/**`, `**/migrations/**`)
+- Infrastructure (`Dockerfile*`, `**/terraform/**`)
+
+### MCP Server Configuration
+
+For advanced integrations, copy `.github/mcp-config.json.template` and configure MCP servers:
+
+```yaml
+# In your workflow
+- uses: anthropics/claude-code-action@v1
+  with:
+    anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    mcp_config: ${{ secrets.MCP_CONFIG }}
+```
+
+Available MCP servers:
+
+- **GitHub**: Issues, PRs, repository operations
+- **Postgres/SQLite**: Database access
+- **Slack**: Workspace messaging
+- **Puppeteer**: Browser automation
+- **Fetch**: External API access
+- **Brave Search**: Web search
 
 ### Setting Up GitHub Actions
 
@@ -731,6 +821,14 @@ Track improvements to this configuration:
   - New `.github/scripts/claude-code-implement.js` SDK integration script
   - User can `/accept` all suggestions or reply with custom instructions
   - Automatic feedback loop: Gemini review → User prompt → Claude implements → Gemini re-reviews → Loop until merge
+- **2026-01-23**: **Claude Code Action Integration** - Full GitHub-native AI assistant:
+  - New `claude.yml` for @claude mention handling in PR/issue comments
+  - New `claude-security-review.yml` for automatic security reviews on sensitive paths
+  - New `claude-auto-implement.yml` for label-triggered implementation from issues
+  - New `claude-research-implement.yml` for two-phase research + implement pipeline
+  - New slash commands: `/research`, `/debug`, `/add-tests`, `/deploy-check`
+  - New `.github/mcp-config.json.template` for MCP server configuration
+  - Total: 18 agents, 11 skills, 26 commands, 8 hooks, 6 AI workflows
 
 ---
 

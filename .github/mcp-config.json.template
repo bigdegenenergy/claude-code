@@ -1,0 +1,76 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GH_PAT}"
+      },
+      "description": "GitHub API access for issues, PRs, repos"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "description": "Extended filesystem operations"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "Persistent memory across sessions"
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres"],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "${DATABASE_URL}"
+      },
+      "description": "PostgreSQL database access"
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}"
+      },
+      "description": "Slack workspace access"
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-puppeteer"],
+      "description": "Browser automation for testing"
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "description": "HTTP fetch for external APIs"
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "./data/local.db"],
+      "description": "SQLite database for local storage"
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "description": "Web search via Brave Search API"
+    },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-sentry"],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}",
+        "SENTRY_ORG": "${SENTRY_ORG}"
+      },
+      "description": "Error tracking and monitoring"
+    }
+  },
+  "mcpServerNotes": {
+    "usage": "Copy this file to .github/mcp-config.json and replace ${...} with actual secrets",
+    "secrets": "Add secrets to GitHub repository settings",
+    "selective": "Remove servers you don't need to reduce attack surface",
+    "workflow": "Reference in claude-code-action using mcp_config input"
+  }
+}

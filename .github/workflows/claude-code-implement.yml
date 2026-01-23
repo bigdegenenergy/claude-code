@@ -219,7 +219,7 @@ jobs:
           USER_MSG="RECENT PR COMMENTS:
           $RECENT_CONTEXT
 
-          USER'S NEW COMMENT TO ANALYZE:
+          NEW COMMENT TO ANALYZE:
           $COMMENT_BODY"
 
           # Call Claude Haiku 4.5 API
