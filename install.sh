@@ -14,11 +14,11 @@
 #           data collection. All data remains local to your machine.
 #
 # Installs development workflow configurations:
-#   - 21 Slash Commands (workflows and orchestration)
+#   - 26 Slash Commands (workflows and orchestration)
 #   - 17 Specialized Agents (subagents for different domains)
 #   - 11 Auto-Discovered Skills (context-aware expertise)
 #   - 8 Automated Hooks (quality gates and automation)
-#   - 7 GitHub Actions Workflows (CI/CD automation)
+#   - 12 GitHub Actions Workflows (CI/CD automation)
 #   - 5 Git Hooks (pre-commit, commit-msg, prepare-commit-msg, post-commit, pre-push)
 #
 # Usage (Multiple Methods):
@@ -61,9 +61,9 @@ set -e
 # ------------------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------------------
-VERSION="2.1.0"
+VERSION="2.2.0"
 # Pin to specific version for reproducibility (update when releasing new versions)
-SOURCE_TAG="v2.1.0"
+SOURCE_TAG="v2.2.0"
 SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
 SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main"
 
@@ -152,7 +152,7 @@ EXAMPLES:
 
 WHAT GETS INSTALLED:
     .claude/
-    ├── commands/     (21 slash commands)
+    ├── commands/     (26 slash commands)
     ├── agents/       (17 specialized subagents)
     ├── skills/       (11 auto-discovered skills)
     ├── hooks/        (8 automated quality gates)
@@ -160,7 +160,7 @@ WHAT GETS INSTALLED:
     └── settings.json (permissions & hook config)
 
     .github/
-    └── workflows/    (7 CI/CD workflows)
+    └── workflows/    (12 CI/CD workflows)
 
     CLAUDE.md         (project instructions)
 
@@ -330,7 +330,7 @@ install_claude_directory() {
 
     if [ "$DRY_RUN" = true ]; then
         log_info "[DRY RUN] Would install .claude directory with:"
-        log_info "  - commands/ (21 slash commands)"
+        log_info "  - commands/ (26 slash commands)"
         log_info "  - agents/ (17 subagents)"
         log_info "  - skills/ (11 skills)"
         log_info "  - hooks/ (8 hooks)"
@@ -440,6 +440,30 @@ install_claude_md() {
     fi
 }
 
+install_mcp_template() {
+    log_header "Installing MCP Server Template"
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would install .mcp.json.template for MCP server configuration"
+        return 0
+    fi
+
+    if [ -f "$TEMP_DIR/.mcp.json.template" ]; then
+        if [ -f ".mcp.json.template" ]; then
+            if confirm_overwrite ".mcp.json.template"; then
+                cp "$TEMP_DIR/.mcp.json.template" .mcp.json.template
+                log_success "Updated .mcp.json.template"
+            else
+                log_warning "Kept existing .mcp.json.template"
+            fi
+        else
+            cp "$TEMP_DIR/.mcp.json.template" .mcp.json.template
+            log_success "Installed .mcp.json.template (MCP server configuration)"
+        fi
+        log_info "To enable MCP servers: cp .mcp.json.template .mcp.json && edit"
+    fi
+}
+
 install_github_workflows() {
     if [ "$INSTALL_GITHUB" = false ]; then
         log_info "Skipping GitHub workflows (--no-github)"
@@ -524,6 +548,20 @@ install_github_workflows() {
     if [ -f "$TEMP_DIR/.github/CONTRIBUTING.md" ]; then
         cp "$TEMP_DIR/.github/CONTRIBUTING.md" .github/
         log_success "Installed CONTRIBUTING.md"
+    fi
+
+    # Copy scripts directory (Claude Code SDK implementation scripts)
+    if [ -d "$TEMP_DIR/.github/scripts" ]; then
+        mkdir -p .github/scripts
+        cp -R "$TEMP_DIR/.github/scripts/"* .github/scripts/ 2>/dev/null || true
+        chmod +x .github/scripts/*.cjs .github/scripts/*.js .github/scripts/*.sh 2>/dev/null || true
+        log_success "Installed GitHub scripts (Claude Code SDK)"
+    fi
+
+    # Copy MCP config template
+    if [ -f "$TEMP_DIR/.github/mcp-config.json.template" ]; then
+        cp "$TEMP_DIR/.github/mcp-config.json.template" .github/
+        log_success "Installed MCP config template"
     fi
 }
 
@@ -1163,7 +1201,7 @@ print_summary() {
     echo ""
 
     echo -e "${YELLOW}2. Commit the Configuration:${NC}"
-    echo "   git add .claude .github CLAUDE.md .gitignore"
+    echo "   git add .claude .github CLAUDE.md .gitignore .mcp.json.template"
     echo "   git commit -m \"chore: add development workflow configuration\""
     echo ""
 
@@ -1199,6 +1237,7 @@ main() {
     download_source
     install_claude_directory
     install_claude_md
+    install_mcp_template
     install_github_workflows
     install_git_hooks
     install_language_profile
