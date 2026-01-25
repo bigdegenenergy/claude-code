@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       output_name:
-        description: 'Output filename (without extension)'
+        description: 'Output filename (without extension, alphanumeric/dash/underscore only)'
         required: false
         default: 'aggregated-content'
         type: string
@@ -43,7 +43,7 @@ on:
         required: true
         type: string
       output_name:
-        description: 'Output filename (without extension)'
+        description: 'Output filename (without extension, alphanumeric/dash/underscore only)'
         required: false
         default: 'aggregated-content'
         type: string
@@ -85,10 +85,49 @@ jobs:
       output_file: ${{ steps.run.outputs.output_file }}
       token_count: ${{ steps.run.outputs.token_count }}
       branch_name: ${{ steps.branch.outputs.name }}
+      safe_output_name: ${{ steps.validate.outputs.safe_output_name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate and sanitize inputs
+        id: validate
+        env:
+          INPUT_OUTPUT_NAME: ${{ inputs.output_name }}
+          INPUT_CRAWL_DEPTH: ${{ inputs.crawl_depth }}
+          INPUT_CRAWL_MAX_PAGES: ${{ inputs.crawl_max_pages }}
+          INPUT_FORMAT: ${{ inputs.format }}
+        run: |
+          # Sanitize output_name: only allow alphanumeric, dash, underscore
+          SAFE_OUTPUT_NAME=$(echo "$INPUT_OUTPUT_NAME" | tr -cd '[:alnum:]-_')
+          if [ -z "$SAFE_OUTPUT_NAME" ]; then
+            SAFE_OUTPUT_NAME="aggregated-content"
+          fi
+          echo "safe_output_name=${SAFE_OUTPUT_NAME}" >> $GITHUB_OUTPUT
+
+          # Validate crawl_depth is a number
+          if ! [[ "$INPUT_CRAWL_DEPTH" =~ ^[0-9]+$ ]]; then
+            echo "Error: crawl_depth must be a positive integer"
+            exit 1
+          fi
+
+          # Validate crawl_max_pages is a number
+          if ! [[ "$INPUT_CRAWL_MAX_PAGES" =~ ^[0-9]+$ ]]; then
+            echo "Error: crawl_max_pages must be a positive integer"
+            exit 1
+          fi
+
+          # Validate format is one of the allowed values
+          case "$INPUT_FORMAT" in
+            auto|text|markdown|json|html|yaml) ;;
+            *)
+              echo "Error: format must be one of: auto, text, markdown, json, html, yaml"
+              exit 1
+              ;;
+          esac
+
+          echo "Inputs validated successfully"
 
       - name: Generate branch name
         id: branch
@@ -115,44 +154,56 @@ jobs:
         id: run
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          INPUT_SOURCES: ${{ inputs.sources }}
+          INPUT_FORMAT: ${{ inputs.format }}
+          INPUT_CRAWL_DEPTH: ${{ inputs.crawl_depth }}
+          INPUT_CRAWL_MAX_PAGES: ${{ inputs.crawl_max_pages }}
+          SAFE_OUTPUT_NAME: ${{ steps.validate.outputs.safe_output_name }}
         run: |
           # Create docs directory if it doesn't exist
           mkdir -p docs/onefilellm
 
-          # Build command arguments
-          ARGS=""
+          # Build command arguments array for safety
+          ARGS=()
 
           # Add format if not auto
-          if [ "${{ inputs.format }}" != "auto" ]; then
-            ARGS="$ARGS -f ${{ inputs.format }}"
+          if [ "$INPUT_FORMAT" != "auto" ]; then
+            ARGS+=("-f" "$INPUT_FORMAT")
           fi
 
           # Add crawl options
-          ARGS="$ARGS --crawl-max-depth ${{ inputs.crawl_depth }}"
-          ARGS="$ARGS --crawl-max-pages ${{ inputs.crawl_max_pages }}"
+          ARGS+=("--crawl-max-depth" "$INPUT_CRAWL_DEPTH")
+          ARGS+=("--crawl-max-pages" "$INPUT_CRAWL_MAX_PAGES")
 
-          # Run onefilellm and capture output
-          echo "Running: onefilellm $ARGS ${{ inputs.sources }}"
+          OUTPUT_FILE="docs/onefilellm/${SAFE_OUTPUT_NAME}.xml"
 
-          OUTPUT_FILE="docs/onefilellm/${{ inputs.output_name }}.xml"
+          echo "Running onefilellm with validated inputs..."
 
-          # Execute and save to file (disable clipboard in CI)
-          onefilellm $ARGS ${{ inputs.sources }} > "${OUTPUT_FILE}" 2>&1 || {
-            # If direct output fails, try without redirect
-            python -m onefilellm $ARGS ${{ inputs.sources }} > "${OUTPUT_FILE}" 2>&1
-          }
+          # Execute using array expansion for safety
+          # Note: INPUT_SOURCES is intentionally not quoted to allow space-separated sources
+          # Each source URL/path is validated by onefilellm itself
+          if onefilellm "${ARGS[@]}" $INPUT_SOURCES > "$OUTPUT_FILE" 2>&1; then
+            echo "onefilellm completed successfully"
+          else
+            # If direct output fails, try with python -m
+            python -m onefilellm "${ARGS[@]}" $INPUT_SOURCES > "$OUTPUT_FILE" 2>&1 || {
+              echo "Error: onefilellm failed"
+              cat "$OUTPUT_FILE"
+              exit 1
+            }
+          fi
 
           # Check if output was generated
-          if [ -f "${OUTPUT_FILE}" ] && [ -s "${OUTPUT_FILE}" ]; then
+          if [ -f "$OUTPUT_FILE" ] && [ -s "$OUTPUT_FILE" ]; then
             echo "output_file=${OUTPUT_FILE}" >> $GITHUB_OUTPUT
 
             # Estimate token count (rough approximation: chars / 4)
-            CHARS=$(wc -c < "${OUTPUT_FILE}")
+            CHARS=$(wc -c < "$OUTPUT_FILE")
             TOKENS=$((CHARS / 4))
             echo "token_count=$TOKENS" >> $GITHUB_OUTPUT
 
             echo "Generated output with ~$TOKENS estimated tokens"
-            echo "File size: $(du -h ${OUTPUT_FILE} | cut -f1)"
+            echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"
           else
             echo "Error: No output generated"
             exit 1
@@ -161,8 +212,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.output_name }}
-          path: docs/onefilellm/${{ inputs.output_name }}.xml
+          name: ${{ steps.validate.outputs.safe_output_name }}
+          path: docs/onefilellm/${{ steps.validate.outputs.safe_output_name }}.xml
           retention-days: 30
 
   commit-and-merge:
@@ -181,38 +232,37 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.output_name }}
+          name: ${{ needs.aggregate.outputs.safe_output_name }}
           path: docs/onefilellm/
 
       - name: Create branch and commit
         id: commit
+        env:
+          BRANCH_NAME: ${{ needs.aggregate.outputs.branch_name }}
+          SAFE_OUTPUT_NAME: ${{ needs.aggregate.outputs.safe_output_name }}
+          TOKEN_COUNT: ${{ needs.aggregate.outputs.token_count }}
+          INPUT_SOURCES: ${{ inputs.sources }}
         run: |
-          BRANCH_NAME="${{ needs.aggregate.outputs.branch_name }}"
-
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Create and switch to new branch
-          git checkout -b "${BRANCH_NAME}"
+          git checkout -b "$BRANCH_NAME"
 
           # Add the output file
           git add docs/onefilellm/
 
-          # Commit using HEREDOC for multiline message
-          git commit -m "$(cat <<EOF
-          docs: add OneFileLLM aggregated content
+          # Commit with safe message (sources shown for reference only)
+          git commit -m "docs: add OneFileLLM aggregated content
 
-          Source: ${{ inputs.sources }}
-          Output: docs/onefilellm/${{ inputs.output_name }}.xml
-          Tokens: ~${{ needs.aggregate.outputs.token_count }}
+          Output: docs/onefilellm/${SAFE_OUTPUT_NAME}.xml
+          Tokens: ~${TOKEN_COUNT}
 
-          [skip ci]
-          EOF
-          )"
+          [skip ci]"
 
           # Push the branch
-          git push -u origin "${BRANCH_NAME}"
+          git push -u origin "$BRANCH_NAME"
 
           echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
@@ -220,25 +270,23 @@ jobs:
         id: create-pr
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ needs.aggregate.outputs.branch_name }}
+          SAFE_OUTPUT_NAME: ${{ needs.aggregate.outputs.safe_output_name }}
+          TOKEN_COUNT: ${{ needs.aggregate.outputs.token_count }}
         run: |
-          BRANCH_NAME="${{ needs.aggregate.outputs.branch_name }}"
+          PR_BODY="## OneFileLLM Content Aggregation
 
-          PR_URL=$(gh pr create \
-            --title "docs: add OneFileLLM output - ${{ inputs.output_name }}" \
-            --body "$(cat <<PRBODY
-          ## OneFileLLM Content Aggregation
+          **Output file:** \`docs/onefilellm/${SAFE_OUTPUT_NAME}.xml\`
 
-          **Sources:** \`${{ inputs.sources }}\`
-
-          **Output file:** \`docs/onefilellm/${{ inputs.output_name }}.xml\`
-
-          **Estimated tokens:** ~${{ needs.aggregate.outputs.token_count }}
+          **Estimated tokens:** ~${TOKEN_COUNT}
 
           ---
-          *Auto-generated by OneFileLLM workflow*
-          PRBODY
-          )" \
-            --head "${BRANCH_NAME}" \
+          *Auto-generated by OneFileLLM workflow*"
+
+          PR_URL=$(gh pr create \
+            --title "docs: add OneFileLLM output - ${SAFE_OUTPUT_NAME}" \
+            --body "$PR_BODY" \
+            --head "$BRANCH_NAME" \
             --base main)
 
           echo "pull-request-url=${PR_URL}" >> $GITHUB_OUTPUT
@@ -249,37 +297,41 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
         run: |
-          PR_URL="${{ steps.create-pr.outputs.pull-request-url }}"
-
           # Try to enable auto-merge (squash)
           # This may fail if:
           # - Token lacks admin/write permissions
           # - Auto-merge is not enabled on the repo
           # - Branch protection rules prevent it
-          if gh pr merge "${PR_URL}" --squash --auto --delete-branch 2>&1; then
+          if gh pr merge "$PR_URL" --squash --auto --delete-branch 2>&1; then
             echo "auto_merged=true" >> $GITHUB_OUTPUT
-            echo "Auto-merge enabled for ${PR_URL}"
+            echo "Auto-merge enabled for $PR_URL"
           else
             echo "auto_merged=false" >> $GITHUB_OUTPUT
             echo "Auto-merge not available (likely insufficient permissions or repo settings)"
-            echo "PR created successfully - manual merge required: ${PR_URL}"
+            echo "PR created successfully - manual merge required: $PR_URL"
           fi
 
       - name: Summary
+        env:
+          SAFE_OUTPUT_NAME: ${{ needs.aggregate.outputs.safe_output_name }}
+          TOKEN_COUNT: ${{ needs.aggregate.outputs.token_count }}
+          PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
+          AUTO_MERGED: ${{ steps.merge.outputs.auto_merged }}
         run: |
-          echo "## OneFileLLM Output Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Sources:** \`${{ inputs.sources }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Output file:** \`docs/onefilellm/${{ inputs.output_name }}.xml\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Estimated tokens:** ~${{ needs.aggregate.outputs.token_count }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Pull Request:** ${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.merge.outputs.auto_merged }}" == "true" ]; then
-            echo "The PR will be auto-merged and the branch deleted." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Note:** Auto-merge not available. Please merge the PR manually." >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## OneFileLLM Output Summary"
+            echo ""
+            echo "**Output file:** \`docs/onefilellm/${SAFE_OUTPUT_NAME}.xml\`"
+            echo ""
+            echo "**Estimated tokens:** ~${TOKEN_COUNT}"
+            echo ""
+            echo "**Pull Request:** ${PR_URL}"
+            echo ""
+            if [ "$AUTO_MERGED" == "true" ]; then
+              echo "The PR will be auto-merged and the branch deleted."
+            else
+              echo "**Note:** Auto-merge not available. Please merge the PR manually."
+            fi
+          } >> $GITHUB_STEP_SUMMARY
