@@ -207,6 +207,64 @@ const skillTriggers = {
       /\bspan\b/,
     ],
     priority: 2
+  },
+  'deslop': {
+    patterns: [
+      /\bdeslop\b/,
+      /\bremove.?slop\b/,
+      /\bai.?slop\b/,
+      /\baggressive.?refactor/,
+      /\bsimplify.?drastic/,
+      /\bcut.?code\b/,
+      /\breduce.?complex/,
+      /\bover.?engineer/,
+      /\btoo.?verbose\b/,
+      /\byagni\b/,
+      /\bdelete.*dead.?code/,
+      /\binline.*function/,
+    ],
+    priority: 1
+  },
+  'systematic-debugging': {
+    patterns: [
+      /\bsystematic.?debug/,
+      /\bmethodical.?debug/,
+      /\bstructured.?debug/,
+      /\broot.?cause.?analysis\b/,
+      /\brca\b/,
+      /\b5.?whys?\b/,
+      /\bbisect\b/,
+      /\bgit.?bisect\b/,
+      /\bhypothesis/,
+      /\breproduc.*bug/,
+      /\bintermittent/,
+    ],
+    priority: 1
+  },
+  'ralph-coder': {
+    patterns: [
+      /\bcoder.?loop\b/,
+      /\bralph.?mode\b/,
+      /\bralph.?coder\b/,
+      /\bautonomous.?cod/,
+      /\bcode.?until.?done/,
+      /\btdd.?loop\b/,
+      /\bimplement.?and.?commit/,
+      /\batomic.?commit/,
+      /\bquality.?gate/,
+    ],
+    priority: 1
+  },
+  'autonomous-loop': {
+    patterns: [
+      /\bautonomous\b/,
+      /\bkeep.?going/,
+      /\bloop.?until/,
+      /\biterat.*until/,
+      /\bexit.?signal/,
+      /\bcircuit.?breaker/,
+    ],
+    priority: 1
   }
 };
 
