@@ -137,6 +137,7 @@ jobs:
             -not -path "./.venv/*" \
             -not -path "./.github/*" \
             -not -path "./.claude/*" \
+            -not -path "./docs/onefilellm/*" \
             -not -name "*.png" -not -name "*.jpg" -not -name "*.jpeg" \
             -not -name "*.gif" -not -name "*.ico" -not -name "*.svg" \
             -not -name "*.woff" -not -name "*.woff2" -not -name "*.ttf" \
