@@ -69,6 +69,13 @@ on:
       token_count:
         description: 'Estimated token count'
         value: ${{ jobs.aggregate.outputs.token_count }}
+      pr_url:
+        description: 'URL of the created pull request'
+        value: ${{ jobs.commit-and-merge.outputs.pr_url }}
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   aggregate:
@@ -77,10 +84,19 @@ jobs:
     outputs:
       output_file: ${{ steps.run.outputs.output_file }}
       token_count: ${{ steps.run.outputs.token_count }}
+      branch_name: ${{ steps.branch.outputs.name }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Generate branch name
+        id: branch
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BRANCH_NAME="onefilellm/output-${TIMESTAMP}"
+          echo "name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          echo "Branch name: ${BRANCH_NAME}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -98,10 +114,10 @@ jobs:
       - name: Run onefilellm
         id: run
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          # Create output directory
-          mkdir -p output
+          # Create docs directory if it doesn't exist
+          mkdir -p docs/onefilellm
 
           # Build command arguments
           ARGS=""
@@ -118,23 +134,25 @@ jobs:
           # Run onefilellm and capture output
           echo "Running: onefilellm $ARGS ${{ inputs.sources }}"
 
+          OUTPUT_FILE="docs/onefilellm/${{ inputs.output_name }}.xml"
+
           # Execute and save to file (disable clipboard in CI)
-          onefilellm $ARGS ${{ inputs.sources }} > "output/${{ inputs.output_name }}.xml" 2>&1 || {
+          onefilellm $ARGS ${{ inputs.sources }} > "${OUTPUT_FILE}" 2>&1 || {
             # If direct output fails, try without redirect
-            python -m onefilellm $ARGS ${{ inputs.sources }} > "output/${{ inputs.output_name }}.xml" 2>&1
+            python -m onefilellm $ARGS ${{ inputs.sources }} > "${OUTPUT_FILE}" 2>&1
           }
 
           # Check if output was generated
-          if [ -f "output/${{ inputs.output_name }}.xml" ]; then
-            echo "output_file=output/${{ inputs.output_name }}.xml" >> $GITHUB_OUTPUT
+          if [ -f "${OUTPUT_FILE}" ] && [ -s "${OUTPUT_FILE}" ]; then
+            echo "output_file=${OUTPUT_FILE}" >> $GITHUB_OUTPUT
 
             # Estimate token count (rough approximation: chars / 4)
-            CHARS=$(wc -c < "output/${{ inputs.output_name }}.xml")
+            CHARS=$(wc -c < "${OUTPUT_FILE}")
             TOKENS=$((CHARS / 4))
             echo "token_count=$TOKENS" >> $GITHUB_OUTPUT
 
             echo "Generated output with ~$TOKENS estimated tokens"
-            echo "File size: $(du -h output/${{ inputs.output_name }}.xml | cut -f1)"
+            echo "File size: $(du -h ${OUTPUT_FILE} | cut -f1)"
           else
             echo "Error: No output generated"
             exit 1
@@ -144,8 +162,92 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.output_name }}
-          path: output/${{ inputs.output_name }}.xml
+          path: docs/onefilellm/${{ inputs.output_name }}.xml
           retention-days: 30
+
+  commit-and-merge:
+    name: Commit, PR, and Merge
+    needs: aggregate
+    runs-on: ubuntu-latest
+    outputs:
+      pr_url: ${{ steps.create-pr.outputs.pull-request-url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.output_name }}
+          path: docs/onefilellm/
+
+      - name: Create branch and commit
+        id: commit
+        run: |
+          BRANCH_NAME="${{ needs.aggregate.outputs.branch_name }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and switch to new branch
+          git checkout -b "${BRANCH_NAME}"
+
+          # Add the output file
+          git add docs/onefilellm/
+
+          # Commit
+          git commit -m "docs: add OneFileLLM aggregated content
+
+Source: ${{ inputs.sources }}
+Output: docs/onefilellm/${{ inputs.output_name }}.xml
+Tokens: ~${{ needs.aggregate.outputs.token_count }}
+
+[skip ci]"
+
+          # Push the branch
+          git push -u origin "${BRANCH_NAME}"
+
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="${{ needs.aggregate.outputs.branch_name }}"
+
+          PR_URL=$(gh pr create \
+            --title "docs: add OneFileLLM output - ${{ inputs.output_name }}" \
+            --body "## OneFileLLM Content Aggregation
+
+**Sources:** \`${{ inputs.sources }}\`
+
+**Output file:** \`docs/onefilellm/${{ inputs.output_name }}.xml\`
+
+**Estimated tokens:** ~${{ needs.aggregate.outputs.token_count }}
+
+---
+*Auto-generated by OneFileLLM workflow*" \
+            --head "${BRANCH_NAME}" \
+            --base main)
+
+          echo "pull-request-url=${PR_URL}" >> $GITHUB_OUTPUT
+          echo "Created PR: ${PR_URL}"
+
+      - name: Auto-merge Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL="${{ steps.create-pr.outputs.pull-request-url }}"
+
+          # Enable auto-merge (squash)
+          gh pr merge "${PR_URL}" --squash --auto --delete-branch
+
+          echo "Auto-merge enabled for ${PR_URL}"
 
       - name: Summary
         run: |
@@ -153,10 +255,10 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Sources:** \`${{ inputs.sources }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Output file:** \`${{ steps.run.outputs.output_file }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Output file:** \`docs/onefilellm/${{ inputs.output_name }}.xml\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Estimated tokens:** ~${{ steps.run.outputs.token_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Estimated tokens:** ~${{ needs.aggregate.outputs.token_count }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**File size:** $(du -h output/${{ inputs.output_name }}.xml | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull Request:** ${{ steps.create-pr.outputs.pull-request-url }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Download the artifact above to use with your LLM." >> $GITHUB_STEP_SUMMARY
+          echo "The PR will be auto-merged and the branch deleted." >> $GITHUB_STEP_SUMMARY

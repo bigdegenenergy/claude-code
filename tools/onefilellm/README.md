@@ -17,13 +17,28 @@ Output is structured XML optimized for LLM context windows.
 
 ## GitHub Action Usage
 
+The workflow automatically:
+
+1. Runs OneFileLLM to aggregate content
+2. Saves output to `docs/onefilellm/`
+3. Creates a new branch (`onefilellm/output-TIMESTAMP`)
+4. Opens a Pull Request
+5. Auto-merges the PR (squash)
+6. Deletes the branch
+
+### Requirements
+
+- **`GH_TOKEN` secret**: A Personal Access Token with `repo` scope (for creating branches and PRs)
+- If auto-merge is enabled on the repo, PRs merge automatically
+- If not, PRs will be created but require manual merge
+
 ### Manual Trigger (workflow_dispatch)
 
 1. Go to **Actions** > **OneFileLLM Content Aggregator**
 2. Click **Run workflow**
 3. Enter your sources (space-separated)
 4. Configure options as needed
-5. Download the artifact when complete
+5. The workflow creates a PR that auto-merges to `main`
 
 ### Example Inputs
 
@@ -64,7 +79,10 @@ jobs:
       sources: "https://github.com/owner/repo"
       output_name: "repo-context"
       crawl_depth: "2"
+    secrets: inherit # Pass GH_TOKEN
 
+  # The output is auto-committed to docs/onefilellm/
+  # You can also access the artifact:
   use-output:
     needs: aggregate
     runs-on: ubuntu-latest
@@ -76,9 +94,18 @@ jobs:
 
       - name: Use aggregated content
         run: |
-          # Your LLM workflow here
+          echo "PR URL: ${{ needs.aggregate.outputs.pr_url }}"
+          echo "Token count: ${{ needs.aggregate.outputs.token_count }}"
           cat repo-context.xml
 ```
+
+### Workflow Outputs
+
+| Output        | Description                                           |
+| ------------- | ----------------------------------------------------- |
+| `output_file` | Path to generated file (`docs/onefilellm/<name>.xml`) |
+| `token_count` | Estimated token count                                 |
+| `pr_url`      | URL of the created Pull Request                       |
 
 ## Local Usage
 
