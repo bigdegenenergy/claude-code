@@ -14,11 +14,11 @@
 #           data collection. All data remains local to your machine.
 #
 # Installs development workflow configurations:
-#   - 26 Slash Commands (workflows and orchestration)
-#   - 17 Specialized Agents (subagents for different domains)
-#   - 11 Auto-Discovered Skills (context-aware expertise)
-#   - 8 Automated Hooks (quality gates and automation)
-#   - 12 GitHub Actions Workflows (CI/CD automation)
+#   - 38 Slash Commands (workflows and orchestration)
+#   - 19 Specialized Agents (subagents for different domains)
+#   - 18 Auto-Discovered Skills (context-aware expertise)
+#   - 11 Automated Hooks (quality gates and automation)
+#   - 13 GitHub Actions Workflows (CI/CD automation)
 #   - 5 Git Hooks (pre-commit, commit-msg, prepare-commit-msg, post-commit, pre-push)
 #
 # Usage (Multiple Methods):
@@ -61,9 +61,9 @@ set -e
 # ------------------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------------------
-VERSION="2.2.0"
+VERSION="2.3.0"
 # Pin to specific version for reproducibility (update when releasing new versions)
-SOURCE_TAG="v2.2.0"
+SOURCE_TAG="v2.3.0"
 SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
 SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main"
 
@@ -152,15 +152,15 @@ EXAMPLES:
 
 WHAT GETS INSTALLED:
     .claude/
-    ├── commands/     (26 slash commands)
-    ├── agents/       (17 specialized subagents)
-    ├── skills/       (11 auto-discovered skills)
-    ├── hooks/        (8 automated quality gates)
+    ├── commands/     (38 slash commands)
+    ├── agents/       (19 specialized subagents)
+    ├── skills/       (18 auto-discovered skills)
+    ├── hooks/        (11 automated quality gates)
     ├── templates/    (project templates)
     └── settings.json (permissions & hook config)
 
     .github/
-    ├── workflows/    (12 CI/CD workflows)
+    ├── workflows/    (13 CI/CD workflows)
     ├── scripts/      (Claude Code SDK scripts)
     └── ISSUE_TEMPLATE/
 
@@ -337,10 +337,10 @@ install_claude_directory() {
 
     if [ "$DRY_RUN" = true ]; then
         log_info "[DRY RUN] Would install .claude directory with:"
-        log_info "  - commands/ (26 slash commands)"
-        log_info "  - agents/ (17 subagents)"
-        log_info "  - skills/ (11 skills)"
-        log_info "  - hooks/ (8 hooks)"
+        log_info "  - commands/ (38 slash commands)"
+        log_info "  - agents/ (19 subagents)"
+        log_info "  - skills/ (18 skills)"
+        log_info "  - hooks/ (11 hooks)"
         log_info "  - templates/"
         log_info "  - settings.json"
         return 0
