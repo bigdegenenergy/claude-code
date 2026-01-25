@@ -25,9 +25,9 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 **Capabilities:**
 
-- **18 Specialized Agents** for different development domains
-- **11 Auto-Discovered Skills** for domain expertise
-- **26 Slash Commands** for workflows and orchestration
+- **20 Specialized Agents** for different development domains
+- **16 Auto-Discovered Skills** for domain expertise
+- **33 Slash Commands** for workflows and orchestration
 - **8 Automated Hooks** for quality gates and friction elimination
 - **6 GitHub Action Workflows** for AI-powered PR review and implementation
 
@@ -80,6 +80,14 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 | **Test Writer**      | `/add-tests`        | Add comprehensive test coverage         |
 | **Deploy Check**     | `/deploy-check`     | Pre-deployment readiness verification   |
 
+#### Browser & Visual Testing
+
+| Role            | Command        | When to Use                         |
+| --------------- | -------------- | ----------------------------------- |
+| **Browser**     | `/browser`     | Headless browser automation tasks   |
+| **Screenshot**  | `/screenshot`  | Capture web page screenshots        |
+| **Visual Diff** | `/visual-diff` | Compare screenshots for regressions |
+
 #### Orchestration Workflows
 
 | Workflow        | Command               | Description                                      |
@@ -93,14 +101,15 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 #### Quality & Review
 
-| Role                 | Agent               | Specialty                                  |
-| -------------------- | ------------------- | ------------------------------------------ |
-| **Code Reviewer**    | `@code-reviewer`    | Critical code review (read-only)           |
-| **Zeno Analyzer**    | `@zeno-analyzer`    | Surgical analysis with file:line citations |
-| **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning       |
-| **Test Automator**   | `@test-automator`   | Unit, integration, E2E test creation       |
-| **Code Simplifier**  | `@code-simplifier`  | Refactoring, code hygiene                  |
-| **QA Verifier**      | `@verify-app`       | End-to-end testing                         |
+| Role                  | Agent                | Specialty                                  |
+| --------------------- | -------------------- | ------------------------------------------ |
+| **Code Reviewer**     | `@code-reviewer`     | Critical code review (read-only)           |
+| **Zeno Analyzer**     | `@zeno-analyzer`     | Surgical analysis with file:line citations |
+| **Security Auditor**  | `@security-auditor`  | OWASP Top 10, vulnerability scanning       |
+| **Test Automator**    | `@test-automator`    | Unit, integration, E2E test creation       |
+| **Code Simplifier**   | `@code-simplifier`   | Refactoring, code hygiene                  |
+| **QA Verifier**       | `@verify-app`        | End-to-end testing                         |
+| **Browser Automator** | `@browser-automator` | Headless browser, E2E, visual testing      |
 
 #### Architecture & Design
 
@@ -168,6 +177,7 @@ Skills are context-aware expertise modules that auto-trigger based on the task a
 | **k8s-operations**       | Working with Kubernetes, containers            |
 | **cicd-automation**      | Setting up pipelines, GitHub Actions           |
 | **observability**        | Implementing logging, metrics, tracing         |
+| **browser-automation**   | E2E testing, screenshots, visual regression    |
 
 Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
 
@@ -216,6 +226,11 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 # Operations
 /incident-response       # Production incident guide
 
+# Browser & Visual Testing
+/browser                 # Headless browser automation
+/screenshot              # Capture web page screenshots
+/visual-diff             # Compare screenshots for regressions
+
 # Agents - Quality (invoke with @)
 @code-reviewer           # Critical code review
 @zeno-analyzer           # Surgical analysis with file:line citations
@@ -223,6 +238,7 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 @test-automator          # Create test suites
 @code-simplifier         # Improve readability
 @verify-app              # End-to-end testing
+@browser-automator       # Headless browser & E2E testing
 
 # Agents - Architecture
 @backend-architect       # API & system design
@@ -845,10 +861,11 @@ Track improvements to this configuration:
   - Total: 18 agents, 11 skills, 26 commands, 8 hooks, 6 AI workflows
 - **2026-01-25**: **Clawdbot Integration** - Added tools inspired by [clawdbot/clawdbot](https://github.com/clawdbot/clawdbot):
   - New `@zeno-analyzer` agent for surgical code analysis with file:line citations
-  - New skills: `deslop` (aggressive simplification), `systematic-debugging` (hypothesis-driven), `ralph-coder` (quality gates), `surgical-analysis` (evidence-based review)
-  - New commands: `/zeno`, `/zeno-verify`, `/deslop`, `/systematic-debug`
-  - Integration plan for Lobster workflow engine, Gateway ChatOps, and headless browser
-  - Total: 19 agents, 15 skills, 30 commands, 8 hooks, 6 AI workflows
+  - New `@browser-automator` agent for headless browser control and E2E testing
+  - New skills: `deslop` (aggressive simplification), `systematic-debugging` (hypothesis-driven), `ralph-coder` (quality gates), `surgical-analysis` (evidence-based review), `browser-automation` (E2E testing, visual regression)
+  - New commands: `/zeno`, `/zeno-verify`, `/deslop`, `/systematic-debug`, `/browser`, `/screenshot`, `/visual-diff`
+  - Integration plan for Lobster workflow engine and Gateway ChatOps
+  - Total: 20 agents, 16 skills, 33 commands, 8 hooks, 6 AI workflows
 
 ---
 

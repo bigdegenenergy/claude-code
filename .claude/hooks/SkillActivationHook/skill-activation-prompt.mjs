@@ -279,6 +279,24 @@ const skillTriggers = {
       /\bstatic.?analysis/,
     ],
     priority: 1
+  },
+  'browser-automation': {
+    patterns: [
+      /\bbrowser\b/,
+      /\bpuppeteer\b/,
+      /\bplaywright\b/,
+      /\be2e.?test/,
+      /\bend.?to.?end/,
+      /\bscreenshot/,
+      /\bvisual.?test/,
+      /\bheadless/,
+      /\bcdp\b/,
+      /\bclick.*button/,
+      /\bfill.*form/,
+      /\bscrape/,
+      /\bautomation/,
+    ],
+    priority: 2
   }
 };
 
