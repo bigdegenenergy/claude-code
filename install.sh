@@ -160,9 +160,15 @@ WHAT GETS INSTALLED:
     └── settings.json (permissions & hook config)
 
     .github/
-    └── workflows/    (12 CI/CD workflows)
+    ├── workflows/    (12 CI/CD workflows)
+    ├── scripts/      (Claude Code SDK scripts)
+    └── ISSUE_TEMPLATE/
+
+    docs/             (setup guides and references)
+    tools/            (utilities like onefilellm)
 
     CLAUDE.md         (project instructions)
+    .mcp.json.template (MCP server configuration)
 
 For more information, visit: https://github.com/bigdegenenergy/ai-dev-toolkit
 EOF
@@ -461,6 +467,55 @@ install_mcp_template() {
             log_success "Installed .mcp.json.template (MCP server configuration)"
         fi
         log_info "To enable MCP servers: cp .mcp.json.template .mcp.json && edit"
+    fi
+}
+
+install_docs() {
+    log_header "Installing Documentation"
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would install docs/ directory with setup guides and references"
+        return 0
+    fi
+
+    if [ -d "$TEMP_DIR/docs" ]; then
+        mkdir -p docs
+
+        # Copy documentation files (excluding generated content like onefilellm/)
+        for doc in "$TEMP_DIR/docs/"*.md; do
+            [ -f "$doc" ] || continue
+            local basename
+            basename=$(basename "$doc")
+            cp "$doc" "docs/$basename"
+        done
+
+        local DOCS_INSTALLED
+        DOCS_INSTALLED=$(find docs -maxdepth 1 -name "*.md" 2>/dev/null | wc -l)
+        if [ "$DOCS_INSTALLED" -gt 0 ]; then
+            log_success "Installed $DOCS_INSTALLED documentation files"
+        fi
+    fi
+}
+
+install_tools() {
+    log_header "Installing Tools"
+
+    if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would install tools/ directory with utilities"
+        return 0
+    fi
+
+    if [ -d "$TEMP_DIR/tools" ]; then
+        mkdir -p tools
+
+        # Copy tools directories
+        for tool_dir in "$TEMP_DIR/tools/"*/; do
+            [ -d "$tool_dir" ] || continue
+            local toolname
+            toolname=$(basename "$tool_dir")
+            cp -R "$tool_dir" "tools/"
+            log_success "Installed tools/$toolname"
+        done
     fi
 }
 
@@ -1198,10 +1253,12 @@ print_summary() {
     echo "   • .claude/commands/  - Workflow templates (markdown)"
     echo "   • .claude/hooks/     - Quality gate scripts (bash/python)"
     echo "   • .github/workflows/ - CI/CD pipelines (yaml)"
+    echo "   • docs/              - Setup guides and references"
+    echo "   • tools/             - Utilities (onefilellm, etc.)"
     echo ""
 
     echo -e "${YELLOW}2. Commit the Configuration:${NC}"
-    echo "   git add .claude .github CLAUDE.md .gitignore .mcp.json.template"
+    echo "   git add .claude .github docs tools CLAUDE.md .gitignore .mcp.json.template"
     echo "   git commit -m \"chore: add development workflow configuration\""
     echo ""
 
@@ -1238,6 +1295,8 @@ main() {
     install_claude_directory
     install_claude_md
     install_mcp_template
+    install_docs
+    install_tools
     install_github_workflows
     install_git_hooks
     install_language_profile
