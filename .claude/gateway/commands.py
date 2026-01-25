@@ -122,6 +122,15 @@ def parse_command(message: str) -> tuple[Optional[str], Optional[str]]:
     Returns:
         Tuple of (command_name, arguments) or (None, None) if not a command
     """
+    # Maximum length limits to prevent DoS and injection attacks
+    MAX_MESSAGE_LENGTH = 2000
+    MAX_COMMAND_LENGTH = 100
+    MAX_ARGS_LENGTH = 1500
+
+    # Enforce maximum message length
+    if len(message) > MAX_MESSAGE_LENGTH:
+        message = message[:MAX_MESSAGE_LENGTH]
+
     # Remove common prefixes
     prefixes = ["/claude ", "!claude ", "@claude "]
 
@@ -138,6 +147,13 @@ def parse_command(message: str) -> tuple[Optional[str], Optional[str]]:
     parts = message.split(maxsplit=1)
     command = parts[0].lower() if parts else None
     args = parts[1] if len(parts) > 1 else None
+
+    # Enforce length limits on parsed components
+    if command and len(command) > MAX_COMMAND_LENGTH:
+        command = command[:MAX_COMMAND_LENGTH]
+
+    if args and len(args) > MAX_ARGS_LENGTH:
+        args = args[:MAX_ARGS_LENGTH]
 
     return command, args
 
