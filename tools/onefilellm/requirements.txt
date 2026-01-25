@@ -1,26 +1,6 @@
-# OneFileLLM dependencies
+# OneFileLLM - install directly from GitHub
 # https://github.com/jimmc414/onefilellm
+#
+# Note: Package is not published to PyPI, so we install from source
 
-onefilellm==0.1.0
-
-# Core dependencies (included with onefilellm package, listed for reference)
-# requests>=2.31.0
-# beautifulsoup4>=4.11.1
-# PyPDF2>=2.10.0
-# tiktoken
-# nltk>=3.7
-# nbformat>=5.4.0
-# nbconvert>=6.5.0
-# yt-dlp
-# pyperclip>=1.8.2
-# tqdm>=4.64.0
-# rich>=12.4.4
-# pandas
-# openpyxl
-# xlrd
-# tabulate
-# PyYAML
-# python-dotenv
-# aiohttp
-# readability-lxml
-# lxml
+onefilellm @ git+https://github.com/jimmc414/onefilellm.git@main
