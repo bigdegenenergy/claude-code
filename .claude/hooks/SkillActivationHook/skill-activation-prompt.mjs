@@ -207,6 +207,128 @@ const skillTriggers = {
       /\bspan\b/,
     ],
     priority: 2
+  },
+  'deslop': {
+    patterns: [
+      /\bdeslop\b/,
+      /\bremove.?slop\b/,
+      /\bai.?slop\b/,
+      /\baggressive.?refactor/,
+      /\bsimplify.?drastic/,
+      /\bcut.?code\b/,
+      /\breduce.?complex/,
+      /\bover.?engineer/,
+      /\btoo.?verbose\b/,
+      /\byagni\b/,
+      /\bdelete.*dead.?code/,
+      /\binline.*function/,
+    ],
+    priority: 1
+  },
+  'systematic-debugging': {
+    patterns: [
+      /\bsystematic.?debug/,
+      /\bmethodical.?debug/,
+      /\bstructured.?debug/,
+      /\broot.?cause.?analysis\b/,
+      /\brca\b/,
+      /\b5.?whys?\b/,
+      /\bbisect\b/,
+      /\bgit.?bisect\b/,
+      /\bhypothesis/,
+      /\breproduc.*bug/,
+      /\bintermittent/,
+    ],
+    priority: 1
+  },
+  'ralph-coder': {
+    patterns: [
+      /\bcoder.?loop\b/,
+      /\bralph.?mode\b/,
+      /\bralph.?coder\b/,
+      /\bautonomous.?cod/,
+      /\bcode.?until.?done/,
+      /\btdd.?loop\b/,
+      /\bimplement.?and.?commit/,
+      /\batomic.?commit/,
+      /\bquality.?gate/,
+    ],
+    priority: 1
+  },
+  'autonomous-loop': {
+    patterns: [
+      /\bautonomous\b/,
+      /\bkeep.?going/,
+      /\bloop.?until/,
+      /\biterat.*until/,
+      /\bexit.?signal/,
+      /\bcircuit.?breaker/,
+    ],
+    priority: 1
+  },
+  'surgical-analysis': {
+    patterns: [
+      /\bzeno\b/,
+      /\bsurgical.?analysis/,
+      /\bevidence.?based.?review/,
+      /\bcite.?lines/,
+      /\bfile.?line.?citation/,
+      /\bcode.?audit/,
+      /\bfind.?vulnerabilities/,
+      /\bscan.?for.?issues/,
+      /\bstatic.?analysis/,
+    ],
+    priority: 1
+  },
+  'browser-automation': {
+    patterns: [
+      /\bbrowser\b/,
+      /\bpuppeteer\b/,
+      /\bplaywright\b/,
+      /\be2e.?test/,
+      /\bend.?to.?end/,
+      /\bscreenshot/,
+      /\bvisual.?test/,
+      /\bheadless/,
+      /\bcdp\b/,
+      /\bclick.*button/,
+      /\bfill.*form/,
+      /\bscrape/,
+      /\bautomation/,
+    ],
+    priority: 2
+  },
+  'chatops': {
+    patterns: [
+      /\bchatops\b/,
+      /\bslack.?bot\b/,
+      /\bdiscord.?bot\b/,
+      /\btelegram.?bot\b/,
+      /\bremote.?command/,
+      /\bchat.?trigger/,
+      /\bwebhook/,
+      /\bgateway\b/,
+      /\bbidirectional/,
+      /\bchat.?platform/,
+      /\bslash.?command/,
+      /\bbot.?integration/,
+    ],
+    priority: 2
+  },
+  'workflow-orchestration': {
+    patterns: [
+      /\bworkflow\b/,
+      /\bpipeline\b/,
+      /\borchestrat/,
+      /\bapproval.?gate/,
+      /\bmulti.?step/,
+      /\blobster\b/,
+      /\btyped.?workflow/,
+      /\bpause.*approval/,
+      /\bwait.*review/,
+      /\bstep.?by.?step.?execut/,
+    ],
+    priority: 2
   }
 };
 
