@@ -187,6 +187,34 @@ def format_help() -> str:
     return "\n".join(lines)
 
 
+def _escape_xml(text: str) -> str:
+    """
+    Escape XML special characters to prevent injection attacks.
+
+    Args:
+        text: Text to escape
+
+    Returns:
+        Escaped text safe for use in XML/prompts
+    """
+    if not text:
+        return text
+
+    # Escape XML special characters
+    replacements = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&apos;',
+    }
+
+    for char, escaped in replacements.items():
+        text = text.replace(char, escaped)
+
+    return text
+
+
 def build_prompt(command: CommandMapping, args: Optional[str], context: dict) -> str:
     """
     Build the Claude prompt for the command.
@@ -202,16 +230,22 @@ def build_prompt(command: CommandMapping, args: Optional[str], context: dict) ->
     prompt_parts = [f"Execute: {command.claude_command}"]
 
     if args:
-        prompt_parts.append(f"Arguments: {args}")
+        # Escape args to prevent XML/prompt injection attacks
+        safe_args = _escape_xml(args)
+        prompt_parts.append(f"Arguments: {safe_args}")
 
     if context.get("repo"):
-        prompt_parts.append(f"Repository: {context['repo']}")
+        safe_repo = _escape_xml(str(context['repo']))
+        prompt_parts.append(f"Repository: {safe_repo}")
 
     if context.get("branch"):
-        prompt_parts.append(f"Branch: {context['branch']}")
+        safe_branch = _escape_xml(str(context['branch']))
+        prompt_parts.append(f"Branch: {safe_branch}")
 
     if context.get("pr_number"):
-        prompt_parts.append(f"PR: #{context['pr_number']}")
+        # pr_number should be numeric, but sanitize anyway
+        safe_pr = _escape_xml(str(context['pr_number']))
+        prompt_parts.append(f"PR: #{safe_pr}")
 
     return "\n".join(prompt_parts)
 

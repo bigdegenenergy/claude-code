@@ -11,7 +11,19 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import fcntl
+
+# Cross-platform file locking
+try:
+    import portalocker
+    HAS_PORTALOCKER = True
+except ImportError:
+    # Fallback to platform-specific locking
+    import sys
+    if sys.platform == 'win32':
+        import msvcrt
+    else:
+        import fcntl
+    HAS_PORTALOCKER = False
 
 from .types import (
     WorkflowState,
@@ -41,17 +53,77 @@ class StateManager:
         self.artifacts_dir = Path(artifacts_dir)
         self.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
+    def _acquire_lock(self, file_obj, exclusive: bool = True):
+        """Acquire a file lock in a cross-platform way."""
+        if HAS_PORTALOCKER:
+            # Use portalocker for cross-platform locking
+            flags = portalocker.LOCK_EX if exclusive else portalocker.LOCK_SH
+            portalocker.lock(file_obj, flags)
+        elif os.name == 'nt':  # Windows
+            # Use msvcrt for Windows
+            import msvcrt
+            # Lock the first byte of the file
+            file_obj.seek(0)
+            msvcrt.locking(file_obj.fileno(), msvcrt.LK_LOCK, 1)
+        else:  # Unix-like systems
+            # Use fcntl for Unix
+            import fcntl
+            lock_type = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+            fcntl.flock(file_obj.fileno(), lock_type)
+
+    def _release_lock(self, file_obj):
+        """Release a file lock in a cross-platform way."""
+        if HAS_PORTALOCKER:
+            portalocker.unlock(file_obj)
+        elif os.name == 'nt':  # Windows
+            import msvcrt
+            # Unlock the first byte of the file
+            file_obj.seek(0)
+            msvcrt.locking(file_obj.fileno(), msvcrt.LK_UNLCK, 1)
+        else:  # Unix-like systems
+            import fcntl
+            fcntl.flock(file_obj.fileno(), fcntl.LOCK_UN)
+
+    def _sanitize_workflow_id(self, workflow_id: str) -> str:
+        """
+        Sanitize workflow_id to prevent path traversal attacks.
+
+        Args:
+            workflow_id: The workflow ID to sanitize
+
+        Returns:
+            Sanitized workflow ID containing only safe characters
+
+        Raises:
+            ValueError: If workflow_id contains invalid characters
+        """
+        # Use basename to strip any directory components
+        safe_id = os.path.basename(workflow_id)
+
+        # Validate that it contains only alphanumeric, hyphens, and underscores
+        import re
+        if not re.match(r'^[\w\-]+$', safe_id):
+            raise ValueError(
+                f"Invalid workflow_id: {workflow_id}. "
+                "Only alphanumeric characters, hyphens, and underscores are allowed."
+            )
+
+        return safe_id
+
     def _state_file(self, workflow_id: str) -> Path:
         """Get path to state file for a workflow."""
-        return self.artifacts_dir / f"{workflow_id}.json"
+        safe_id = self._sanitize_workflow_id(workflow_id)
+        return self.artifacts_dir / f"{safe_id}.json"
 
     def _approval_file(self, workflow_id: str) -> Path:
         """Get path to approval file for a workflow."""
-        return self.artifacts_dir / f"{workflow_id}.approval.json"
+        safe_id = self._sanitize_workflow_id(workflow_id)
+        return self.artifacts_dir / f"{safe_id}.approval.json"
 
     def _lock_file(self, workflow_id: str) -> Path:
         """Get path to lock file for concurrent access."""
-        return self.artifacts_dir / f"{workflow_id}.lock"
+        safe_id = self._sanitize_workflow_id(workflow_id)
+        return self.artifacts_dir / f"{safe_id}.lock"
 
     def _serialize_datetime(self, dt: Optional[datetime]) -> Optional[str]:
         """Convert datetime to ISO format string."""
@@ -107,12 +179,12 @@ class StateManager:
 
         # Write with file locking for concurrent access
         with open(lock_file, "w") as lf:
-            fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+            self._acquire_lock(lf, exclusive=True)
             try:
                 with open(state_file, "w") as f:
                     json.dump(data, f, indent=2)
             finally:
-                fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+                self._release_lock(lf)
 
     def load_state(self, workflow_id: str) -> Optional[WorkflowState]:
         """
@@ -132,12 +204,12 @@ class StateManager:
         lock_file = self._lock_file(workflow_id)
 
         with open(lock_file, "w") as lf:
-            fcntl.flock(lf.fileno(), fcntl.LOCK_SH)
+            self._acquire_lock(lf, exclusive=False)
             try:
                 with open(state_file) as f:
                     data = json.load(f)
             finally:
-                fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+                self._release_lock(lf)
 
         # Deserialize step results
         step_results = [

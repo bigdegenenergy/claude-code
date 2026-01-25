@@ -120,7 +120,10 @@ def evaluate_condition(
     # Support basic comparisons: ==, !=, <, >, <=, >=
 
     # Pattern: left op right
-    pattern = r"(\w+(?:\.\w+)*)\s*(==|!=|<|>|<=|>=)\s*(\d+|'[^']*'|\"[^\"]*\")"
+    # Updated to support hyphens in identifiers and bracket notation
+    # Examples: "findings.critical == 0", "steps.test-unit.status == 'completed'",
+    #           "steps['test-unit'].outputs.coverage > 80"
+    pattern = r"([\w\-]+(?:\.[\w\-]+|\[['\"]\w+[-\w]*['\"]\])*)\s*(==|!=|<|>|<=|>=)\s*(\d+|'[^']*'|\"[^\"]*\")"
     match = re.match(pattern, condition.strip())
 
     if not match:
@@ -159,18 +162,51 @@ def evaluate_condition(
 
 def _resolve_expression(expr: str, context: dict[str, Any]) -> Any:
     """
-    Resolve a dot-notation expression against a context.
+    Resolve a dot-notation or bracket-notation expression against a context.
 
     Args:
-        expr: Expression like "findings.critical" or "steps['review'].status"
+        expr: Expression like "findings.critical", "steps.test-unit.status",
+              or "steps['test-unit'].status"
         context: Dictionary of available values
 
     Returns:
         The resolved value, or None if not found
     """
-    parts = expr.split(".")
+    import re
+
     value = context
 
+    # Handle bracket notation: steps['test-unit'].status
+    # Split by bracket notation first
+    bracket_pattern = r"\['([^']+)'\]|\[\"([^\"]+)\"\]"
+    parts = []
+    current_expr = expr
+
+    while current_expr:
+        # Check for bracket notation
+        match = re.search(bracket_pattern, current_expr)
+        if match:
+            # Get everything before the bracket
+            before = current_expr[:match.start()]
+            if before and before != '.':
+                # Split by dots and filter out empty parts
+                parts.extend([p for p in before.split('.') if p])
+
+            # Add the bracketed key
+            key = match.group(1) or match.group(2)
+            parts.append(key)
+
+            # Continue with remainder
+            current_expr = current_expr[match.end():]
+            if current_expr.startswith('.'):
+                current_expr = current_expr[1:]
+        else:
+            # No more brackets, split remaining by dots
+            if current_expr:
+                parts.extend([p for p in current_expr.split('.') if p])
+            break
+
+    # Navigate through the parts
     for part in parts:
         if isinstance(value, dict) and part in value:
             value = value[part]

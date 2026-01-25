@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Optional
 import uuid
 import yaml
+import shlex
 
 from .types import (
     WorkflowDefinition,
@@ -260,15 +261,24 @@ class WorkflowEngine:
         Returns:
             The output of the step
         """
+        # For shell commands, use shell-safe variable substitution
+        # to prevent command injection attacks
+        shell_safe = step.step_type == StepType.SHELL
+
         # Template substitution in inputs
-        inputs = self._substitute_variables(step.inputs, variables)
+        inputs = self._substitute_variables(step.inputs, variables, shell_safe=shell_safe)
+
+        # For shell commands, also substitute and escape the target command
+        target = step.target
+        if shell_safe:
+            target = self._substitute_variables(target, variables, shell_safe=True)
 
         # Log what would be executed
         execution_info = {
             "step_type": step.step_type.value,
-            "target": step.target,
+            "target": target,
             "inputs": inputs,
-            "message": f"Would execute: {step.step_type.value} '{step.target}'",
+            "message": f"Would execute: {step.step_type.value} '{target}'",
         }
 
         # In a real implementation, this would dispatch to the appropriate executor
@@ -279,18 +289,37 @@ class WorkflowEngine:
         self,
         value: Any,
         variables: dict[str, Any],
+        shell_safe: bool = False,
     ) -> Any:
-        """Substitute {{ variable }} patterns in values."""
+        """
+        Substitute {{ variable }} patterns in values.
+
+        Args:
+            value: The value to substitute variables in
+            variables: Dictionary of variable names to values
+            shell_safe: If True, escape values for safe shell execution
+
+        Returns:
+            Value with variables substituted
+        """
         if isinstance(value, str):
             for var_name, var_value in variables.items():
-                value = value.replace(f"{{{{ {var_name} }}}}", str(var_value))
+                # Convert variable value to string
+                var_str = str(var_value)
+
+                # For shell commands, escape the value to prevent injection
+                if shell_safe:
+                    var_str = shlex.quote(var_str)
+
+                value = value.replace(f"{{{{ {var_name} }}}}", var_str)
             return value
         elif isinstance(value, dict):
             return {
-                k: self._substitute_variables(v, variables) for k, v in value.items()
+                k: self._substitute_variables(v, variables, shell_safe)
+                for k, v in value.items()
             }
         elif isinstance(value, list):
-            return [self._substitute_variables(v, variables) for v in value]
+            return [self._substitute_variables(v, variables, shell_safe) for v in value]
         return value
 
     def _handle_gate(
