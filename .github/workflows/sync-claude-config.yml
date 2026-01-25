@@ -1,7 +1,7 @@
 # Claude Code Configuration Sync
 #
 # This workflow pulls the latest Claude Code configuration from
-# bigdegenenergy/ai-dev-toolkit on a weekly schedule.
+# bigdegenenergy/ai-dev-toolkit on a daily schedule.
 #
 # SETUP:
 # 1. Copy this file to your repo's .github/workflows/ directory
@@ -11,8 +11,8 @@
 # 3. Push to enable the workflow
 #
 # The workflow will:
-# - Run every Monday at 9:00 AM UTC
-# - Sync .claude/ directory from the source repo
+# - Run every day at 9:00 AM UTC
+# - Sync .claude/, docs/, and tools/ directories from the source repo
 # - Create a PR if changes are detected
 #
 # IMPORTANT - CI Workflows:
@@ -45,8 +45,8 @@ name: Sync Claude Config
 
 on:
   schedule:
-    # Run every Monday at 9:00 AM UTC
-    - cron: '0 9 * * 1'
+    # Run every day at 9:00 AM UTC
+    - cron: '0 9 * * *'
 
   workflow_dispatch:
     inputs:
@@ -220,9 +220,66 @@ jobs:
             echo "  Synced: CLAUDE.md"
           fi
 
+          # Sync .mcp.json.template if it exists in source
+          if [ -f "/tmp/claude-code-source/.mcp.json.template" ]; then
+            cp /tmp/claude-code-source/.mcp.json.template ./.mcp.json.template
+            echo "  Synced: .mcp.json.template"
+          fi
+
           # Check for changes
-          if ! git diff --quiet CLAUDE.md 2>/dev/null; then
+          if ! git diff --quiet CLAUDE.md .mcp.json.template 2>/dev/null; then
             CHANGES_MADE=true
+          fi
+
+          echo "changes_made=$CHANGES_MADE" >> $GITHUB_OUTPUT
+
+      - name: Sync docs directory
+        id: sync_docs
+        run: |
+          echo "🔄 Syncing docs/ directory..."
+
+          CHANGES_MADE=false
+
+          if [ -d "/tmp/claude-code-source/docs" ]; then
+            mkdir -p docs
+
+            # Copy documentation files (excluding generated content like onefilellm/)
+            for doc in /tmp/claude-code-source/docs/*.md; do
+              [ -f "$doc" ] || continue
+              cp "$doc" "docs/$(basename "$doc")"
+              echo "  Synced: docs/$(basename "$doc")"
+            done
+
+            # Check for changes
+            if ! git diff --quiet docs/ 2>/dev/null; then
+              CHANGES_MADE=true
+            fi
+          fi
+
+          echo "changes_made=$CHANGES_MADE" >> $GITHUB_OUTPUT
+
+      - name: Sync tools directory
+        id: sync_tools
+        run: |
+          echo "🔄 Syncing tools/ directory..."
+
+          CHANGES_MADE=false
+
+          if [ -d "/tmp/claude-code-source/tools" ]; then
+            mkdir -p tools
+
+            # Copy tools directories
+            for tool_dir in /tmp/claude-code-source/tools/*/; do
+              [ -d "$tool_dir" ] || continue
+              toolname=$(basename "$tool_dir")
+              cp -R "$tool_dir" "tools/"
+              echo "  Synced: tools/$toolname"
+            done
+
+            # Check for changes
+            if ! git diff --quiet tools/ 2>/dev/null; then
+              CHANGES_MADE=true
+            fi
           fi
 
           echo "changes_made=$CHANGES_MADE" >> $GITHUB_OUTPUT
@@ -311,6 +368,9 @@ jobs:
           ### Changes Synced
           - \`.claude/\` directory (commands, hooks, agents, skills)
           - \`CLAUDE.md\` (main configuration file)
+          - \`.mcp.json.template\` (MCP server configuration)
+          - \`docs/\` directory (setup guides and references)
+          - \`tools/\` directory (utilities like onefilellm)
           ${WORKFLOW_LINE}
 
           ### ⚠️ CI Note
