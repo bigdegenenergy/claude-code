@@ -49,8 +49,18 @@ If auto-merge fails (insufficient permissions or repo settings), the workflow wi
 1. Go to **Actions** > **OneFileLLM Content Aggregator**
 2. Click **Run workflow**
 3. Enter your sources (space-separated)
-4. Configure options as needed
-5. The workflow creates a PR that auto-merges to `main`
+4. Configure options as needed (output name is auto-generated if left empty)
+5. The workflow creates a PR and merges it to `main`
+
+### Auto-Generated Filenames
+
+When `output_name` is left empty, the filename is auto-generated from the source:
+
+| Source Type | Example Input                   | Generated Filename |
+| ----------- | ------------------------------- | ------------------ |
+| GitHub repo | `https://github.com/owner/repo` | `owner-repo.xml`   |
+| Website     | `https://docs.example.com/api`  | `docs-example.xml` |
+| Local path  | `./src/components`              | `components.xml`   |
 
 ### Example Inputs
 
