@@ -29,11 +29,22 @@ fi
 
 ### Step 2: Approve Gate
 
-```python
+```bash
+# Export variables to environment to prevent injection
+export WORKFLOW_ID="$WORKFLOW_ID"
+export USER="$USER"
+
+# Execute Python safely using environment variables
+python3 -c '
+import os
 from .claude.workflows.lobster import WorkflowEngine
 
+workflow_id = os.environ.get("WORKFLOW_ID", "")
+user = os.environ.get("USER", "")
+
 engine = WorkflowEngine()
-state = engine.approve("$WORKFLOW_ID", approved_by="$USER")
+state = engine.approve(workflow_id, approved_by=user)
+'
 ```
 
 ### Step 3: Resume Execution

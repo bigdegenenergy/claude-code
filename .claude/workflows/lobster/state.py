@@ -302,6 +302,7 @@ class StateManager:
             request: The approval request to save
         """
         approval_file = self._approval_file(request.workflow_id)
+        lock_file = self._lock_file(request.workflow_id)
 
         data = {
             "workflow_id": request.workflow_id,
@@ -324,8 +325,14 @@ class StateManager:
             "rejection_reason": request.rejection_reason,
         }
 
-        with open(approval_file, "w") as f:
-            json.dump(data, f, indent=2)
+        # Write with file locking for concurrent access
+        with open(lock_file, "w") as lf:
+            self._acquire_lock(lf, exclusive=True)
+            try:
+                with open(approval_file, "w") as f:
+                    json.dump(data, f, indent=2)
+            finally:
+                self._release_lock(lf)
 
     def load_approval_request(self, workflow_id: str) -> Optional[ApprovalRequest]:
         """

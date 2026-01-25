@@ -65,8 +65,8 @@ const { chromium } = require("playwright");
   const page = await browser.newPage();
 
   await page.goto("$URL");
-  await page.fill('[data-testid="email"]', "test@example.com");
-  await page.fill('[data-testid="password"]', "password");
+  await page.fill('[data-testid="email"]', process.env.TEST_EMAIL || "test@example.com");
+  await page.fill('[data-testid="password"]', process.env.TEST_PASSWORD);
   await page.click('[data-testid="submit"]');
   await page.waitForURL("**/dashboard");
 
@@ -92,7 +92,7 @@ test("user can complete checkout", async ({ page }) => {
 
   // Checkout
   await page.click('[data-testid="checkout"]');
-  await page.fill('[data-testid="email"]', "test@example.com");
+  await page.fill('[data-testid="email"]', process.env.TEST_EMAIL || "test@example.com");
   await page.click('[data-testid="place-order"]');
 
   // Verify

@@ -45,12 +45,16 @@ jobs:
     steps:
       - name: Parse Command
         id: parse
+        env:
+          PAYLOAD_COMMAND: ${{ github.event.client_payload.command }}
+          INPUT_COMMAND: ${{ github.event.inputs.command }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Get command from dispatch or workflow input
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            FULL_COMMAND="${{ github.event.client_payload.command }}"
+          # Get command from dispatch or workflow input via environment variables
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
+            FULL_COMMAND="$PAYLOAD_COMMAND"
           else
-            FULL_COMMAND="${{ github.event.inputs.command }}"
+            FULL_COMMAND="$INPUT_COMMAND"
           fi
 
           echo "Raw command: $FULL_COMMAND"

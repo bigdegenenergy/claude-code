@@ -4,6 +4,22 @@ Gateway Command Mapping
 
 Maps chat platform commands to Claude Code commands.
 Used by webhook handlers to translate incoming requests.
+
+SECURITY WARNING:
+================
+The permission system relies on user_id provided in the webhook payload.
+Since repository_dispatch often uses a shared token, any holder of the token
+can potentially spoof the user_id to bypass admin restrictions.
+
+REQUIRED SECURITY MEASURES:
+1. Validate the payload signature from the chat platform if possible
+2. Implement strict access controls on the webhook Personal Access Token (PAT)
+3. Ensure users.json is NOT writable by the GitHub Actions workflow
+4. Consider implementing additional authentication layers for admin commands
+5. Review webhook audit logs regularly for unauthorized access attempts
+
+The current implementation assumes trusted webhook sources. For production use,
+implement proper cryptographic signature validation for incoming webhooks.
 """
 
 from dataclasses import dataclass
@@ -164,7 +180,15 @@ def get_command(name: str) -> Optional[CommandMapping]:
 
 
 def can_execute(command: CommandMapping, user_permission: PermissionLevel) -> bool:
-    """Check if user has permission to execute command."""
+    """
+    Check if user has permission to execute command.
+
+    SECURITY WARNING: This function assumes the user_permission parameter
+    is trustworthy. In webhook scenarios, the user_id (and thus permission level)
+    comes from the webhook payload and can be spoofed if the webhook is not
+    properly authenticated. Always validate webhook signatures before trusting
+    user_id claims.
+    """
     permission_order = [
         PermissionLevel.VIEWER,
         PermissionLevel.MEMBER,
