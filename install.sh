@@ -487,6 +487,11 @@ install_tools() {
             cp -R "$tool_dir" "tools/"
             log_success "Installed tools/$toolname"
         done
+
+        # Set executable permissions on scripts/binaries within tools/
+        # Similar to .claude/hooks/ and .github/scripts/ handling
+        find tools -type f \( -name "*.sh" -o -name "*.py" -o -name "*.mjs" -o -name "*.cjs" -o -name "*.js" \) -exec chmod +x {} \; 2>/dev/null || true
+        log_info "Set executable permissions on tool scripts"
     fi
 }
 
