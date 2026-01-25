@@ -265,6 +265,20 @@ const skillTriggers = {
       /\bcircuit.?breaker/,
     ],
     priority: 1
+  },
+  'surgical-analysis': {
+    patterns: [
+      /\bzeno\b/,
+      /\bsurgical.?analysis/,
+      /\bevidence.?based.?review/,
+      /\bcite.?lines/,
+      /\bfile.?line.?citation/,
+      /\bcode.?audit/,
+      /\bfind.?vulnerabilities/,
+      /\bscan.?for.?issues/,
+      /\bstatic.?analysis/,
+    ],
+    priority: 1
   }
 };
 

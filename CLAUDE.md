@@ -69,12 +69,16 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 #### Analysis & Investigation
 
-| Role             | Command         | When to Use                            |
-| ---------------- | --------------- | -------------------------------------- |
-| **Researcher**   | `/research`     | Before implementation, explore options |
-| **Debugger**     | `/debug`        | Systematic bug investigation           |
-| **Test Writer**  | `/add-tests`    | Add comprehensive test coverage        |
-| **Deploy Check** | `/deploy-check` | Pre-deployment readiness verification  |
+| Role                 | Command             | When to Use                             |
+| -------------------- | ------------------- | --------------------------------------- |
+| **Researcher**       | `/research`         | Before implementation, explore options  |
+| **Debugger**         | `/debug`            | Systematic bug investigation            |
+| **Zeno Analyzer**    | `/zeno`             | Surgical code analysis with citations   |
+| **Zeno Verifier**    | `/zeno-verify`      | Validate analysis citations still valid |
+| **Deslop**           | `/deslop`           | Aggressive code simplification          |
+| **Systematic Debug** | `/systematic-debug` | Evidence-based hypothesis debugging     |
+| **Test Writer**      | `/add-tests`        | Add comprehensive test coverage         |
+| **Deploy Check**     | `/deploy-check`     | Pre-deployment readiness verification   |
 
 #### Orchestration Workflows
 
@@ -89,13 +93,14 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 #### Quality & Review
 
-| Role                 | Agent               | Specialty                            |
-| -------------------- | ------------------- | ------------------------------------ |
-| **Code Reviewer**    | `@code-reviewer`    | Critical code review (read-only)     |
-| **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning |
-| **Test Automator**   | `@test-automator`   | Unit, integration, E2E test creation |
-| **Code Simplifier**  | `@code-simplifier`  | Refactoring, code hygiene            |
-| **QA Verifier**      | `@verify-app`       | End-to-end testing                   |
+| Role                 | Agent               | Specialty                                  |
+| -------------------- | ------------------- | ------------------------------------------ |
+| **Code Reviewer**    | `@code-reviewer`    | Critical code review (read-only)           |
+| **Zeno Analyzer**    | `@zeno-analyzer`    | Surgical analysis with file:line citations |
+| **Security Auditor** | `@security-auditor` | OWASP Top 10, vulnerability scanning       |
+| **Test Automator**   | `@test-automator`   | Unit, integration, E2E test creation       |
+| **Code Simplifier**  | `@code-simplifier`  | Refactoring, code hygiene                  |
+| **QA Verifier**      | `@verify-app`       | End-to-end testing                         |
 
 #### Architecture & Design
 
@@ -146,19 +151,23 @@ This is the **AI Dev Toolkit** - a template that configures AI coding assistants
 
 Skills are context-aware expertise modules that auto-trigger based on the task at hand.
 
-| Skill                | Auto-Triggers When                        |
-| -------------------- | ----------------------------------------- |
-| **autonomous-loop**  | Running iteratively until task completion |
-| **tdd**              | Writing tests first, TDD workflow         |
-| **security-review**  | Reviewing for vulnerabilities, auth code  |
-| **api-design**       | Designing REST/GraphQL endpoints          |
-| **async-patterns**   | Implementing concurrent code              |
-| **debugging**        | Investigating bugs, analyzing errors      |
-| **refactoring**      | Cleaning up code, reducing complexity     |
-| **testing-patterns** | Writing test suites, improving coverage   |
-| **k8s-operations**   | Working with Kubernetes, containers       |
-| **cicd-automation**  | Setting up pipelines, GitHub Actions      |
-| **observability**    | Implementing logging, metrics, tracing    |
+| Skill                    | Auto-Triggers When                             |
+| ------------------------ | ---------------------------------------------- |
+| **autonomous-loop**      | Running iteratively until task completion      |
+| **ralph-coder**          | TDD loop with quality gates and atomic commits |
+| **tdd**                  | Writing tests first, TDD workflow              |
+| **security-review**      | Reviewing for vulnerabilities, auth code       |
+| **surgical-analysis**    | Evidence-based code analysis with citations    |
+| **deslop**               | Aggressive simplification, removing AI slop    |
+| **systematic-debugging** | Hypothesis-driven debugging, root cause        |
+| **api-design**           | Designing REST/GraphQL endpoints               |
+| **async-patterns**       | Implementing concurrent code                   |
+| **debugging**            | Investigating bugs, analyzing errors           |
+| **refactoring**          | Cleaning up code, reducing complexity          |
+| **testing-patterns**     | Writing test suites, improving coverage        |
+| **k8s-operations**       | Working with Kubernetes, containers            |
+| **cicd-automation**      | Setting up pipelines, GitHub Actions           |
+| **observability**        | Implementing logging, metrics, tracing         |
 
 Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise without bloating the main context.
 
@@ -194,6 +203,10 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 
 # Analysis & Debugging
 /debug                   # Systematic bug investigation
+/systematic-debug        # Hypothesis-driven debugging with evidence
+/zeno                    # Surgical code analysis with citations
+/zeno-verify             # Validate analysis citations
+/deslop                  # Aggressive code simplification
 /deploy-check            # Pre-deployment readiness check
 
 # Git Operations
@@ -205,6 +218,7 @@ Skills live in `.claude/skills/<skill>/SKILL.md` and provide domain expertise wi
 
 # Agents - Quality (invoke with @)
 @code-reviewer           # Critical code review
+@zeno-analyzer           # Surgical analysis with file:line citations
 @security-auditor        # Security audit
 @test-automator          # Create test suites
 @code-simplifier         # Improve readability
@@ -829,6 +843,12 @@ Track improvements to this configuration:
   - New slash commands: `/research`, `/debug`, `/add-tests`, `/deploy-check`
   - New `.github/mcp-config.json.template` for MCP server configuration
   - Total: 18 agents, 11 skills, 26 commands, 8 hooks, 6 AI workflows
+- **2026-01-25**: **Clawdbot Integration** - Added tools inspired by [clawdbot/clawdbot](https://github.com/clawdbot/clawdbot):
+  - New `@zeno-analyzer` agent for surgical code analysis with file:line citations
+  - New skills: `deslop` (aggressive simplification), `systematic-debugging` (hypothesis-driven), `ralph-coder` (quality gates), `surgical-analysis` (evidence-based review)
+  - New commands: `/zeno`, `/zeno-verify`, `/deslop`, `/systematic-debug`
+  - Integration plan for Lobster workflow engine, Gateway ChatOps, and headless browser
+  - Total: 19 agents, 15 skills, 30 commands, 8 hooks, 6 AI workflows
 
 ---
 
