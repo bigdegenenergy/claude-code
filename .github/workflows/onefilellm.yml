@@ -8,9 +8,9 @@ on:
         required: true
         type: string
       output_name:
-        description: 'Output filename (without extension, alphanumeric/dash/underscore only)'
+        description: 'Output filename (auto-generated from source if left empty)'
         required: false
-        default: 'aggregated-content'
+        default: ''
         type: string
       format:
         description: 'Output format override'
@@ -43,9 +43,9 @@ on:
         required: true
         type: string
       output_name:
-        description: 'Output filename (without extension, alphanumeric/dash/underscore only)'
+        description: 'Output filename (auto-generated from source if left empty)'
         required: false
-        default: 'aggregated-content'
+        default: ''
         type: string
       format:
         description: 'Output format override'
@@ -100,11 +100,44 @@ jobs:
           INPUT_FORMAT: ${{ inputs.format }}
           INPUT_SOURCES: ${{ inputs.sources }}
         run: |
-          # Sanitize output_name: only allow alphanumeric, dash, underscore
-          SAFE_OUTPUT_NAME=$(echo "$INPUT_OUTPUT_NAME" | tr -cd '[:alnum:]-_')
+          # Auto-generate output name from first source if not provided
+          if [ -z "$INPUT_OUTPUT_NAME" ]; then
+            # Get the first source
+            FIRST_SOURCE=$(echo "$INPUT_SOURCES" | awk '{print $1}')
+
+            # Extract name based on source type
+            if [[ "$FIRST_SOURCE" =~ ^https?://github\.com/([^/]+)/([^/]+) ]]; then
+              # GitHub repo: use owner-repo format
+              OWNER="${BASH_REMATCH[1]}"
+              REPO="${BASH_REMATCH[2]}"
+              # Remove .git suffix if present
+              REPO="${REPO%.git}"
+              AUTO_NAME="${OWNER}-${REPO}"
+            elif [[ "$FIRST_SOURCE" =~ ^https?://([^/]+) ]]; then
+              # Other URL: use domain name
+              DOMAIN="${BASH_REMATCH[1]}"
+              # Remove www. prefix and common TLDs for cleaner name
+              AUTO_NAME=$(echo "$DOMAIN" | sed -E 's/^www\.//; s/\.(com|org|io|net|dev)$//; s/\./-/g')
+            elif [[ "$FIRST_SOURCE" =~ ^\.?/?(.+)$ ]]; then
+              # Local path: use directory/file name
+              AUTO_NAME=$(basename "$FIRST_SOURCE" | tr -cd '[:alnum:]-_')
+            else
+              AUTO_NAME="aggregated-content"
+            fi
+
+            # Sanitize the auto-generated name
+            SAFE_OUTPUT_NAME=$(echo "$AUTO_NAME" | tr -cd '[:alnum:]-_' | tr '[:upper:]' '[:lower:]')
+          else
+            # Sanitize user-provided output_name
+            SAFE_OUTPUT_NAME=$(echo "$INPUT_OUTPUT_NAME" | tr -cd '[:alnum:]-_')
+          fi
+
+          # Fallback if empty
           if [ -z "$SAFE_OUTPUT_NAME" ]; then
             SAFE_OUTPUT_NAME="aggregated-content"
           fi
+
+          echo "Auto-generated output name: $SAFE_OUTPUT_NAME"
           echo "safe_output_name=${SAFE_OUTPUT_NAME}" >> $GITHUB_OUTPUT
 
           # Validate crawl_depth is a number
@@ -226,22 +259,34 @@ jobs:
           OUTPUT_FILE="docs/onefilellm/${SAFE_OUTPUT_NAME}.xml"
 
           echo "Running onefilellm with validated inputs..."
+          echo "Output will be saved to: $OUTPUT_FILE"
 
-          # Execute using array expansion for safety
+          # Execute onefilellm - it writes to output.xml by default
           # Use -- separator to prevent argument injection (sources validated in earlier step)
           # Note: INPUT_SOURCES is intentionally not quoted to allow space-separated sources
-          if onefilellm "${ARGS[@]}" -- $INPUT_SOURCES > "$OUTPUT_FILE" 2>&1; then
+          if onefilellm "${ARGS[@]}" -- $INPUT_SOURCES; then
             echo "onefilellm completed successfully"
           else
-            # If direct output fails, try with python -m
-            python -m onefilellm "${ARGS[@]}" -- $INPUT_SOURCES > "$OUTPUT_FILE" 2>&1 || {
+            # If direct call fails, try with python -m
+            python -m onefilellm "${ARGS[@]}" -- $INPUT_SOURCES || {
               echo "Error: onefilellm failed"
-              cat "$OUTPUT_FILE"
               exit 1
             }
           fi
 
-          # Check if output was generated
+          # onefilellm writes to output.xml by default - move it to our target location
+          if [ -f "output.xml" ] && [ -s "output.xml" ]; then
+            mv "output.xml" "$OUTPUT_FILE"
+            echo "Moved output.xml to $OUTPUT_FILE"
+          elif [ -f "$OUTPUT_FILE" ] && [ -s "$OUTPUT_FILE" ]; then
+            echo "Output already at target location"
+          else
+            echo "Error: No output.xml generated"
+            ls -la
+            exit 1
+          fi
+
+          # Verify output was generated
           if [ -f "$OUTPUT_FILE" ] && [ -s "$OUTPUT_FILE" ]; then
             echo "output_file=${OUTPUT_FILE}" >> $GITHUB_OUTPUT
 
@@ -253,7 +298,7 @@ jobs:
             echo "Generated output with ~$TOKENS estimated tokens"
             echo "File size: $(du -h "$OUTPUT_FILE" | cut -f1)"
           else
-            echo "Error: No output generated"
+            echo "Error: No output generated at $OUTPUT_FILE"
             exit 1
           fi
 
@@ -340,25 +385,25 @@ jobs:
           echo "pull-request-url=${PR_URL}" >> $GITHUB_OUTPUT
           echo "Created PR: ${PR_URL}"
 
-      - name: Auto-merge Pull Request
+      - name: Merge Pull Request
         id: merge
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
         run: |
-          # Try to enable auto-merge (squash)
+          # Merge the PR immediately (squash merge)
           # This may fail if:
-          # - Token lacks admin/write permissions
-          # - Auto-merge is not enabled on the repo
-          # - Branch protection rules prevent it
-          if gh pr merge "$PR_URL" --squash --auto --delete-branch 2>&1; then
-            echo "auto_merged=true" >> $GITHUB_OUTPUT
-            echo "Auto-merge enabled for $PR_URL"
+          # - Token lacks write permissions
+          # - Branch protection rules require reviews
+          # - Merge conflicts exist
+          if gh pr merge "$PR_URL" --squash --delete-branch 2>&1; then
+            echo "merged=true" >> $GITHUB_OUTPUT
+            echo "PR merged successfully: $PR_URL"
           else
-            echo "auto_merged=false" >> $GITHUB_OUTPUT
-            echo "Auto-merge not available (likely insufficient permissions or repo settings)"
-            echo "PR created successfully - manual merge required: $PR_URL"
+            echo "merged=false" >> $GITHUB_OUTPUT
+            echo "Could not merge PR (may require manual merge or review)"
+            echo "PR created: $PR_URL"
           fi
 
       - name: Summary
@@ -366,7 +411,7 @@ jobs:
           SAFE_OUTPUT_NAME: ${{ needs.aggregate.outputs.safe_output_name }}
           TOKEN_COUNT: ${{ needs.aggregate.outputs.token_count }}
           PR_URL: ${{ steps.create-pr.outputs.pull-request-url }}
-          AUTO_MERGED: ${{ steps.merge.outputs.auto_merged }}
+          MERGED: ${{ steps.merge.outputs.merged }}
         run: |
           {
             echo "## OneFileLLM Output Summary"
@@ -377,9 +422,9 @@ jobs:
             echo ""
             echo "**Pull Request:** ${PR_URL}"
             echo ""
-            if [ "$AUTO_MERGED" == "true" ]; then
-              echo "The PR will be auto-merged and the branch deleted."
+            if [ "$MERGED" == "true" ]; then
+              echo "PR was merged successfully and branch deleted."
             else
-              echo "**Note:** Auto-merge not available. Please merge the PR manually."
+              echo "**Note:** PR created but not merged. Please merge manually."
             fi
           } >> $GITHUB_STEP_SUMMARY
