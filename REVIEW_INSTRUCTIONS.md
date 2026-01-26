@@ -5,7 +5,7 @@
 ```json
 {
   "review": {
-    "summary": "The PR correctly addresses the issue of distinguishing between piped execution (curl) and local execution, preventing false positives in source detection. However, the introduction of a fallback mechanism that defaults to the 'main' branch when a tag is missing poses a significant stability and determinism risk.",
+    "summary": "The security hardening in `.github/workflows/gateway-webhook.yml` is excellent and correctly mitigates script injection risks. However, the `install.sh` script introduces a significant reliability risk by silently falling back to the `main` branch if a requested tag fails to clone. This breaks version pinning guarantees.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
@@ -13,28 +13,19 @@
       "id": 1,
       "severity": "important",
       "file": "install.sh",
-      "line": 1,
-      "title": "Unsafe fallback to 'main' branch",
-      "description": "The logic attempts to fetch a specific tag but falls back to the 'main' branch if the tag is missing. This defeats the purpose of version pinning. If a user or script requests a specific version that cannot be found (due to typo, network error, or retraction), the installation should fail explicitly rather than silently installing the 'main' branch, which may contain breaking changes or unstable code.",
-      "suggestion": "Remove the fallback logic. The script should `exit 1` with a clear error message if the requested Git tag cannot be checked out."
+      "line": 0,
+      "title": "Silent fallback to main branch compromises version pinning",
+      "description": "The logic to clone `SOURCE_TAG` with a fallback to `main` (e.g., `git clone ... $TAG || git clone ... main`) is unsafe for a toolkit installer. If a user or CI process pins a specific version (e.g., `v1.2.3`), and that tag is missing or the clone fails (e.g., due to a typo or network blip), the script silently installs the latest `main` branch. This can result in unexpected breaking changes or the installation of unstable/unverified code.",
+      "suggestion": "Remove the fallback logic. If `SOURCE_TAG` is provided but the clone fails, the script should output an error and exit (e.g., `exit 1`) to alert the user that the requested version could not be installed."
     },
     {
       "id": 2,
       "severity": "suggestion",
       "file": "install.sh",
-      "line": 1,
-      "title": "Temporary directory cleanup",
-      "description": "The script now clones to a temporary directory when running via pipe. Ensure that this temporary directory is reliably cleaned up after the installation process completes (both on success and failure) to avoid filling up the user's temporary storage.",
-      "suggestion": "Verify that a `trap` exists to clean up `$TEMP_DIR`. Example: `trap 'rm -rf \"$TEMP_DIR\"' EXIT`."
-    },
-    {
-      "id": 3,
-      "severity": "suggestion",
-      "file": "install.sh",
-      "line": 1,
-      "title": "BASH_SOURCE dependency",
-      "description": "The detection logic relies on `${BASH_SOURCE[0]}`. While valid for `bash`, if users execute the script via `sh install.sh` (POSIX sh) or other shells, this variable may not be set, potentially causing the logic to misbehave.",
-      "suggestion": "Ensure the script has a proper shebang (`#!/bin/bash`) and consider adding a check at the start of the script to ensure it is running under Bash if it relies on Bash-specific variables."
+      "line": 0,
+      "title": "Use shallow clones for installation",
+      "description": "When cloning the repository for installation (especially in the temporary directory flow), ensure `--depth 1` is used. This reduces bandwidth usage and speeds up the installation process.",
+      "suggestion": "Ensure the `git clone` command includes `--depth 1`."
     }
   ]
 }
