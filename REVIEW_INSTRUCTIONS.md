@@ -5,27 +5,45 @@
 ```json
 {
   "review": {
-    "summary": "Security hardening measures are well-implemented, particularly the dependency pinning and read-only agent permissions. However, the command injection prevention logic in the CI workflow is too restrictive and will break valid URL inputs containing standard characters like '&'.",
+    "summary": "The security hardening changes to the agent definitions and dependency pinning are excellent improvements. However, I am requesting changes due to a critical privacy risk in the PII scanning workflow where sensitive data is logged to the console, the lack of failure signaling in that same workflow, and the inclusion of a temporary file.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "important",
-      "file": ".github/workflows/onefilellm.yml",
-      "line": 0,
-      "title": "Input validation blocks valid URL characters",
-      "description": "The validation regex `[\\$;\\|\\&><\\`\\(\\)]` includes characters commonly found in URLs, specifically the ampersand (`&`) for query parameters and parentheses (`()`). Since `onefilellm` is designed to process URLs, this check will cause valid inputs (e.g., URLs with query strings) to fail validation, causing a regression in functionality.",
-      "suggestion": "Remove `&`, `(`, and `)` from the regex blocklist. To prevent command injection securely, ensure the `$INPUT_SOURCES` variable is double-quoted in all subsequent shell usage, rather than sanitizing the input content."
+      "severity": "critical",
+      "file": ".github/workflows/pii-scan-content.yml",
+      "line": 47,
+      "title": "Sensitive PII exposed in CI logs",
+      "description": "The fallback mechanism logs the full content of the PII report (`message`) to the GitHub Actions console when running in a fork or if commenting fails. If this report contains the actual detected PII (e.g., secrets, keys), it exposes these secrets in the build logs, which are persistent and visible to anyone with read access.",
+      "suggestion": "Do not log the raw PII report to the console. Instead, log a generic warning indicating that PII was detected and referencing the file locations, or ensure the content is strictly redacted before logging."
     },
     {
       "id": 2,
-      "severity": "suggestion",
-      "file": "install.sh",
-      "line": 0,
-      "title": "Unpinned 'main' branch usage in install script",
-      "description": "Setting `SOURCE_TAG=\"main\"` creates a non-deterministic installation target that will break if the main branch becomes unstable. While noted as temporary, this reduces reliability.",
-      "suggestion": "Use a specific commit SHA for `SOURCE_TAG` instead of `\"main\"` until the release tag `v2.3.0` is officially created."
+      "severity": "important",
+      "file": ".github/workflows/pii-scan-content.yml",
+      "line": 47,
+      "title": "Workflow does not fail on PII detection in forks",
+      "description": "When the workflow detects PII in a fork (or if commenting errors out), it logs the finding but proceeds without signaling failure. This allows a PR containing PII to show a passing CI status.",
+      "suggestion": "Add `core.setFailed('PII detected in content');` within the fallback/catch blocks to ensure the workflow fails when PII is discovered."
+    },
+    {
+      "id": 3,
+      "severity": "important",
+      "file": "REVIEW_INSTRUCTIONS.md",
+      "line": 1,
+      "title": "Temporary artifact committed",
+      "description": "This file appears to be a temporary automated report or instruction set for an AI agent and should not be included in the source repository.",
+      "suggestion": "Remove `REVIEW_INSTRUCTIONS.md` from the Pull Request."
+    },
+    {
+      "id": 4,
+      "severity": "important",
+      "file": ".github/workflows/onefilellm.yml",
+      "line": 50,
+      "title": "Potential command injection risk with allowed `&`",
+      "description": "The updated input validation regex allows `&` (to support URLs). However, `&` is a shell metacharacter used for background execution. If `INPUT_SOURCES` is passed to a shell command downstream without strict quoting, this allows command injection.",
+      "suggestion": "Ensure that `INPUT_SOURCES` is strictly quoted (e.g., `\"$INPUT_SOURCES\"` or `\"${{ inputs.sources }}\"`) in all subsequent execution steps. If strict quoting cannot be guaranteed, `&` must remain blocked."
     }
   ]
 }
