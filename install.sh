@@ -237,23 +237,11 @@ check_prerequisites() {
         fi
     fi
 
-    # Check if AI Dev Toolkit is already installed in this repo
+    # Check if AI Dev Toolkit is already installed - auto-update if so
     if [ -d "$GIT_ROOT/.claude/commands" ] && [ -d "$GIT_ROOT/.claude/agents" ]; then
-        if [ "$UPDATE_MODE" = false ] && [ "$FORCE_MODE" = false ]; then
-            echo ""
-            log_warning "AI Dev Toolkit is already installed in this repository!"
-            echo ""
-            echo -e "${YELLOW}Detected existing installation:${NC}"
-            echo "  • .claude/commands/ exists"
-            echo "  • .claude/agents/ exists"
-            echo ""
-            echo -e "${YELLOW}To update to the latest version, run:${NC}"
-            echo "  bash install.sh --update"
-            echo ""
-            exit 0
-        else
-            log_info "Update mode: will refresh existing installation"
-        fi
+        log_info "Existing installation detected - updating to latest version"
+        UPDATE_MODE=true
+        FORCE_MODE=true
     fi
 
     # Check for curl or wget
