@@ -338,7 +338,7 @@ download_source() {
         if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
             log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
         elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
-             (cd "$TEMP_DIR" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
+             (cd "$TEMP_DIR" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
             log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
         else
             log_error "Failed to clone version $SOURCE_TAG"
@@ -374,7 +374,7 @@ download_source() {
     if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
         log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
     elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
-         (cd "$TEMP_DIR" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
+         (cd "$TEMP_DIR" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
         log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
     else
         log_error "Failed to clone version $SOURCE_TAG"
