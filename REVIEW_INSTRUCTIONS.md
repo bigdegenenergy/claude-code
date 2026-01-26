@@ -5,7 +5,7 @@
 ```json
 {
   "review": {
-    "summary": "The PR introduces aggressive auto-update logic that removes user safety checks and simultaneously enables conflicting `UPDATE` and `FORCE` modes. It also includes an artifact file that appears to be unintentional.",
+    "summary": "The PR removes blocking checks to allow the script to run in more contexts (including inside the source repo) and fixes potential self-copying errors. However, removing the source repository guard clause creates a significant risk for developers working on the toolkit itself, as running the script locally could trigger an update that overwrites uncommitted changes.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
@@ -13,28 +13,10 @@
       "id": 1,
       "severity": "important",
       "file": "install.sh",
-      "line": 5,
-      "title": "Conflicting installation modes set simultaneously",
-      "description": "The script sets both `UPDATE_MODE=true` and `FORCE_MODE=true` when an installation is detected. Typically, `FORCE_MODE` implies a destructive reinstall (rm -rf && clone), while `UPDATE_MODE` implies an in-place update (git pull). Setting both is contradictory; if the directory is wiped by force, the update logic is irrelevant. If it's not wiped, `FORCE_MODE` might be misleading.",
-      "suggestion": "Determine the specific intent (clean reinstall vs. in-place update) and set only the appropriate flag. If `FORCE_MODE` is intended to bypass version checks but keep files, verify downstream logic supports this combination."
-    },
-    {
-      "id": 2,
-      "severity": "important",
-      "file": "install.sh",
-      "line": 3,
-      "title": "Removal of safety check for existing installations",
-      "description": "Previously, the script aborted if an installation existed, protecting local modifications. The new logic automatically forces an update/reinstall. This could lead to data loss if a user has modified files within the toolkit directory expecting them to persist.",
-      "suggestion": "Restore a confirmation prompt or require an explicit argument (like `--auto-update`) to bypass the safety check, rather than defaulting to aggressive updates."
-    },
-    {
-      "id": 3,
-      "severity": "suggestion",
-      "file": "REVIEW_INSTRUCTIONS.md",
       "line": 1,
-      "title": "Commit of generated artifact",
-      "description": "The file `REVIEW_INSTRUCTIONS.md` appears to be a generated report or instruction set for an AI agent and likely should not be committed to the source repository.",
-      "suggestion": "Remove `REVIEW_INSTRUCTIONS.md` from the PR."
+      "title": "Risk of overwriting local development work",
+      "description": "You removed the guard clause that prevented the script from running inside the `ai-dev-toolkit` source repository. If a developer runs `./install.sh` inside their local clone of the toolkit (where `SCRIPT_DIR == GIT_ROOT`), the script presumably falls through to the 'update' logic (fetching from remote). This will overwrite their local uncommitted changes with the remote version, causing data loss.\n\nThe logic fix `[ \"$SCRIPT_DIR\" != \"$GIT_ROOT\" ]` prevents the `cp` command from erroring on source==dest, but it does not prevent the subsequent download/update logic from overwriting the current directory.",
+      "suggestion": "Ensure that if `SCRIPT_DIR == GIT_ROOT` (running inside the source repo), the script skips any remote download/update steps and only performs non-destructive setup (like installing hooks). Alternatively, restore a non-blocking warning or check for dirty git status before proceeding."
     }
   ]
 }
