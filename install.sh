@@ -307,31 +307,51 @@ confirm_overwrite() {
 # ------------------------------------------------------------------------------
 
 # Detect script directory for local source detection
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# When piped via curl, BASH_SOURCE[0] may be empty or /dev/stdin, so SCRIPT_DIR becomes current dir
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+
+# Check if we're running from a real file (not piped via curl)
+RUNNING_FROM_FILE=false
+if [ -f "$SCRIPT_DIR/install.sh" ]; then
+    RUNNING_FROM_FILE=true
+fi
 
 download_source() {
     log_header "Locating AI Dev Toolkit Configuration"
 
-    # Check if we're running from within the source repository itself
-    # (SCRIPT_DIR == GIT_ROOT means ./install.sh in the toolkit repo)
-    if [ "$SCRIPT_DIR" = "$GIT_ROOT" ] && \
-       [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
-        log_success "Running from toolkit source directory - using local files"
-        TEMP_DIR="$SCRIPT_DIR"
-        USE_LOCAL_SOURCE=true
+    # If piped via curl (not running from a file), always download from remote
+    if [ "$RUNNING_FROM_FILE" = false ]; then
+        log_info "Downloading from remote repository..."
+
+        TEMP_DIR=$(mktemp -d)
+        USE_LOCAL_SOURCE=false
+        trap 'rm -rf "$TEMP_DIR"' EXIT
+
+        if [ "$DRY_RUN" = true ]; then
+            log_info "[DRY RUN] Would clone $SOURCE_REPO (tag: $SOURCE_TAG) to $TEMP_DIR"
+            return 0
+        fi
+
+        log_info "Cloning repository (version: $SOURCE_TAG)..."
+        if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
+            log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
+        else
+            log_warning "Tag $SOURCE_TAG not found, using main branch"
+            git clone --quiet --depth 1 "$SOURCE_REPO" "$TEMP_DIR"
+            log_success "Downloaded configuration source (latest)"
+        fi
         return 0
     fi
 
-    # Check if we're running from a cloned toolkit repo into a different target
-    if [ "$SCRIPT_DIR" != "$GIT_ROOT" ] && \
-       [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+    # Running from a local file - check if it's the toolkit source repo
+    if [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
         log_success "Using local source files from: $SCRIPT_DIR"
         TEMP_DIR="$SCRIPT_DIR"
         USE_LOCAL_SOURCE=true
         return 0
     fi
 
-    # Download from remote
+    # Local file but not a complete toolkit - download from remote
     log_info "Downloading from remote repository..."
 
     TEMP_DIR=$(mktemp -d)
