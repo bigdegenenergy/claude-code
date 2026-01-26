@@ -104,6 +104,69 @@ log_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 log_error() { echo -e "${RED}✗${NC} $1"; }
 log_header() { echo -e "\n${BOLD}${CYAN}$1${NC}"; }
 
+# Validate SOURCE_TAG to prevent flag injection
+# Allows: alphanumeric, dots, hyphens (not at start), underscores, slashes (for refs)
+# Pattern matches: commit SHAs, semver tags (v1.0.0), branch names (main, feature/foo)
+validate_source_tag() {
+    local tag="$1"
+    # Must not be empty
+    if [ -z "$tag" ]; then
+        log_error "SOURCE_TAG cannot be empty"
+        return 1
+    fi
+    # Must not start with hyphen (prevents flag injection)
+    if [[ "$tag" =~ ^- ]]; then
+        log_error "SOURCE_TAG cannot start with hyphen: $tag"
+        return 1
+    fi
+    # Must match safe pattern: alphanumeric, dots, hyphens, underscores, slashes
+    if ! [[ "$tag" =~ ^[a-zA-Z0-9][a-zA-Z0-9._/-]*$ ]]; then
+        log_error "SOURCE_TAG contains invalid characters: $tag"
+        return 1
+    fi
+    return 0
+}
+
+# Clone repository with fallback strategy
+# Usage: clone_repo <target_dir>
+clone_repo() {
+    local target_dir="$1"
+
+    # Validate SOURCE_TAG before any git operations
+    if ! validate_source_tag "$SOURCE_TAG"; then
+        exit 1
+    fi
+
+    log_info "Cloning repository (version: $SOURCE_TAG)..."
+
+    # Try 1: Shallow clone with branch/tag (fastest, works for tags and branches)
+    if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$target_dir" 2>/dev/null; then
+        log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
+        return 0
+    fi
+
+    # Try 2: Partial clone with blob filter (Git 2.19+), then checkout commit
+    if git clone --quiet --filter=blob:none "$SOURCE_REPO" "$target_dir" 2>/dev/null && \
+       (cd "$target_dir" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
+        log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
+        return 0
+    fi
+
+    # Try 3: Full clone fallback for older Git versions without --filter support
+    rm -rf "$target_dir" 2>/dev/null
+    if git clone --quiet "$SOURCE_REPO" "$target_dir" 2>/dev/null && \
+       (cd "$target_dir" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
+        log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
+        return 0
+    fi
+
+    # All attempts failed
+    log_error "Failed to clone version $SOURCE_TAG"
+    log_error "The requested version may not exist or there may be a network issue."
+    log_error "Available versions: https://github.com/bigdegenenergy/ai-dev-toolkit/tags"
+    return 1
+}
+
 print_banner() {
     echo -e "${CYAN}"
     cat << 'EOF'
@@ -333,17 +396,7 @@ download_source() {
             return 0
         fi
 
-        log_info "Cloning repository (version: $SOURCE_TAG)..."
-        # Try branch/tag first (shallow clone), fall back to filtered clone for commit SHA
-        if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
-            log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-        elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
-             (cd "$TEMP_DIR" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
-            log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
-        else
-            log_error "Failed to clone version $SOURCE_TAG"
-            log_error "The requested version may not exist or there may be a network issue."
-            log_error "Available versions: https://github.com/bigdegenenergy/ai-dev-toolkit/tags"
+        if ! clone_repo "$TEMP_DIR"; then
             exit 1
         fi
         return 0
@@ -369,17 +422,7 @@ download_source() {
         return 0
     fi
 
-    log_info "Cloning repository (version: $SOURCE_TAG)..."
-    # Try branch/tag first (shallow clone), fall back to filtered clone for commit SHA
-    if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
-        log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-    elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
-         (cd "$TEMP_DIR" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
-        log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
-    else
-        log_error "Failed to clone version $SOURCE_TAG"
-        log_error "The requested version may not exist or there may be a network issue."
-        log_error "Available versions: https://github.com/bigdegenenergy/ai-dev-toolkit/tags"
+    if ! clone_repo "$TEMP_DIR"; then
         exit 1
     fi
 }
