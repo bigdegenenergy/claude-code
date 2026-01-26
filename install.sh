@@ -63,8 +63,9 @@ set -e
 # Configuration
 # ------------------------------------------------------------------------------
 VERSION="2.3.0"
-# Pin to specific version for reproducibility (update when releasing new versions)
-SOURCE_TAG="v2.3.0"
+# Use main branch until first release is tagged
+# TODO: Update to "v2.3.0" after creating the release tag
+SOURCE_TAG="main"
 SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
 SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main"
 
