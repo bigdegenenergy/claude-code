@@ -105,8 +105,8 @@ log_error() { echo -e "${RED}✗${NC} $1"; }
 log_header() { echo -e "\n${BOLD}${CYAN}$1${NC}"; }
 
 # Validate SOURCE_TAG to prevent flag injection
-# Allows: alphanumeric, dots, hyphens (not at start), underscores, slashes (for refs)
-# Pattern matches: commit SHAs, semver tags (v1.0.0), branch names (main, feature/foo)
+# Allows: alphanumeric, underscores, dots, hyphens (not at start), slashes (for refs)
+# Pattern matches: commit SHAs, semver tags (v1.0.0), branch names (main, feature/foo, _experimental)
 validate_source_tag() {
     local tag="$1"
     # Must not be empty
@@ -119,8 +119,9 @@ validate_source_tag() {
         log_error "SOURCE_TAG cannot start with hyphen: $tag"
         return 1
     fi
-    # Must match safe pattern: alphanumeric, dots, hyphens, underscores, slashes
-    if ! [[ "$tag" =~ ^[a-zA-Z0-9][a-zA-Z0-9._/-]*$ ]]; then
+    # Must match safe pattern: alphanumeric, underscores, dots, hyphens, slashes
+    # Underscore allowed at start for branch names like _experimental
+    if ! [[ "$tag" =~ ^[a-zA-Z0-9_][a-zA-Z0-9._/-]*$ ]]; then
         log_error "SOURCE_TAG contains invalid characters: $tag"
         return 1
     fi
