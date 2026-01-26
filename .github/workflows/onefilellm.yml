@@ -166,7 +166,7 @@ jobs:
 
           # Validate sources to prevent argument injection and command injection
           # Check that no source starts with a dash to prevent flag injection
-          # Check for shell metacharacters to prevent command injection
+          # Check for dangerous shell metacharacters (but allow URL-safe chars like & and ())
           for source in $INPUT_SOURCES; do
             if [[ "$source" =~ ^- ]]; then
               echo "Error: Source '$source' starts with a dash. This is not allowed to prevent argument injection."
