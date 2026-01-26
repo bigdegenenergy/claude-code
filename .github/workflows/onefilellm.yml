@@ -174,8 +174,8 @@ jobs:
             # Block shell metacharacters that enable command injection
             # Note: & is blocked despite being valid in URLs because it's a shell background operator
             # URLs with query params should use URL encoding (%26) instead of literal &
-            # Blocked: $ ` ; | & > < { } [ ] ! \ ( )
-            if [[ "$source" =~ [\$\`\;\|\&\>\<\{\}\[\]\!\\\(\)] ]]; then
+            # Blocked: $ ` ; | & > < { } [ ] ! \ ( ) ' "
+            if [[ "$source" =~ [\$\`\;\|\&\>\<\{\}\[\]\!\\\(\)\'\"  ] ]]; then
               echo "Error: Source '$source' contains shell metacharacters. Use URL encoding for special characters (e.g., %26 for &)."
               exit 1
             fi

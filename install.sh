@@ -334,10 +334,10 @@ download_source() {
         fi
 
         log_info "Cloning repository (version: $SOURCE_TAG)..."
-        # Try branch/tag first, fall back to commit SHA clone
+        # Try branch/tag first (shallow clone), fall back to filtered clone for commit SHA
         if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
             log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-        elif git clone --quiet "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
+        elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
              (cd "$TEMP_DIR" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
             log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
         else
@@ -370,10 +370,10 @@ download_source() {
     fi
 
     log_info "Cloning repository (version: $SOURCE_TAG)..."
-    # Try branch/tag first, fall back to commit SHA clone
+    # Try branch/tag first (shallow clone), fall back to filtered clone for commit SHA
     if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
         log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-    elif git clone --quiet "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
+    elif git clone --quiet --filter=blob:none "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null && \
          (cd "$TEMP_DIR" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
         log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
     else
