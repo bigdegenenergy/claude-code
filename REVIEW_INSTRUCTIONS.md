@@ -5,7 +5,7 @@
 ```json
 {
   "review": {
-    "summary": "While the updates to `install.sh` improve security by preventing flag injection and handling commit SHAs correctly, the changes to `.github/workflows/onefilellm.yml` introduce a critical security regression. The new 'allowlist' regex permits dangerous shell metacharacters that were previously blocked, enabling potential Command Injection.",
+    "summary": "The PR introduces valuable security hardening for `install.sh` (input validation, commit pinning) and `onefilellm.yml`. However, there are critical issues to resolve: a temporary file `REVIEW_INSTRUCTIONS.md` was accidentally included, and the relaxation of the allowlist in `onefilellm.yml` to support URL characters has inadvertently unblocked parentheses `(` and `)`, which are shell metacharacters. Given the security-sensitive nature of the repo, these should remain blocked.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
@@ -13,10 +13,28 @@
       "id": 1,
       "severity": "critical",
       "file": ".github/workflows/onefilellm.yml",
-      "line": 0,
-      "title": "Critical Command Injection Vulnerability",
-      "description": "The new input validation regex `^[...\\$\\&\\'\\(\\)\\*\\;...]` explicitly allows dangerous shell metacharacters including `$`, `;`, `&`, `(`, `)`, and `'`. Allowing `$` is particularly critical as it permits command substitution (e.g., `$(malicious_command)`) if the `source` variable is referenced inside double quotes in the workflow script. The previous logic correctly blocked these characters; this change removes those protections.",
-      "suggestion": "Revert the regex validation to strictly exclude shell metacharacters. Specifically remove `\\$`, `\\;`, `\\&`, `\\(`, `\\)`, `\\*`, and `\\'` from the allowed character class. If URLs containing these characters must be supported, they should be URL-encoded (e.g., `%26` instead of `&`)."
+      "line": 1,
+      "title": "Shell Metacharacters Unblocked in Input Validation",
+      "description": "The commit history indicates that parentheses `(` and `)` were unblocked to support URLs. However, these are shell metacharacters that can enable subshell execution or affect command parsing. In a security-sensitive context, allowing these characters in inputs passed to shell commands is a vulnerability.",
+      "suggestion": "Add `(` and `)` back to the blocklist. If users need to pass URLs containing parentheses, require them to be URL-encoded (e.g., `%28`, `%29`) to prevent interpretation by the shell."
+    },
+    {
+      "id": 2,
+      "severity": "important",
+      "file": "REVIEW_INSTRUCTIONS.md",
+      "line": 1,
+      "title": "Remove Temporary Artifact",
+      "description": "The file `REVIEW_INSTRUCTIONS.md` appears to be an AI-generated report or temporary file that should not be committed to the repository.",
+      "suggestion": "Delete this file from the PR."
+    },
+    {
+      "id": 3,
+      "severity": "suggestion",
+      "file": "install.sh",
+      "line": 1,
+      "title": "Strict Branch Name Validation",
+      "description": "The regex `^[a-zA-Z0-9][a-zA-Z0-9._/-]*$` correctly prevents flag injection by enforcing an alphanumeric start, but it also blocks branch names starting with an underscore (e.g., `_experimental`), which are generally safe.",
+      "suggestion": "Consider relaxing the start character check to include `_` if such branch names are used (e.g., `^[a-zA-Z0-9_]...`), while still blocking `-`."
     }
   ]
 }
