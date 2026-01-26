@@ -333,13 +333,13 @@ download_source() {
         fi
 
         log_info "Cloning repository (version: $SOURCE_TAG)..."
-        if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
-            log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-        else
-            log_warning "Tag $SOURCE_TAG not found, using main branch"
-            git clone --quiet --depth 1 "$SOURCE_REPO" "$TEMP_DIR"
-            log_success "Downloaded configuration source (latest)"
+        if ! git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
+            log_error "Failed to clone version $SOURCE_TAG"
+            log_error "The requested version may not exist or there may be a network issue."
+            log_error "Available versions: https://github.com/bigdegenenergy/ai-dev-toolkit/tags"
+            exit 1
         fi
+        log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
         return 0
     fi
 
@@ -364,15 +364,13 @@ download_source() {
     fi
 
     log_info "Cloning repository (version: $SOURCE_TAG)..."
-    # Pin to specific version for reproducibility
-    if git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
-        log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
-    else
-        # Fallback to main branch if tag doesn't exist yet
-        log_warning "Tag $SOURCE_TAG not found, using main branch"
-        git clone --quiet --depth 1 "$SOURCE_REPO" "$TEMP_DIR"
-        log_success "Downloaded configuration source (latest)"
+    if ! git clone --quiet --depth 1 --branch "$SOURCE_TAG" "$SOURCE_REPO" "$TEMP_DIR" 2>/dev/null; then
+        log_error "Failed to clone version $SOURCE_TAG"
+        log_error "The requested version may not exist or there may be a network issue."
+        log_error "Available versions: https://github.com/bigdegenenergy/ai-dev-toolkit/tags"
+        exit 1
     fi
+    log_success "Downloaded configuration source (pinned to $SOURCE_TAG)"
 }
 
 install_claude_directory() {

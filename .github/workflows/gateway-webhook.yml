@@ -133,6 +133,7 @@ jobs:
         env:
           CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
           AUTHORIZED_CALLBACK_URL: ${{ secrets.GATEWAY_CALLBACK_URL }}
+          CLAUDE_RESPONSE: ${{ steps.claude.outputs.response }}
         run: |
           # Validate callback URL against authorized endpoint
           if [ -z "$AUTHORIZED_CALLBACK_URL" ]; then
@@ -148,11 +149,8 @@ jobs:
             exit 1
           fi
 
-          # Format response for chat
-          RESPONSE=$(cat << 'EOF'
-          ${{ steps.claude.outputs.response }}
-          EOF
-          )
+          # Format response for chat (using env var, not interpolation)
+          RESPONSE="$CLAUDE_RESPONSE"
 
           # Truncate if too long (2000 char limit for most platforms)
           if [ ${#RESPONSE} -gt 1900 ]; then
@@ -166,16 +164,21 @@ jobs:
             || echo "Failed to post response"
 
       - name: Create Summary
+        env:
+          CMD_NAME: ${{ needs.validate.outputs.command }}
+          CMD_ARGS: ${{ needs.validate.outputs.args }}
+          PLATFORM: ${{ github.event.client_payload.platform || github.event.inputs.platform }}
+          CLAUDE_RESPONSE: ${{ steps.claude.outputs.response }}
         run: |
           echo "## Gateway Command Executed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Command:** ${{ needs.validate.outputs.command }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Arguments:** ${{ needs.validate.outputs.args }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Platform:** ${{ github.event.client_payload.platform || github.event.inputs.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Command:** $CMD_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "**Arguments:** $CMD_ARGS" >> $GITHUB_STEP_SUMMARY
+          echo "**Platform:** $PLATFORM" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Response" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.claude.outputs.response }}" >> $GITHUB_STEP_SUMMARY
+          echo "$CLAUDE_RESPONSE" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
   help:
@@ -249,6 +252,7 @@ jobs:
         env:
           CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
           AUTHORIZED_CALLBACK_URL: ${{ secrets.GATEWAY_CALLBACK_URL }}
+          CMD_NAME: ${{ needs.validate.outputs.command }}
         run: |
           # Validate callback URL against authorized endpoint
           if [ -z "$AUTHORIZED_CALLBACK_URL" ]; then
@@ -262,7 +266,7 @@ jobs:
             exit 1
           fi
 
-          ERROR_MSG="Unknown command: ${{ needs.validate.outputs.command }}. Use \`/claude help\` to see available commands."
+          ERROR_MSG="Unknown command: $CMD_NAME. Use \`/claude help\` to see available commands."
 
           curl -X POST "$AUTHORIZED_CALLBACK_URL" \
             -H "Content-Type: application/json" \
@@ -270,6 +274,8 @@ jobs:
             || echo "Failed to post error"
 
       - name: Summary
+        env:
+          CMD_NAME: ${{ needs.validate.outputs.command }}
         run: |
           echo "## Command Error" >> $GITHUB_STEP_SUMMARY
-          echo "Unknown command: ${{ needs.validate.outputs.command }}" >> $GITHUB_STEP_SUMMARY
+          echo "Unknown command: $CMD_NAME" >> $GITHUB_STEP_SUMMARY
