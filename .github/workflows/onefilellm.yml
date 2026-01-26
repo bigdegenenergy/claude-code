@@ -100,6 +100,9 @@ jobs:
           INPUT_FORMAT: ${{ inputs.format }}
           INPUT_SOURCES: ${{ inputs.sources }}
         run: |
+          # SECURITY: Disable glob expansion to prevent wildcard injection
+          set -f
+
           # Auto-generate output name from first source if not provided
           if [ -z "$INPUT_OUTPUT_NAME" ]; then
             # Get the first source
@@ -161,11 +164,19 @@ jobs:
               ;;
           esac
 
-          # Validate sources to prevent argument injection (Issue #1)
+          # Validate sources to prevent argument injection and command injection
           # Check that no source starts with a dash to prevent flag injection
           for source in $INPUT_SOURCES; do
             if [[ "$source" =~ ^- ]]; then
               echo "Error: Source '$source' starts with a dash. This is not allowed to prevent argument injection."
+              exit 1
+            fi
+            # Block shell metacharacters that enable command injection
+            # Note: & is blocked despite being valid in URLs because it's a shell background operator
+            # URLs with query params should use URL encoding (%26) instead of literal &
+            # Blocked: $ ` ; | & > < { } [ ] ! \ ( )
+            if [[ "$source" =~ [\$\`\;\|\&\>\<\{\}\[\]\!\\\(\)] ]]; then
+              echo "Error: Source '$source' contains shell metacharacters. Use URL encoding for special characters (e.g., %26 for &)."
               exit 1
             fi
           done
@@ -241,6 +252,9 @@ jobs:
           INPUT_CRAWL_MAX_PAGES: ${{ inputs.crawl_max_pages }}
           SAFE_OUTPUT_NAME: ${{ steps.validate.outputs.safe_output_name }}
         run: |
+          # SECURITY: Disable glob expansion to prevent wildcard injection
+          set -f
+
           # Create docs directory if it doesn't exist
           mkdir -p docs/onefilellm
 

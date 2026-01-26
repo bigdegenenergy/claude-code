@@ -1,7 +1,8 @@
 ---
 name: bug-tracker
 description: Logs, categorizes, and prioritizes bugs. Acts like a product owner tracking issues.
-tools: Read, Glob, Grep, Bash(git*), Bash(npm*), Bash(pytest*)
+# SECURITY: Read-only git commands. No commit, push, reset, or other write operations.
+tools: Read, Glob, Grep, Bash(git status*), Bash(git log*), Bash(git diff*), Bash(git show*), Bash(git blame*), Bash(npm test*), Bash(npm audit*), Bash(pytest*)
 model: haiku
 ---
 

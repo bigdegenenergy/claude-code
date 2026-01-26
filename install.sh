@@ -63,11 +63,11 @@ set -e
 # Configuration
 # ------------------------------------------------------------------------------
 VERSION="2.3.0"
-# Use main branch until first release is tagged
+# Pin to specific commit SHA for deterministic installs
 # TODO: Update to "v2.3.0" after creating the release tag
-SOURCE_TAG="main"
+SOURCE_TAG="b9249b45ab52b74c3e359a299fb7793c15de4beb"
 SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
-SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main"
+SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/b9249b45ab52b74c3e359a299fb7793c15de4beb"
 
 # Colors
 RED='\033[0;31m'

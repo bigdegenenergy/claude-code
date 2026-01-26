@@ -1,7 +1,8 @@
 ---
 name: devops-troubleshooter
 description: DevOps expert for production debugging, incident response, and infrastructure troubleshooting. Use for diagnosing production issues, analyzing logs, or debugging deployments.
-tools: Read, Grep, Glob, Bash(kubectl*), Bash(docker*), Bash(curl*), Bash(dig*), Bash(netstat*), Bash(ps*), Bash(top*)
+# SECURITY: Read-only diagnostic commands. No exec, rm, deploy, apply, or other write operations.
+tools: Read, Grep, Glob, Bash(kubectl get*), Bash(kubectl describe*), Bash(kubectl logs*), Bash(kubectl top*), Bash(docker ps*), Bash(docker logs*), Bash(docker inspect*), Bash(docker stats*), Bash(curl -s*), Bash(curl -I*), Bash(dig*), Bash(netstat*), Bash(ps*), Bash(top -b*)
 model: haiku
 ---
 
