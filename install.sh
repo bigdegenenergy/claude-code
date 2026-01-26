@@ -211,33 +211,7 @@ check_prerequisites() {
     cd "$GIT_ROOT"
     log_success "Git root: $GIT_ROOT"
 
-    # Check if this IS the ai-dev-toolkit source repository
-    if [ -f "$GIT_ROOT/install.sh" ] && [ -f "$GIT_ROOT/CLAUDE.md" ] && \
-       [ -d "$GIT_ROOT/.claude/commands" ] && [ -d "$GIT_ROOT/.claude/agents" ] && \
-       [ -d "$GIT_ROOT/.github/workflows" ]; then
-        # Check if remote is the source repo
-        local remote_url
-        remote_url=$(git remote get-url origin 2>/dev/null || echo "")
-        if [[ "$remote_url" == *"ai-dev-toolkit"* ]]; then
-            echo ""
-            log_warning "This appears to be the AI Dev Toolkit source repository itself!"
-            echo ""
-            echo -e "${YELLOW}You are already in the toolkit source repo. To update a DIFFERENT repo:${NC}"
-            echo ""
-            echo "  1. Navigate to your target project:"
-            echo "     cd /path/to/your/project"
-            echo ""
-            echo "  2. Run the install script from here:"
-            echo "     bash $GIT_ROOT/install.sh"
-            echo ""
-            echo "  Or use the one-liner:"
-            echo "     curl -fsSL https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/main/install.sh | bash"
-            echo ""
-            exit 0
-        fi
-    fi
-
-    # Check if AI Dev Toolkit is already installed - auto-update if so
+    # Auto-detect existing installation and switch to update mode
     if [ -d "$GIT_ROOT/.claude/commands" ] && [ -d "$GIT_ROOT/.claude/agents" ]; then
         log_info "Existing installation detected - updating to latest version"
         UPDATE_MODE=true
@@ -338,21 +312,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 download_source() {
     log_header "Locating AI Dev Toolkit Configuration"
 
-    # Check if we're running from within the source repository
-    # (i.e., both .claude AND .github directories exist alongside this script)
-    if [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+    # Check if we're running from within the source repository itself
+    # (SCRIPT_DIR == GIT_ROOT means ./install.sh in the toolkit repo)
+    if [ "$SCRIPT_DIR" = "$GIT_ROOT" ] && \
+       [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
+        log_success "Running from toolkit source directory - using local files"
+        TEMP_DIR="$SCRIPT_DIR"
+        USE_LOCAL_SOURCE=true
+        return 0
+    fi
+
+    # Check if we're running from a cloned toolkit repo into a different target
+    if [ "$SCRIPT_DIR" != "$GIT_ROOT" ] && \
+       [ -d "$SCRIPT_DIR/.claude" ] && [ -d "$SCRIPT_DIR/.github" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
         log_success "Using local source files from: $SCRIPT_DIR"
         TEMP_DIR="$SCRIPT_DIR"
         USE_LOCAL_SOURCE=true
-        # Don't set trap to remove TEMP_DIR since it's the source repo
         return 0
-    elif [ -d "$SCRIPT_DIR/.claude" ] && [ -f "$SCRIPT_DIR/CLAUDE.md" ]; then
-        # Partial local source - .claude exists but .github is missing
-        log_warning "Local source found but .github directory is missing"
-        log_info "Downloading complete source from remote repository..."
     fi
 
-    # Otherwise, download from remote
+    # Download from remote
     log_info "Downloading from remote repository..."
 
     TEMP_DIR=$(mktemp -d)
