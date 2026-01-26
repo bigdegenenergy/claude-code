@@ -5,18 +5,27 @@
 ```json
 {
   "review": {
-    "summary": "The PR removes blocking checks to allow the script to run in more contexts (including inside the source repo) and fixes potential self-copying errors. However, removing the source repository guard clause creates a significant risk for developers working on the toolkit itself, as running the script locally could trigger an update that overwrites uncommitted changes.",
-    "decision": "REQUEST_CHANGES"
+    "summary": "The changes correctly implement a 'local dev' installation mode by detecting the repository root and copying local files, which improves the developer workflow. However, removing the safeguard that blocked execution within the source repository introduces a potential risk if the installation target is misconfigured. The logic for `USE_LOCAL_SOURCE` is sound.",
+    "decision": "APPROVE"
   },
   "issues": [
     {
       "id": 1,
       "severity": "important",
       "file": "install.sh",
-      "line": 1,
-      "title": "Risk of overwriting local development work",
-      "description": "You removed the guard clause that prevented the script from running inside the `ai-dev-toolkit` source repository. If a developer runs `./install.sh` inside their local clone of the toolkit (where `SCRIPT_DIR == GIT_ROOT`), the script presumably falls through to the 'update' logic (fetching from remote). This will overwrite their local uncommitted changes with the remote version, causing data loss.\n\nThe logic fix `[ \"$SCRIPT_DIR\" != \"$GIT_ROOT\" ]` prevents the `cp` command from erroring on source==dest, but it does not prevent the subsequent download/update logic from overwriting the current directory.",
-      "suggestion": "Ensure that if `SCRIPT_DIR == GIT_ROOT` (running inside the source repo), the script skips any remote download/update steps and only performs non-destructive setup (like installing hooks). Alternatively, restore a non-blocking warning or check for dirty git status before proceeding."
+      "line": 15,
+      "title": "Missing safeguard against installing into source directory",
+      "description": "You removed the check that blocked running the script inside the source repository. While this enables local installation, it removes a layer of protection. If `INSTALL_DIR` is accidentally set to the current directory (`PWD` or `SCRIPT_DIR`), the installation logic (likely containing `rm -rf \"$INSTALL_DIR\"`) could wipe the source repository.",
+      "suggestion": "Add a check to ensure `\"$INSTALL_DIR\"` is not equal to `\"$SCRIPT_DIR\"` or `\"$PWD\"` before proceeding with the installation."
+    },
+    {
+      "id": 2,
+      "severity": "suggestion",
+      "file": "install.sh",
+      "line": 30,
+      "title": "Ensure exclusion of node_modules during local copy",
+      "description": "When copying from the local source (`USE_LOCAL_SOURCE=true`), copying the `node_modules` directory can be very slow and may introduce binary incompatibilities if the temporary build directory environment differs.",
+      "suggestion": "Ensure the `cp` or `rsync` command explicitly excludes `node_modules`, `dist`, and `.git`."
     }
   ]
 }
