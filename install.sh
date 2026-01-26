@@ -63,11 +63,10 @@ set -e
 # Configuration
 # ------------------------------------------------------------------------------
 VERSION="2.3.0"
-# Pin to specific commit SHA for deterministic installs
-# TODO: Update to "v2.3.0" after creating the release tag
-SOURCE_TAG="b9249b45ab52b74c3e359a299fb7793c15de4beb"
+# Use release tag for deterministic installs
+SOURCE_TAG="v2.3.0"
 SOURCE_REPO="https://github.com/bigdegenenergy/ai-dev-toolkit.git"
-SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/b9249b45ab52b74c3e359a299fb7793c15de4beb"
+SOURCE_RAW="https://raw.githubusercontent.com/bigdegenenergy/ai-dev-toolkit/v2.3.0"
 
 # Colors
 RED='\033[0;31m'
@@ -147,8 +146,9 @@ clone_repo() {
     fi
 
     # Try 2: Partial clone with blob filter (Git 2.19+), then checkout commit
+    # Note: No -- separator needed since validate_source_tag prevents leading hyphens
     if git clone --quiet --filter=blob:none "$SOURCE_REPO" "$target_dir" 2>/dev/null && \
-       (cd "$target_dir" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
+       (cd "$target_dir" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
         log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
         return 0
     fi
@@ -156,7 +156,7 @@ clone_repo() {
     # Try 3: Full clone fallback for older Git versions without --filter support
     rm -rf "$target_dir" 2>/dev/null
     if git clone --quiet "$SOURCE_REPO" "$target_dir" 2>/dev/null && \
-       (cd "$target_dir" && git checkout --quiet -- "$SOURCE_TAG" 2>/dev/null); then
+       (cd "$target_dir" && git checkout --quiet "$SOURCE_TAG" 2>/dev/null); then
         log_success "Downloaded configuration source (pinned to commit $SOURCE_TAG)"
         return 0
     fi
