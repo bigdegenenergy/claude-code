@@ -5,18 +5,27 @@
 ```json
 {
   "review": {
-    "summary": "The PR correctly fixes a functional bug in `git checkout` where references were being treated as file paths. However, switching `SOURCE_TAG` from a commit SHA to a git tag introduces a supply chain security risk, as tags are mutable.",
+    "summary": "This PR implements significant security improvements, addressing script injection in workflows, SSRF risks, and race conditions in file locking. The move to strict environment variable usage in CI and proper lock file handling is excellent. However, the regex syntax used in the safety net script is likely non-portable (risking bypass on macOS/BSD systems), and the switch to timezone-aware datetimes may crash the application when loading existing state.",
     "decision": "REQUEST_CHANGES"
   },
   "issues": [
     {
       "id": 1,
-      "severity": "important",
-      "file": "install.sh",
+      "severity": "critical",
+      "file": ".claude/hooks/safety-net.sh",
       "line": 0,
-      "title": "Supply Chain Risk: Use of mutable git tag",
-      "description": "The PR updates `SOURCE_TAG` to `v2.3.0` (a git tag) instead of a specific commit SHA. Git tags are mutable and can be moved or hijacked to point to malicious code. For security-sensitive toolkits, dependencies must be pinned to a specific commit hash to guarantee immutability and deterministic installs.",
-      "suggestion": "Determine the full commit SHA corresponding to release `v2.3.0` and pin `SOURCE_TAG` to that hash."
+      "title": "Non-portable regex syntax undermines security checks",
+      "description": "The use of `\\s+` for whitespace matching is not standard in POSIX Extended Regular Expressions (ERE), which is typically used by Bash's `[[ =~ ]]` operator and `grep -E`. On many systems (particularly macOS/BSD and minimal Linux containers), `\\s` does not match whitespace; it may match the literal character 's' or nothing. This renders the `DANGEROUS_PATTERNS` checks ineffective against the very bypasses they attempt to prevent.",
+      "suggestion": "Replace `\\s+` with the POSIX standard `[[:space:]]+` to ensure robust matching across all environments (Bash, GNU grep, BSD grep)."
+    },
+    {
+      "id": 2,
+      "severity": "important",
+      "file": ".claude/workflows/lobster/engine.py",
+      "line": 0,
+      "title": "Risk of runtime crash due to mixed datetime types",
+      "description": "Switching from `datetime.now()` (which returns a naive datetime) to `datetime.now(timezone.utc)` (offset-aware) introduces a breaking change for persistent state. If the application loads existing state files containing naive datetimes, comparing them with the new aware datetimes will raise `TypeError: can't subtract offset-naive and offset-aware datetimes`.",
+      "suggestion": "Ensure the state deserialization logic explicitly converts loaded timestamps to timezone-aware UTC objects, or implement defensive comparison logic to handle both naive and aware datetimes during the migration period."
     }
   ]
 }
