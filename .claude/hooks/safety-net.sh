@@ -17,47 +17,48 @@ FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 # ============================================
 # DANGEROUS COMMAND PATTERNS
 # ============================================
-# SECURITY: Use \s+ for whitespace matching to prevent bypass with extra spaces
-# Example: "rm  -rf /" (two spaces) would bypass "rm -rf /" but not "rm\s+-rf\s+/"
+# SECURITY: Use [[:space:]]+ for whitespace matching to prevent bypass with extra spaces
+# Example: "rm  -rf /" (two spaces) would bypass "rm -rf /" but not "rm[[:space:]]+-rf[[:space:]]+/"
+# Using POSIX-compliant [[:space:]]+ instead of \s+ for portability across all platforms
 
 DANGEROUS_PATTERNS=(
-    # Destructive file operations (use \s+ for whitespace to prevent bypass with extra spaces)
-    'rm\s+-rf\s+/'
-    'rm\s+-rf\s+/\*'
-    'rm\s+-rf\s+~'
-    'rm\s+-rf\s+\$HOME'
+    # Destructive file operations (use [[:space:]]+ for whitespace to prevent bypass with extra spaces)
+    'rm[[:space:]]+-rf[[:space:]]+/'
+    'rm[[:space:]]+-rf[[:space:]]+/\*'
+    'rm[[:space:]]+-rf[[:space:]]+~'
+    'rm[[:space:]]+-rf[[:space:]]+\$HOME'
 
     # Git destructive operations
-    'git\s+reset\s+--hard'
-    'git\s+push.*--force'
-    'git\s+push.*-f\s'
-    'git\s+clean\s+-fdx'
+    'git[[:space:]]+reset[[:space:]]+--hard'
+    'git[[:space:]]+push.*--force'
+    'git[[:space:]]+push.*-f[[:space:]]'
+    'git[[:space:]]+clean[[:space:]]+-fdx'
 
     # Database destructive operations
-    'drop\s+table'
-    'drop\s+database'
-    'truncate\s+table'
-    'delete\s+from.*where\s+1\s*=\s*1'
-    'delete\s+from.*without\s+where'
+    'drop[[:space:]]+table'
+    'drop[[:space:]]+database'
+    'truncate[[:space:]]+table'
+    'delete[[:space:]]+from.*where[[:space:]]+1[[:space:]]*=[[:space:]]*1'
+    'delete[[:space:]]+from.*without[[:space:]]+where'
 
     # System-level operations
-    'chmod\s+777'
-    'chmod\s+-R\s+777'
-    'sudo\s+rm'
-    'sudo\s+chmod'
-    '>\s*/dev/sd'
+    'chmod[[:space:]]+777'
+    'chmod[[:space:]]+-R[[:space:]]+777'
+    'sudo[[:space:]]+rm'
+    'sudo[[:space:]]+chmod'
+    '>[[:space:]]*/dev/sd'
     'mkfs'
-    'dd\s+if=.*/dev/'
+    'dd[[:space:]]+if=.*/dev/'
 
     # Credential exposure
-    'cat\s+.*\.env'
-    'cat\s+.*credentials'
-    'cat\s+.*secret'
-    'cat\s+.*/etc/passwd'
-    'cat\s+.*/etc/shadow'
-    'echo\s+.*API_KEY'
-    'echo\s+.*SECRET'
-    'echo\s+.*PASSWORD'
+    'cat[[:space:]]+.*\.env'
+    'cat[[:space:]]+.*credentials'
+    'cat[[:space:]]+.*secret'
+    'cat[[:space:]]+.*/etc/passwd'
+    'cat[[:space:]]+.*/etc/shadow'
+    'echo[[:space:]]+.*API_KEY'
+    'echo[[:space:]]+.*SECRET'
+    'echo[[:space:]]+.*PASSWORD'
 
     # Network exfiltration patterns
     'curl.*\|.*sh'
@@ -185,7 +186,7 @@ if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" ]]; then
 
     if [[ -n "$CONTENT" ]]; then
         # Check for hardcoded secrets patterns
-        if echo "$CONTENT" | grep -qiE "(password|api_key|secret|token)\s*[:=]\s*['\"][^'\"]{8,}['\"]"; then
+        if echo "$CONTENT" | grep -qiE "(password|api_key|secret|token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}['\"]"; then
             echo "WARNING: Potential hardcoded secret detected in content." >&2
             echo "File: $FILE_PATH" >&2
             echo "" >&2

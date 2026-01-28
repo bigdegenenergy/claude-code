@@ -8,7 +8,7 @@ Supports concurrent access and state recovery.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -139,10 +139,19 @@ class StateManager:
         return dt.isoformat()
 
     def _deserialize_datetime(self, s: Optional[str]) -> Optional[datetime]:
-        """Convert ISO format string to datetime."""
+        """
+        Convert ISO format string to timezone-aware UTC datetime.
+
+        Handles both naive and aware datetimes for backward compatibility.
+        Naive datetimes are assumed to be UTC.
+        """
         if s is None:
             return None
-        return datetime.fromisoformat(s)
+        dt = datetime.fromisoformat(s)
+        # If the datetime is naive (no timezone info), assume it's UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
 
     def save_state(self, state: WorkflowState) -> None:
         """
@@ -155,7 +164,7 @@ class StateManager:
         lock_file = self._lock_file(state.workflow_id)
 
         # Ensure updated_at is current
-        state.updated_at = datetime.now()
+        state.updated_at = datetime.now(timezone.utc)
 
         # Serialize state to JSON
         data = {
