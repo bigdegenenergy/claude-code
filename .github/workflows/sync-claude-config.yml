@@ -423,14 +423,25 @@ jobs:
           ---
           *This PR was automatically created by the [sync-claude-config](.github/workflows/sync-claude-config.yml) workflow.*"
 
-          gh pr create \
+          # Ensure labels exist before creating PR (--force updates if exists, creates if not)
+          gh label create "automated" --description "Automated PR" --color "0E8A16" --force 2>/dev/null || true
+          gh label create "claude-code" --description "Claude Code configuration" --color "7057FF" --force 2>/dev/null || true
+
+          # Create PR with labels
+          if gh pr create \
             --title "chore: sync Claude Code config (${COMMIT_DATE})" \
             --body "$PR_BODY" \
             --label "automated,claude-code" \
-            --head "${{ steps.branch.outputs.branch_name }}" \
-            || echo "PR creation failed - may already exist or labels don't exist"
-
-          echo "✅ Pull request created"
+            --head "${{ steps.branch.outputs.branch_name }}"; then
+            echo "✅ Pull request created"
+          else
+            echo "⚠️ PR creation failed - may already exist"
+            # Check if PR already exists for this branch
+            EXISTING_PR=$(gh pr list --head "${{ steps.branch.outputs.branch_name }}" --json url --jq '.[0].url' 2>/dev/null || true)
+            if [ -n "$EXISTING_PR" ]; then
+              echo "📋 Existing PR: $EXISTING_PR"
+            fi
+          fi
 
       - name: Summary
         run: |
